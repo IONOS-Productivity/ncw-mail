@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "83637eb41c680a699ac79685d738130d",
+    "content-hash": "7e26a34386e89811d5df49168ccc8623",
     "packages": [
         {
             "name": "amphp/amp",
@@ -1853,6 +1853,21 @@
                 "source": "https://github.com/hamza221/html2text/tree/v1.0.0"
             },
             "time": "2023-08-16T11:30:50+00:00"
+        },
+        {
+            "name": "ionos-productivity/ionos-mail-configuration-api-client",
+            "version": "2.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/ionos-productivity/ionos-mail-configuration-api-client.git",
+                "reference": "2.0.0-e22cc02"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "IONOS\\MailConfigurationAPI\\Client\\": "lib/"
+                }
+            }
         },
         {
             "name": "jeremykendall/php-domain-parser",
@@ -4155,7 +4170,7 @@
         "php": ">=8.1 <=8.4",
         "ext-openssl": "*"
     },
-    "platform-dev": {},
+    "platform-dev": [],
     "platform-overrides": {
         "php": "8.1"
     },
