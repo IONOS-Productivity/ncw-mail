@@ -231,6 +231,11 @@
 					{{ t('mail', 'Enable mark as important classification') }}
 				</NcCheckboxRadioSwitch>
 			</Tab>
+			<Tab id="create" key="create" :name="t('mail', 'New Email Address')">
+				<NewEmailAddressTab :loading="loading"
+					:clear-feedback="clearFeedback"
+					:is-valid-email="isValidEmail" />
+			</Tab>
 		</Tabs>
 		<div v-if="isGoogleAccount && !googleOauthUrl" class="account-form__google-sso">
 			{{ t('mail', 'Google requires OAuth authentication. If your Nextcloud admin has not configured Google OAuth, you can use a Google App Password instead.') }}
@@ -290,6 +295,7 @@ import {
 } from '../service/AutoConfigService.js'
 import { generateOauthState } from '../service/OauthStateService.js'
 import useMainStore from '../store/mainStore.js'
+import NewEmailAddressTab from './ionos/NewEmailAddressTab.vue'
 
 export default {
 	name: 'AccountForm',
@@ -302,6 +308,7 @@ export default {
 		NcButton,
 		NcLoadingIcon,
 		IconCheck,
+		NewEmailAddressTab,
 	},
 
 	props: {
