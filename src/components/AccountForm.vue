@@ -199,6 +199,14 @@
 					required
 					@change="clearFeedback" />
 			</Tab>
+			<Tab id="create" key="create" :name="t('mail', 'New Email Address')">
+				<NewEmailAddressTab :loading="loading"
+					:has-password-alternatives="hasPasswordAlternatives"
+					:clear-feedback="clearFeedback"
+					:is-valid-email="isValidEmail"
+					:translate="t"
+					@account-created="onAccountCreated" />
+			</Tab>
 		</Tabs>
 		<div v-if="isGoogleAccount && !googleOauthUrl" class="account-form__google-sso">
 			{{ t('mail', 'For the Google account to work with this app you need to enable two-factor authentication for Google and generate an app password.') }}
@@ -252,6 +260,7 @@ import {
 import { CONSENT_ABORTED, getUserConsent } from '../integration/oauth.js'
 import useMainStore from '../store/mainStore.js'
 import { mapStores, mapState } from 'pinia'
+import NewEmailAddressTab from './ionos/NewEmailAddressTab.vue'
 
 export default {
 	name: 'AccountForm',
@@ -264,6 +273,7 @@ export default {
 		ButtonVue,
 		IconLoading,
 		IconCheck,
+		NewEmailAddressTab,
 	},
 	props: {
 		displayName: {
@@ -668,6 +678,11 @@ export default {
 		isValidEmail(email) {
 			const regExpEmail = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
 			return regExpEmail.test(email)
+		},
+		onAccountCreated(account) {
+			// Handle account created from NewEmailAddressTab
+			logger.info('Account created from NewEmailAddressTab, emitting to Setup.vue', { account })
+			this.$emit('account-created', account)
 		},
 	},
 }
