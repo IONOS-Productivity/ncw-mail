@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 /**
  * SPDX-FileCopyrightText: 2025 STRATO GmbH
- * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
- * SPDX-FileCopyrightText: 2014-2016 ownCloud, Inc.
- * SPDX-License-Identifier: AGPL-3.0-only
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
 namespace OCA\Mail\Controller;
@@ -38,6 +36,17 @@ class IonosAccountsController extends Controller {
 	 */
 	#[TrapError]
 	public function create(string $accountName, string $emailAddress, string $password): JSONResponse {
+		// Stub implementation for development
+		// TODO: Implement actual IONOS API integration
+
+		// Basic validation
+		if (empty($accountName) || empty($emailAddress) || empty($password)) {
+			return new JSONResponse([
+				'status' => 'error',
+				'message' => 'All fields are required',
+			], 400);
+		}
+
 		// Simple stub implementation
 		if ($password === '1111') {
 			return new JSONResponse([
