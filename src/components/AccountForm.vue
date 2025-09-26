@@ -201,10 +201,8 @@
 			</Tab>
 			<Tab id="create" key="create" :name="t('mail', 'New Email Address')">
 				<NewEmailAddressTab :loading="loading"
-					:has-password-alternatives="hasPasswordAlternatives"
 					:clear-feedback="clearFeedback"
-					:is-valid-email="isValidEmail"
-					:translate="t" />
+					:is-valid-email="isValidEmail" />
 			</Tab>
 		</Tabs>
 		<div v-if="isGoogleAccount && !googleOauthUrl" class="account-form__google-sso">
