@@ -1,40 +1,39 @@
 <!--
   - SPDX-FileCopyrightText: 2025 STRATO GmbH
-  - SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
   - SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <template>
 	<div>
-		<NcInputField id="auto-name"
-			v-model="localAccountName"
-			:label="translate('mail', 'Name')"
+		<NcInputField id="ionos-account-name"
+			v-model="accountName"
+			:label="t('mail', 'Name')"
 			type="text"
-			:placeholder="translate('mail', 'Name')"
-			:disabled="loading"
+			:placeholder="t('mail', 'Name')"
+			:disabled="loading || localLoading"
 			autofocus />
-		<NcInputField id="auto-address"
-			v-model="localEmailAddress"
-			:label="translate('mail', 'Mail address')"
+		<NcInputField id="ionos-email-address"
+			v-model="emailAddress"
+			:label="t('mail', 'Mail address')"
 			type="email"
-			:placeholder="translate('mail', 'Mail address')"
-			:disabled="loading"
+			:placeholder="t('mail', 'Mail address')"
+			:disabled="loading || localLoading"
 			required
 			@change="clearFeedback" />
-		<p v-if="localEmailAddress && !isValidEmail(localEmailAddress)" class="account-form--error">
-			{{ translate('mail', 'Please enter an email of the format name@example.com') }}
+		<p v-if="emailAddress && !isValidEmail(emailAddress)" class="account-form--error">
+			{{ t('mail', 'Please enter an email of the format name@example.com') }}
 		</p>
 		<span class="email-domain-hint">@myworkspace.com</span>
-		<NcPasswordField id="auto-password"
-			v-model="localPassword"
-			:disabled="loading"
+		<NcPasswordField id="ionos-password"
+			v-model="password"
+			:disabled="loading || localLoading"
 			type="password"
-			:label="translate('mail', 'Password')"
-			:placeholder="translate('mail', 'Password')"
-			:required="!hasPasswordAlternatives" />
+			:label="t('mail', 'Password')"
+			:placeholder="t('mail', 'Password')"
+			required />
 		<div class="account-form__submit-buttons">
 			<NcButton class="account-form__submit-button"
 				type="primary"
-				:disabled="localLoading || !localAccountName || !isValidEmail(localEmailAddress) || !localPassword"
+				:disabled="!isFormValid || localLoading"
 				@click="submitForm">
 				<template #icon>
 					<IconLoading v-if="localLoading" :size="20" />
@@ -43,8 +42,8 @@
 				{{ buttonText }}
 			</NcButton>
 		</div>
-		<div v-if="localFeedback" class="account-form--feedback">
-			{{ localFeedback }}
+		<div v-if="feedback" class="account-form--feedback">
+			{{ feedback }}
 		</div>
 	</div>
 </template>
@@ -54,8 +53,6 @@ import { NcInputField, NcPasswordField, NcButton, NcLoadingIcon as IconLoading }
 import IconCheck from 'vue-material-design-icons/Check.vue'
 import { generateUrl } from '@nextcloud/router'
 import axios from '@nextcloud/axios'
-import { mapStores } from 'pinia'
-import useMainStore from '../../store/mainStore.js'
 
 export default {
 	name: 'NewEmailAddressTab',
@@ -71,111 +68,73 @@ export default {
 			type: Boolean,
 			default: false,
 		},
-		hasPasswordAlternatives: {
-			type: Boolean,
-			default: false,
-		},
 		clearFeedback: {
 			type: Function,
 			default: () => {},
 		},
 		isValidEmail: {
 			type: Function,
-			default: (email) => {
-				// Fallback email validation if not provided
-				// This should match AccountForm.vue's validation
-				if (!email) return true // Don't validate empty emails
-				const regExpEmail = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-				return regExpEmail.test(email)
-			},
-		},
-		translate: {
-			type: Function,
-			default: (a, b) => b,
+			required: true,
 		},
 	},
 	data() {
 		return {
-			localAccountName: '',
-			localEmailAddress: '',
-			localPassword: '',
+			accountName: '',
+			emailAddress: '',
+			password: '',
 			localLoading: false,
-			localFeedback: null,
-			currentStep: null, // Track current step for button text
+			feedback: null,
 		}
 	},
 	computed: {
-		...mapStores(useMainStore),
+		isFormValid() {
+			return this.accountName &&
+			       this.isValidEmail(this.emailAddress) &&
+			       this.password
+		},
 
 		buttonText() {
-			if (this.localLoading && this.currentStep) {
-				return this.currentStep
-			}
-			return this.translate('mail', 'Create & Connect')
+			return this.localLoading
+				? this.t('mail', 'Creating account...')
+				: this.t('mail', 'Create & Connect')
 		},
 	},
 	methods: {
 		async submitForm() {
 			this.clearLocalFeedback()
+			this.clearFeedback()
 			this.localLoading = true
 
-			const { localAccountName, localEmailAddress, localPassword } = this
-
-			// Basic validation
-			if (!localAccountName || !localEmailAddress || !localPassword) {
-				this.localFeedback = this.translate('mail', 'Please fill all fields')
-				this.localLoading = false
-				return
-			}
-
-			if (!this.isValidEmail(localEmailAddress)) {
-				this.localFeedback = this.translate('mail', 'Please enter a valid email address')
-				this.localLoading = false
-				return
-			}
-
 			try {
-				// Step 1: Call IONOS API
-				this.currentStep = this.translate('mail', 'Creating account...')
 				const response = await this.callIonosAPI({
-					accountName: localAccountName,
-					emailAddress: localEmailAddress,
-					password: localPassword,
+					accountName: this.accountName,
+					emailAddress: this.emailAddress,
+					password: this.password,
 				})
 
-				// Step 2: Success - Just show message, no redirect
-				this.localFeedback = response.data.message || this.translate('mail', 'Account created successfully')
-
-				// Note: No redirect for stub - just shows success message
+				this.feedback = response.data.message || this.t('mail', 'Account created successfully')
 
 			} catch (error) {
 				console.error('Account creation failed:', error)
 
-				if (error.response?.status === 400) {
-					this.localFeedback = error.response.data?.message || this.translate('mail', 'Invalid request')
-				} else {
-					this.localFeedback = this.translate('mail', 'There was an error while setting up your account')
-				}
+				this.feedback = error.response?.data?.message ||
+				               this.t('mail', 'There was an error while setting up your account')
 			} finally {
 				this.localLoading = false
-				this.currentStep = null
 			}
 		},
 
 		async callIonosAPI({ accountName, emailAddress, password }) {
 			const url = generateUrl('/apps/mail/api/ionos/accounts')
-
-			const response = await axios.post(url, {
+			return await axios.post(url, {
 				accountName,
 				emailAddress,
 				password,
 			})
-
-			return response
 		},
 
 		clearLocalFeedback() {
-			this.localFeedback = null
+			this.feedback = null
 		},
 	},
 }
