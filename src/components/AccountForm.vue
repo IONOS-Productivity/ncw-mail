@@ -199,6 +199,11 @@
 					required
 					@change="clearFeedback" />
 			</Tab>
+			<Tab id="create" key="create" :name="t('mail', 'New Email Address')">
+				<NewEmailAddressTab :loading="loading"
+					:clear-feedback="clearFeedback"
+					:is-valid-email="isValidEmail" />
+			</Tab>
 		</Tabs>
 		<div v-if="isGoogleAccount && !googleOauthUrl" class="account-form__google-sso">
 			{{ t('mail', 'For the Google account to work with this app you need to enable two-factor authentication for Google and generate an app password.') }}
@@ -252,6 +257,7 @@ import {
 import { CONSENT_ABORTED, getUserConsent } from '../integration/oauth.js'
 import useMainStore from '../store/mainStore.js'
 import { mapStores, mapState } from 'pinia'
+import NewEmailAddressTab from './ionos/NewEmailAddressTab.vue'
 
 export default {
 	name: 'AccountForm',
@@ -264,6 +270,7 @@ export default {
 		ButtonVue,
 		IconLoading,
 		IconCheck,
+		NewEmailAddressTab,
 	},
 	props: {
 		displayName: {
