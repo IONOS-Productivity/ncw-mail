@@ -6,58 +6,158 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2025 STRATO GmbH
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
-
 namespace OCA\Mail\Controller;
 
+use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\TrapError;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use Psr\Log\LoggerInterface;
 
 #[OpenAPI(scope: OpenAPI::SCOPE_IGNORE)]
 class IonosAccountsController extends Controller {
 
+	// Error message constants
+	private const ERR_ALL_FIELDS_REQUIRED = 'All fields are required';
+	private const ERR_CREATE_EMAIL_FAILED = 'Failed to create email account';
+	private const ERR_IONOS_API_ERROR = 'IONOS_API_ERROR';
+	private const ERR_UNKNOWN_ERROR = 'UNKNOWN_ERROR';
+	private const ERR_GENERIC_SETUP = 'There was an error while setting up your account';
+
 	public function __construct(
 		string $appName,
 		IRequest $request,
+		private AccountsController $accountsController,
+		private LoggerInterface $logger,
 	) {
 		parent::__construct($appName, $request);
 	}
 
+	// Helper: input validation
+	private function validateInput(string $accountName, string $emailAddress): ?JSONResponse {
+		if ($accountName === '' || $emailAddress === '') {
+			return new JSONResponse(['success' => false, 'message' => self::ERR_ALL_FIELDS_REQUIRED, 'error' => self::ERR_IONOS_API_ERROR], 400);
+		}
+		if (!filter_var($emailAddress, FILTER_VALIDATE_EMAIL)) {
+			return new JSONResponse(['success' => false, 'message' => 'Invalid email address format', 'error' => self::ERR_IONOS_API_ERROR], 400);
+		}
+		return null;
+	}
+
 	/**
 	 * @NoAdminRequired
-	 *
-	 * @param string $accountName Display name for the account
-	 * @param string $emailAddress Email address to create
-	 * @param string $password Password for the new email account
-	 *
-	 * @return JSONResponse
 	 */
 	#[TrapError]
-	public function create(string $accountName, string $emailAddress, string $password): JSONResponse {
-		// Stub implementation for development
-		// TODO: Implement actual IONOS API integration
-
-		// Basic validation
-		if (empty($accountName) || empty($emailAddress) || empty($password)) {
-			return new JSONResponse([
-				'status' => 'error',
-				'message' => 'All fields are required',
-			], 400);
+	public function create(string $accountName, string $emailAddress): JSONResponse {
+		if ($error = $this->validateInput($accountName, $emailAddress)) {
+			return $error;
 		}
 
-		// Simple stub implementation
-		if ($password === '1111') {
+		try {
+			$this->logger->info('Starting IONOS email account creation', [ 'emailAddress' => $emailAddress, 'accountName' => $accountName ]);
+			$mailConfig = $this->createIonosEmailAccount($accountName, $emailAddress);
+			$accountResponse = $this->createNextcloudMailAccount($accountName, $emailAddress, $mailConfig);
+			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $emailAddress ]);
 			return new JSONResponse([
-				'status' => 'success',
-				'message' => 'Account created successfully',
-			]);
-		} else {
-			return new JSONResponse([
-				'status' => 'error',
-				'message' => 'Invalid password. Use "1111" for testing.'
-			], 400);
+				'success' => true,
+				'message' => 'Email account created successfully via IONOS',
+				'account' => $accountResponse->getData(),
+			], 201);
+		} catch (ServiceException $e) {
+			return $this->handleServiceException($e, $emailAddress);
+		} catch (\Exception $e) {
+			return $this->handleGenericException($e, $emailAddress);
 		}
+	}
+
+	/**
+	 * @throws ServiceException
+	 */
+	private function createIonosEmailAccount(string $accountName, string $emailAddress): array {
+		$ionosResponse = $this->callIonosCreateEmailAPI($accountName, $emailAddress);
+		if ($ionosResponse === null || !($ionosResponse['success'] ?? false)) {
+			$this->logger->error('Failed to create IONOS email account', [ 'emailAddress' => $emailAddress, 'response' => $ionosResponse ]);
+			throw new ServiceException(self::ERR_CREATE_EMAIL_FAILED);
+		}
+		$mailConfig = $ionosResponse['mailConfig'] ?? null;
+		if (!is_array($mailConfig)) {
+			$this->logger->error('IONOS API response missing mailConfig', [ 'emailAddress' => $emailAddress, 'response' => $ionosResponse ]);
+			throw new ServiceException('Invalid IONOS API response: missing mail configuration');
+		}
+		return $mailConfig;
+	}
+
+	/**
+	 * @throws ServiceException
+	 */
+	private function createNextcloudMailAccount(string $accountName, string $emailAddress, array $mailConfig): JSONResponse {
+		if (!isset($mailConfig['imap'], $mailConfig['smtp'])) {
+			throw new ServiceException('Invalid mail configuration: missing IMAP or SMTP configuration');
+		}
+		$imap = $mailConfig['imap'];
+		$smtp = $mailConfig['smtp'];
+		if (!is_array($imap) || !is_array($smtp)) {
+			throw new ServiceException('Invalid mail configuration: IMAP or SMTP configuration must be arrays');
+		}
+		return $this->accountsController->create(
+			$accountName,
+			$emailAddress,
+			(string)$imap['host'],
+			(int)$imap['port'],
+			(string)$imap['security'],
+			(string)($imap['username'] ?? $emailAddress),
+			(string)($imap['password'] ?? ''),
+			(string)$smtp['host'],
+			(int)$smtp['port'],
+			(string)$smtp['security'],
+			(string)($smtp['username'] ?? $emailAddress),
+			(string)($smtp['password'] ?? ''),
+		);
+	}
+
+	private function handleServiceException(ServiceException $e, string $emailAddress): JSONResponse {
+		$this->logger->error('IONOS service error', [ 'exception' => $e, 'emailAddress' => $emailAddress ]);
+		return new JSONResponse(['success' => false, 'message' => $e->getMessage(), 'error' => self::ERR_IONOS_API_ERROR], 400);
+	}
+
+	/**
+	 * @throws ServiceException
+	 */
+	protected function callIonosCreateEmailAPI(string $accountName, string $emailAddress): ?array {
+		$atPosition = strrchr($emailAddress, '@');
+		if ($atPosition === false) {
+			throw new ServiceException('Invalid email address: unable to extract domain');
+		}
+		$domain = substr($atPosition, 1);
+		if ($domain === '') {
+			throw new ServiceException('Invalid email address: unable to extract domain');
+		}
+		return [
+			'success' => true,
+			'message' => 'Email account created successfully via IONOS (mock)',
+			'mailConfig' => [
+				'imap' => [
+					'host' => 'mail.localhost', // 'imap.' . $domain,
+					'password' => 'tmp',
+					'port' => 1143, // 993,
+					'security' => 'none',
+					'username' => 'admin@strado.de' // $emailAddress,
+				],
+				'smtp' => [
+					'host' => 'mail.localhost', // 'smtp.' . $domain,
+					'password' => 'tmp',
+					'port' => 1587, // 465,
+					'security' => 'none',
+					'username' => 'admin@strado.de' // $emailAddress,
+				]
+			]
+		];
+	}
+
+	private function handleGenericException(\Exception $e, string $emailAddress): JSONResponse {
+		$this->logger->error('Unexpected error during IONOS account creation', [ 'exception' => $e, 'emailAddress' => $emailAddress ]);
+		return new JSONResponse(['success' => false, 'message' => self::ERR_GENERIC_SETUP, 'error' => self::ERR_UNKNOWN_ERROR], 500);
 	}
 }
