@@ -58,13 +58,8 @@ class IonosAccountsController extends Controller {
 		try {
 			$this->logger->info('Starting IONOS email account creation', [ 'emailAddress' => $emailAddress, 'accountName' => $accountName ]);
 			$mailConfig = $this->createIonosEmailAccount($accountName, $emailAddress);
-			$accountResponse = $this->createNextcloudMailAccount($accountName, $emailAddress, $mailConfig);
 			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $emailAddress ]);
-			return new JSONResponse([
-				'success' => true,
-				'message' => 'Email account created successfully via IONOS',
-				'account' => $accountResponse->getData(),
-			], 201);
+			return $this->createNextcloudMailAccount($accountName, $emailAddress, $mailConfig);
 		} catch (ServiceException $e) {
 			return $this->handleServiceException($e, $emailAddress);
 		} catch (\Exception $e) {
@@ -89,18 +84,10 @@ class IonosAccountsController extends Controller {
 		return $mailConfig;
 	}
 
-	/**
-	 * @throws ServiceException
-	 */
 	private function createNextcloudMailAccount(string $accountName, string $emailAddress, array $mailConfig): JSONResponse {
-		if (!isset($mailConfig['imap'], $mailConfig['smtp'])) {
-			throw new ServiceException('Invalid mail configuration: missing IMAP or SMTP configuration');
-		}
 		$imap = $mailConfig['imap'];
 		$smtp = $mailConfig['smtp'];
-		if (!is_array($imap) || !is_array($smtp)) {
-			throw new ServiceException('Invalid mail configuration: IMAP or SMTP configuration must be arrays');
-		}
+
 		return $this->accountsController->create(
 			$accountName,
 			$emailAddress,
@@ -143,14 +130,14 @@ class IonosAccountsController extends Controller {
 					'password' => 'tmp',
 					'port' => 1143, // 993,
 					'security' => 'none',
-					'username' => 'admin@strado.de' // $emailAddress,
+					'username' => $emailAddress,
 				],
 				'smtp' => [
 					'host' => 'mail.localhost', // 'smtp.' . $domain,
 					'password' => 'tmp',
 					'port' => 1587, // 465,
 					'security' => 'none',
-					'username' => 'admin@strado.de' // $emailAddress,
+					'username' => $emailAddress,
 				]
 			]
 		];
