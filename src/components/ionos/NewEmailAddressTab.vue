@@ -23,13 +23,6 @@
 			{{ t('mail', 'Please enter an email of the format name@example.com') }}
 		</p>
 		<span class="email-domain-hint">@myworkspace.com</span>
-		<NcPasswordField id="ionos-password"
-			v-model="password"
-			:disabled="loading || localLoading"
-			type="password"
-			:label="t('mail', 'Password')"
-			:placeholder="t('mail', 'Password')"
-			required />
 		<div class="account-form__submit-buttons">
 			<NcButton class="account-form__submit-button"
 				type="primary"
@@ -49,7 +42,7 @@
 </template>
 
 <script>
-import { NcInputField, NcPasswordField, NcButton, NcLoadingIcon as IconLoading } from '@nextcloud/vue'
+import { NcInputField, NcButton, NcLoadingIcon as IconLoading } from '@nextcloud/vue'
 import IconCheck from 'vue-material-design-icons/Check.vue'
 import { generateUrl } from '@nextcloud/router'
 import axios from '@nextcloud/axios'
@@ -58,7 +51,6 @@ export default {
 	name: 'NewEmailAddressTab',
 	components: {
 		NcInputField,
-		NcPasswordField,
 		NcButton,
 		IconLoading,
 		IconCheck,
@@ -81,7 +73,6 @@ export default {
 		return {
 			accountName: '',
 			emailAddress: '',
-			password: '',
 			localLoading: false,
 			feedback: null,
 		}
@@ -90,7 +81,6 @@ export default {
 		isFormValid() {
 			return this.accountName
 				&& this.isValidEmail(this.emailAddress)
-				&& this.password
 		},
 
 		buttonText() {
@@ -109,7 +99,6 @@ export default {
 				const response = await this.callIonosAPI({
 					accountName: this.accountName,
 					emailAddress: this.emailAddress,
-					password: this.password,
 				})
 
 				this.feedback = response.data.message || t('mail', 'Account created successfully')
@@ -124,12 +113,11 @@ export default {
 			}
 		},
 
-		async callIonosAPI({ accountName, emailAddress, password }) {
+		async callIonosAPI({ accountName, emailAddress }) {
 			const url = generateUrl('/apps/mail/api/ionos/accounts')
 			return await axios.post(url, {
 				accountName,
 				emailAddress,
-				password,
 			})
 		},
 
