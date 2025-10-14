@@ -47,6 +47,11 @@ import { NcInputField, NcButton, NcLoadingIcon as IconLoading } from '@nextcloud
 import IconCheck from 'vue-material-design-icons/Check.vue'
 import { generateUrl } from '@nextcloud/router'
 import axios from '@nextcloud/axios'
+import { translate as t } from '@nextcloud/l10n'
+import logger from '../../logger.js'
+import { fixAccountId } from '../../service/AccountService.js'
+import { mapStores } from 'pinia'
+import useMainStore from '../../store/mainStore.js'
 
 export default {
 	name: 'NewEmailAddressTab',
@@ -79,6 +84,7 @@ export default {
 		}
 	},
 	computed: {
+		...mapStores(useMainStore),
 		isFormValid() {
 			return this.accountName
 				&& this.isValidEmail(this.emailAddress)
@@ -96,13 +102,18 @@ export default {
 			this.localLoading = true
 
 			try {
-				const response = await this.callIonosAPI({
+				const account = await this.callIonosAPI({
 					accountName: this.accountName,
 					emailAddress: this.emailAddress,
 				})
 
-				this.feedback = response.data.message || t('mail', 'Account created successfully')
+				logger.debug(`account ${account.id} created`, { account })
 
+				this.feedback = t('mail', 'Account created successfully')
+
+				this.loadingMessage = t('mail', 'Loading account')
+				await this.mainStore.finishAccountSetup({ account })
+				this.$emit('account-created', account)
 			} catch (error) {
 				console.error('Account creation failed:', error)
 
@@ -115,10 +126,18 @@ export default {
 
 		async callIonosAPI({ accountName, emailAddress }) {
 			const url = generateUrl('/apps/mail/api/ionos/accounts')
-			return await axios.post(url, {
-				accountName,
-				emailAddress,
-			})
+
+			return axios
+				.post(url, { accountName, emailAddress })
+				.then((resp) => resp.data.data)
+				.then(fixAccountId)
+				.catch((e) => {
+					if (e.response && e.response.status === 400) {
+						throw e.response.data
+					}
+
+					throw e
+				})
 		},
 
 		clearLocalFeedback() {
