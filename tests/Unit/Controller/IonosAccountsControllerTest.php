@@ -87,14 +87,14 @@ class IonosAccountsControllerTest extends TestCase {
 					'password' => 'tmp',
 					'port' => 1143,
 					'security' => 'none',
-					'username' => 'admin@strado.de',
+					'username' => $emailAddress, // Updated to use actual email address
 				],
 				'smtp' => [
 					'host' => 'mail.localhost',
 					'password' => 'tmp',
 					'port' => 1587,
 					'security' => 'none',
-					'username' => 'admin@strado.de',
+					'username' => $emailAddress, // Updated to use actual email address
 				]
 			]
 		]);
@@ -110,11 +110,8 @@ class IonosAccountsControllerTest extends TestCase {
 
 		$response = $this->controller->create($accountName, $emailAddress);
 
-		$this->assertEquals(201, $response->getStatus());
-		$data = $response->getData();
-		$this->assertTrue($data['success']);
-		$this->assertEquals('Email account created successfully via IONOS', $data['message']);
-		$this->assertEquals($accountData, $data['account']);
+		// The controller now directly returns the AccountsController response
+		$this->assertSame($accountResponse, $response);
 	}
 
 	public function testCreateWithServiceException(): void {
@@ -177,7 +174,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$accountName = 'Test Account';
 		$emailAddress = 'test@example.com';
 
-		// Mock successful IONOS API response - using actual mock data
+		// Mock successful IONOS API response - using actual mock data with correct email address
 		$mockResponse = [
 			'success' => true,
 			'mailConfig' => [
@@ -185,13 +182,13 @@ class IonosAccountsControllerTest extends TestCase {
 					'host' => 'mail.localhost',
 					'port' => 1143,
 					'security' => 'none',
-					'username' => 'admin@strado.de',
+					'username' => $emailAddress, // Updated to use actual email address
 				],
 				'smtp' => [
 					'host' => 'mail.localhost',
 					'port' => 1587,
 					'security' => 'none',
-					'username' => 'admin@strado.de',
+					'username' => $emailAddress, // Updated to use actual email address
 				]
 			]
 		];
@@ -256,14 +253,14 @@ class IonosAccountsControllerTest extends TestCase {
 				'host' => 'mail.localhost',
 				'port' => 1143,
 				'security' => 'none',
-				'username' => 'admin@strado.de',
+				'username' => $emailAddress, // Updated to use actual email address
 				'password' => 'tmp'
 			],
 			'smtp' => [
 				'host' => 'mail.localhost',
 				'port' => 1587,
 				'security' => 'none',
-				'username' => 'admin@strado.de',
+				'username' => $emailAddress, // Updated to use actual email address
 				'password' => 'tmp'
 			]
 		];
@@ -279,12 +276,12 @@ class IonosAccountsControllerTest extends TestCase {
 				'mail.localhost',
 				1143,
 				'none',
-				'admin@strado.de',
+				$emailAddress, // Updated to use actual email address
 				'tmp',
 				'mail.localhost',
 				1587,
 				'none',
-				'admin@strado.de',
+				$emailAddress, // Updated to use actual email address
 				'tmp',
 			)
 			->willReturn($expectedResponse);
