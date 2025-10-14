@@ -199,7 +199,10 @@
 					required
 					@change="clearFeedback" />
 			</Tab>
-			<Tab id="create" key="create" :name="t('mail', 'New Email Address')">
+			<Tab v-if="useIonosMailconfig"
+				id="create"
+				key="create"
+				:name="t('mail', 'New Email Address')">
 				<NewEmailAddressTab :loading="loading"
 					:clear-feedback="clearFeedback"
 					:is-valid-email="isValidEmail" />
@@ -327,6 +330,10 @@ export default {
 			'googleOauthUrl',
 			'microsoftOauthUrl',
 		]),
+
+		useIonosMailconfig() {
+			return this.mainStore.getPreference('ionos-mailconfig-enabled', null)
+		},
 
 		settingsPage() {
 			return this.account !== undefined
