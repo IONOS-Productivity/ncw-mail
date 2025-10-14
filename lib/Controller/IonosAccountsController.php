@@ -76,7 +76,7 @@ class IonosAccountsController extends Controller {
 	 * @throws ServiceException
 	 */
 	private function createIonosEmailAccount(string $accountName, string $emailAddress): array {
-		$ionosResponse = $this->callIonosCreateEmailAPI($accountName, $emailAddress);
+		$ionosResponse = $this->callIonosCreateEmailAPI($emailAddress);
 		if ($ionosResponse === null || !($ionosResponse['success'] ?? false)) {
 			$this->logger->error('Failed to create IONOS email account', [ 'emailAddress' => $emailAddress, 'response' => $ionosResponse ]);
 			throw new ServiceException(self::ERR_CREATE_EMAIL_FAILED);
@@ -125,7 +125,7 @@ class IonosAccountsController extends Controller {
 	/**
 	 * @throws ServiceException
 	 */
-	protected function callIonosCreateEmailAPI(string $accountName, string $emailAddress): ?array {
+	protected function callIonosCreateEmailAPI(string $emailAddress): ?array {
 		$atPosition = strrchr($emailAddress, '@');
 		if ($atPosition === false) {
 			throw new ServiceException('Invalid email address: unable to extract domain');
