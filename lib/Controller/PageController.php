@@ -205,6 +205,7 @@ class PageController extends Controller {
 		$response = new TemplateResponse($this->appName, 'index');
 		$this->initialStateService->provideInitialState('preferences', [
 			'attachment-size-limit' => $this->config->getSystemValue('app.mail.attachment-size-limit', 0),
+			'ionos-mailconfig-enabled' => $this->config->getAppValue('mail', 'ionos-mailconfig-enabled', 'no') === 'yes',
 			'app-version' => $this->config->getAppValue('mail', 'installed_version'),
 			'external-avatars' => $this->preferences->getPreference($this->currentUserId, 'external-avatars', 'true'),
 			'layout-mode' => $this->preferences->getPreference($this->currentUserId, 'layout-mode', 'vertical-split'),

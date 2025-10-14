@@ -257,9 +257,10 @@ class PageControllerTest extends TestCase {
 				['version', '0.0.0', '26.0.0'],
 				['app.mail.attachment-size-limit', 0, 123],
 			]);
-		$this->config->expects($this->exactly(7))
+		$this->config->expects($this->exactly(8))
 			->method('getAppValue')
 			->withConsecutive(
+				[ 'mail', 'ionos-mailconfig-enabled' ],
 				[ 'mail', 'installed_version' ],
 				['mail', 'layout_message_view' ],
 				['mail', 'google_oauth_client_id' ],
@@ -268,6 +269,7 @@ class PageControllerTest extends TestCase {
 				['core', 'backgroundjobs_mode', 'ajax' ],
 				['mail', 'allow_new_mail_accounts', 'yes'],
 			)->willReturnOnConsecutiveCalls(
+				$this->returnValue('no'),
 				$this->returnValue('1.2.3'),
 				$this->returnValue('threaded'),
 				$this->returnValue(''),
@@ -323,6 +325,7 @@ class PageControllerTest extends TestCase {
 					'external-avatars' => 'true',
 					'reply-mode' => 'bottom',
 					'app-version' => '1.2.3',
+					'ionos-mailconfig-enabled' => false,
 					'collect-data' => 'true',
 					'start-mailbox-id' => '123',
 					'tag-classified-messages' => 'false',
