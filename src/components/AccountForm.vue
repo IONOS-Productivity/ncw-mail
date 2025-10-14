@@ -205,7 +205,8 @@
 				:name="t('mail', 'New Email Address')">
 				<NewEmailAddressTab :loading="loading"
 					:clear-feedback="clearFeedback"
-					:is-valid-email="isValidEmail" />
+					:is-valid-email="isValidEmail"
+					@account-created="(account) => $emit('account-created', account)" />
 			</Tab>
 		</Tabs>
 		<div v-if="isGoogleAccount && !googleOauthUrl" class="account-form__google-sso">
