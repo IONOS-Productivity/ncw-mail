@@ -284,12 +284,14 @@ class PageControllerTest extends TestCase {
 				['version', '0.0.0', '26.0.0'],
 				['app.mail.attachment-size-limit', 0, 123],
 			]);
-		$this->config->expects($this->exactly(2))
+		$this->config->expects($this->exactly(3))
 			->method('getAppValue')
 			->withConsecutive(
+				['mail', 'ionos-mailconfig-enabled'],
 				['mail', 'installed_version'],
 				['core', 'backgroundjobs_mode', 'ajax'],
 			)->willReturnOnConsecutiveCalls(
+				'no',
 				'1.2.3',
 				'cron',
 			);
@@ -366,6 +368,7 @@ class PageControllerTest extends TestCase {
 					'external-avatars' => 'true',
 					'reply-mode' => 'bottom',
 					'app-version' => '1.2.3',
+					'ionos-mailconfig-enabled' => false,
 					'collect-data' => 'true',
 					'start-mailbox-id' => '123',
 					'search-priority-body' => 'false',
