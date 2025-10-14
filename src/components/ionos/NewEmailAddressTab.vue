@@ -77,8 +77,8 @@ export default {
 	},
 	data() {
 		return {
-			accountName: '',
-			emailAddress: '',
+			accountName: 'foo',
+			emailAddress: 'admin@mail.localhost',
 			localLoading: false,
 			feedback: null,
 		}
