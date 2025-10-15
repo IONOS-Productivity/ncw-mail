@@ -158,6 +158,31 @@ class IonosAccountsControllerTest extends TestCase {
 		self::assertEquals($expectedResponse, $response);
 	}
 
+	public function testCreateWithSimulatedError(): void {
+		$accountName = 'error'; // This triggers the simulated error
+		$emailAddress = 'test@example.com';
+
+		$this->logger
+			->expects($this->once())
+			->method('error')
+			->with(
+				'IONOS service error: Failed to create email account',
+				[
+					'emailAddress' => $emailAddress,
+					'error' => 'IONOS_API_ERROR',
+				]
+			);
+
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
+			'emailAddress' => 'test@example.com',
+			'error' => 'IONOS_API_ERROR',
+		]);
+
+		$response = $this->controller->create($accountName, $emailAddress);
+
+		self::assertEquals($expectedResponse, $response);
+	}
+
 	public function testCreateIonosEmailAccountSuccess(): void {
 		$accountName = 'Test Account';
 		$emailAddress = 'test@example.com';
@@ -189,6 +214,20 @@ class IonosAccountsControllerTest extends TestCase {
 
 		$result = $method->invoke($this->controller, $accountName, $emailAddress);
 		$this->assertEquals($mockResponse['mailConfig'], $result);
+	}
+
+	public function testCreateIonosEmailAccountWithSimulatedError(): void {
+		$accountName = 'error'; // This triggers the simulated error
+		$emailAddress = 'test@example.com';
+
+		$reflection = new ReflectionClass($this->controller);
+		$method = $reflection->getMethod('createIonosEmailAccount');
+		$method->setAccessible(true);
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to create email account');
+
+		$method->invoke($this->controller, $accountName, $emailAddress);
 	}
 
 	public function testCreateIonosEmailAccountFailure(): void {
