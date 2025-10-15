@@ -416,6 +416,12 @@ export default {
 					this.manualConfig.smtpPassword = this.autoConfig.password
 				}
 			}
+			if (this.mode === 'create') {
+				// cleanup host info in order to remove isGoogleAccount message from interface
+				this.manualConfig.imapHost = undefined
+				this.manualConfig.smtpHost = undefined
+				this.clearFeedback()
+			}
 		},
 		onImapSslModeChange(value) {
 			this.clearFeedback()
