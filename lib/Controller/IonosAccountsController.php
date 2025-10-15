@@ -80,6 +80,11 @@ class IonosAccountsController extends Controller {
 	 * @throws ServiceException
 	 */
 	private function createIonosEmailAccount(string $accountName, string $emailAddress): array {
+		// simulate error response
+		if ($accountName === 'error') {
+			throw new ServiceException(self::ERR_CREATE_EMAIL_FAILED);
+		}
+
 		$ionosResponse = $this->ionosMailService->createEmailAccount($emailAddress);
 		if ($ionosResponse === null || !($ionosResponse['success'] ?? false)) {
 			$this->logger->error('Failed to create IONOS email account', [ 'emailAddress' => $emailAddress, 'response' => $ionosResponse ]);
