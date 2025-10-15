@@ -18,7 +18,7 @@
 			:placeholder="t('mail', 'Mail address')"
 			:disabled="loading || localLoading"
 			required
-			@change="clearFeedback" />
+			@change="clearAllFeedback" />
 		<p v-if="emailAddress && !isValidEmail(emailAddress)" class="account-form--error">
 			{{ t('mail', 'Please enter an email of the format name@example.com') }}
 		</p>
@@ -91,8 +91,7 @@ export default {
 	},
 	methods: {
 		async submitForm() {
-			this.clearLocalFeedback()
-			this.clearFeedback()
+			this.clearAllFeedback()
 			this.localLoading = true
 
 			try {
@@ -123,6 +122,11 @@ export default {
 
 		clearLocalFeedback() {
 			this.feedback = null
+		},
+
+		clearAllFeedback() {
+			this.clearLocalFeedback()
+			this.clearFeedback()
 		},
 	},
 }
