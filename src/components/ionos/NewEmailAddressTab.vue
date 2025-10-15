@@ -95,8 +95,8 @@ export default {
 
 		buttonText() {
 			return this.localLoading
-				? this.t('mail', 'Creating account...')
-				: this.t('mail', 'Create & Connect')
+				? t('mail', 'Creating account...')
+				: t('mail', 'Create & Connect')
 		},
 	},
 	methods: {
@@ -112,13 +112,13 @@ export default {
 					password: this.password,
 				})
 
-				this.feedback = response.data.message || this.t('mail', 'Account created successfully')
+				this.feedback = response.data.message || t('mail', 'Account created successfully')
 
 			} catch (error) {
 				console.error('Account creation failed:', error)
 
 				this.feedback = error.response?.data?.message
-					|| this.t('mail', 'There was an error while setting up your account')
+					|| t('mail', 'There was an error while setting up your account')
 			} finally {
 				this.localLoading = false
 			}
