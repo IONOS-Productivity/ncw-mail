@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace OCA\Mail\Controller;
 
 use OCA\Mail\Exception\ServiceException;
+use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
@@ -23,8 +24,6 @@ class IonosAccountsController extends Controller {
 	private const ERR_ALL_FIELDS_REQUIRED = 'All fields are required';
 	private const ERR_CREATE_EMAIL_FAILED = 'Failed to create email account';
 	private const ERR_IONOS_API_ERROR = 'IONOS_API_ERROR';
-	private const ERR_UNKNOWN_ERROR = 'UNKNOWN_ERROR';
-	private const ERR_GENERIC_SETUP = 'There was an error while setting up your account';
 
 	public function __construct(
 		string $appName,
@@ -58,12 +57,20 @@ class IonosAccountsController extends Controller {
 		try {
 			$this->logger->info('Starting IONOS email account creation', [ 'emailAddress' => $emailAddress, 'accountName' => $accountName ]);
 			$mailConfig = $this->createIonosEmailAccount($accountName, $emailAddress);
+
 			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $emailAddress ]);
 			return $this->createNextcloudMailAccount($accountName, $emailAddress, $mailConfig);
 		} catch (ServiceException $e) {
-			return $this->handleServiceException($e, $emailAddress);
+
+			$data = [
+				'emailAddress' => $emailAddress,
+				'error' => self::ERR_IONOS_API_ERROR,
+			];
+			$this->logger->error('IONOS service error: ' . $e->getMessage(), $data);
+
+			return MailJsonResponse::fail($data);
 		} catch (\Exception $e) {
-			return $this->handleGenericException($e, $emailAddress);
+			return MailJsonResponse::error('Could not create account');
 		}
 	}
 
@@ -104,11 +111,6 @@ class IonosAccountsController extends Controller {
 		);
 	}
 
-	private function handleServiceException(ServiceException $e, string $emailAddress): JSONResponse {
-		$this->logger->error('IONOS service error', [ 'exception' => $e, 'emailAddress' => $emailAddress ]);
-		return new JSONResponse(['success' => false, 'message' => $e->getMessage(), 'error' => self::ERR_IONOS_API_ERROR], 400);
-	}
-
 	/**
 	 * @throws ServiceException
 	 */
@@ -141,10 +143,5 @@ class IonosAccountsController extends Controller {
 				]
 			]
 		];
-	}
-
-	private function handleGenericException(\Exception $e, string $emailAddress): JSONResponse {
-		$this->logger->error('Unexpected error during IONOS account creation', [ 'exception' => $e, 'emailAddress' => $emailAddress ]);
-		return new JSONResponse(['success' => false, 'message' => self::ERR_GENERIC_SETUP, 'error' => self::ERR_UNKNOWN_ERROR], 500);
 	}
 }
