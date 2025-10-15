@@ -10,6 +10,7 @@
 			type="text"
 			:placeholder="t('mail', 'Name')"
 			:disabled="loading || localLoading"
+			@change="clearAllFeedback"
 			autofocus />
 		<NcInputField id="ionos-email-address"
 			v-model="emailAddress"
