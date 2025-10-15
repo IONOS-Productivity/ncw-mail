@@ -117,8 +117,11 @@ export default {
 			} catch (error) {
 				console.error('Account creation failed:', error)
 
-				this.feedback = error.response?.data?.message
-					|| t('mail', 'There was an error while setting up your account')
+				if (error.data?.error === 'IONOS_API_ERROR') {
+					this.feedback = t('mail', 'There was an error while setting up your account')
+				} else {
+					this.feedback = t('mail', 'There was an error while setting up your account')
+				}
 			} finally {
 				this.localLoading = false
 			}
