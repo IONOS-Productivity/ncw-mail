@@ -122,24 +122,23 @@ class IonosAccountsControllerTest extends TestCase {
 		$this->mockCallIonosCreateEmailAPI(null, new ServiceException('Failed to create email account'));
 
 		$this->logger
-			->expects($this->atLeastOnce())
+			->expects($this->once())
 			->method('error')
 			->with(
-				$this->callback(function ($message) {
-					return $message === 'IONOS service error' || $message === 'Unexpected error during IONOS account creation';
-				}),
-				$this->callback(function ($context) use ($emailAddress) {
-					return $context['emailAddress'] === $emailAddress;
-				})
+				'IONOS service error: Failed to create email account',
+				[
+					'emailAddress' => $emailAddress,
+					'error' => 'IONOS_API_ERROR',
+				]
 			);
 
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
+			'emailAddress' => 'test@example.com',
+			'error' => 'IONOS_API_ERROR',
+		]);
 		$response = $this->controller->create($accountName, $emailAddress);
 
-		$this->assertEquals(400, $response->getStatus());
-		$data = $response->getData();
-		$this->assertFalse($data['success']);
-		$this->assertEquals('IONOS_API_ERROR', $data['error']);
-		$this->assertEquals('Failed to create email account', $data['message']);
+		self::assertEquals($expectedResponse, $response);
 	}
 
 	public function testCreateWithGenericException(): void {
@@ -149,25 +148,14 @@ class IonosAccountsControllerTest extends TestCase {
 		// Mock IONOS API to throw a generic exception
 		$this->mockCallIonosCreateEmailAPI(null, new \Exception('Generic error'));
 
-		$this->logger
-			->expects($this->atLeastOnce())
-			->method('error')
-			->with(
-				$this->callback(function ($message) {
-					return $message === 'IONOS service error' || $message === 'Unexpected error during IONOS account creation';
-				}),
-				$this->callback(function ($context) use ($emailAddress) {
-					return $context['emailAddress'] === $emailAddress;
-				})
-			);
-
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::error('Could not create account',
+			500,
+			[],
+			0
+		);
 		$response = $this->controller->create($accountName, $emailAddress);
 
-		$this->assertEquals(500, $response->getStatus());
-		$data = $response->getData();
-		$this->assertFalse($data['success']);
-		$this->assertEquals('UNKNOWN_ERROR', $data['error']);
-		$this->assertEquals('There was an error while setting up your account', $data['message']);
+		self::assertEquals($expectedResponse, $response);
 	}
 
 	public function testCreateIonosEmailAccountSuccess(): void {
@@ -295,57 +283,6 @@ class IonosAccountsControllerTest extends TestCase {
 		$this->assertSame($expectedResponse, $result);
 	}
 
-	public function testHandleServiceException(): void {
-		$emailAddress = 'test@example.com';
-		$exception = new ServiceException('Test service error');
-
-		$this->logger
-			->expects($this->once())
-			->method('error')
-			->with('IONOS service error', [
-				'exception' => $exception,
-				'emailAddress' => $emailAddress
-			]);
-
-		$reflection = new ReflectionClass($this->controller);
-		$method = $reflection->getMethod('handleServiceException');
-		$method->setAccessible(true);
-
-		$result = $method->invoke($this->controller, $exception, $emailAddress);
-
-		$this->assertInstanceOf(JSONResponse::class, $result);
-		$this->assertEquals(400, $result->getStatus());
-		$data = $result->getData();
-		$this->assertFalse($data['success']);
-		$this->assertEquals('IONOS_API_ERROR', $data['error']);
-		$this->assertEquals('Test service error', $data['message']);
-	}
-
-	public function testHandleGenericException(): void {
-		$emailAddress = 'test@example.com';
-		$exception = new \Exception('Test generic error');
-
-		$this->logger
-			->expects($this->once())
-			->method('error')
-			->with('Unexpected error during IONOS account creation', [
-				'exception' => $exception,
-				'emailAddress' => $emailAddress
-			]);
-
-		$reflection = new ReflectionClass($this->controller);
-		$method = $reflection->getMethod('handleGenericException');
-		$method->setAccessible(true);
-
-		$result = $method->invoke($this->controller, $exception, $emailAddress);
-
-		$this->assertInstanceOf(JSONResponse::class, $result);
-		$this->assertEquals(500, $result->getStatus());
-		$data = $result->getData();
-		$this->assertFalse($data['success']);
-		$this->assertEquals('UNKNOWN_ERROR', $data['error']);
-		$this->assertEquals('There was an error while setting up your account', $data['message']);
-	}
 
 	public function testCallIonosCreateEmailAPIWithInvalidDomain(): void {
 		$accountName = 'Test Account';
