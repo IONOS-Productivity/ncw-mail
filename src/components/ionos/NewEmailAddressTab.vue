@@ -10,6 +10,7 @@
 			type="text"
 			:placeholder="t('mail', 'Name')"
 			:disabled="loading || localLoading"
+			@change="clearAllFeedback"
 			autofocus />
 		<NcInputField id="ionos-email-address"
 			v-model="emailAddress"
@@ -18,18 +19,11 @@
 			:placeholder="t('mail', 'Mail address')"
 			:disabled="loading || localLoading"
 			required
-			@change="clearFeedback" />
+			@change="clearAllFeedback" />
 		<p v-if="emailAddress && !isValidEmail(emailAddress)" class="account-form--error">
 			{{ t('mail', 'Please enter an email of the format name@example.com') }}
 		</p>
 		<span class="email-domain-hint">@myworkspace.com</span>
-		<NcPasswordField id="ionos-password"
-			v-model="password"
-			:disabled="loading || localLoading"
-			type="password"
-			:label="t('mail', 'Password')"
-			:placeholder="t('mail', 'Password')"
-			required />
 		<div class="account-form__submit-buttons">
 			<NcButton class="account-form__submit-button"
 				type="primary"
@@ -49,16 +43,20 @@
 </template>
 
 <script>
-import { NcInputField, NcPasswordField, NcButton, NcLoadingIcon as IconLoading } from '@nextcloud/vue'
+import { NcInputField, NcButton, NcLoadingIcon as IconLoading } from '@nextcloud/vue'
 import IconCheck from 'vue-material-design-icons/Check.vue'
 import { generateUrl } from '@nextcloud/router'
 import axios from '@nextcloud/axios'
+import { translate as t } from '@nextcloud/l10n'
+import logger from '../../logger.js'
+import { fixAccountId } from '../../service/AccountService.js'
+import { mapStores } from 'pinia'
+import useMainStore from '../../store/mainStore.js'
 
 export default {
 	name: 'NewEmailAddressTab',
 	components: {
 		NcInputField,
-		NcPasswordField,
 		NcButton,
 		IconLoading,
 		IconCheck,
@@ -79,62 +77,79 @@ export default {
 	},
 	data() {
 		return {
-			accountName: '',
-			emailAddress: '',
-			password: '',
+			accountName: 'foo',
+			emailAddress: 'admin@mail.localhost',
 			localLoading: false,
 			feedback: null,
 		}
 	},
 	computed: {
+		...mapStores(useMainStore),
 		isFormValid() {
 			return this.accountName
 				&& this.isValidEmail(this.emailAddress)
-				&& this.password
 		},
 
 		buttonText() {
 			return this.localLoading
-				? this.t('mail', 'Creating account...')
-				: this.t('mail', 'Create & Connect')
+				? t('mail', 'Creating account...')
+				: t('mail', 'Create & Connect')
 		},
 	},
 	methods: {
 		async submitForm() {
-			this.clearLocalFeedback()
-			this.clearFeedback()
+			this.clearAllFeedback()
 			this.localLoading = true
 
 			try {
-				const response = await this.callIonosAPI({
+				const account = await this.callIonosAPI({
 					accountName: this.accountName,
 					emailAddress: this.emailAddress,
-					password: this.password,
 				})
 
-				this.feedback = response.data.message || this.t('mail', 'Account created successfully')
+				logger.debug(`account ${account.id} created`, { account })
 
+				this.feedback = t('mail', 'Account created successfully')
+
+				this.loadingMessage = t('mail', 'Loading account')
+				await this.mainStore.finishAccountSetup({ account })
+				this.$emit('account-created', account)
 			} catch (error) {
 				console.error('Account creation failed:', error)
 
-				this.feedback = error.response?.data?.message
-					|| this.t('mail', 'There was an error while setting up your account')
+				if (error.data?.error === 'IONOS_API_ERROR') {
+					this.feedback = t('mail', 'There was an error while setting up your account')
+				} else {
+					this.feedback = t('mail', 'There was an error while setting up your account')
+				}
 			} finally {
 				this.localLoading = false
 			}
 		},
 
-		async callIonosAPI({ accountName, emailAddress, password }) {
+		async callIonosAPI({ accountName, emailAddress }) {
 			const url = generateUrl('/apps/mail/api/ionos/accounts')
-			return await axios.post(url, {
-				accountName,
-				emailAddress,
-				password,
-			})
+
+			return axios
+				.post(url, { accountName, emailAddress })
+				.then((resp) => resp.data.data)
+				.then(fixAccountId)
+				.catch((e) => {
+					if (e.response && e.response.status === 400) {
+						throw e.response.data
+					}
+
+					throw e
+				})
 		},
 
 		clearLocalFeedback() {
 			this.feedback = null
+		},
+
+		clearAllFeedback() {
+			this.clearLocalFeedback()
+			this.clearFeedback()
 		},
 	},
 }

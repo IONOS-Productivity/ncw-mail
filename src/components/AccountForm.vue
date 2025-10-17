@@ -199,10 +199,14 @@
 					required
 					@change="clearFeedback" />
 			</Tab>
-			<Tab id="create" key="create" :name="t('mail', 'New Email Address')">
+			<Tab v-if="useIonosMailconfig"
+				id="create"
+				key="create"
+				:name="t('mail', 'New Email Address')">
 				<NewEmailAddressTab :loading="loading"
 					:clear-feedback="clearFeedback"
-					:is-valid-email="isValidEmail" />
+					:is-valid-email="isValidEmail"
+					@account-created="(account) => $emit('account-created', account)" />
 			</Tab>
 		</Tabs>
 		<div v-if="isGoogleAccount && !googleOauthUrl" class="account-form__google-sso">
@@ -328,6 +332,10 @@ export default {
 			'microsoftOauthUrl',
 		]),
 
+		useIonosMailconfig() {
+			return this.mainStore.getPreference('ionos-mailconfig-enabled', null)
+		},
+
 		settingsPage() {
 			return this.account !== undefined
 		},
@@ -415,6 +423,12 @@ export default {
 				if (this.manualConfig.smtpPassword === '') {
 					this.manualConfig.smtpPassword = this.autoConfig.password
 				}
+			}
+			if (this.mode === 'create') {
+				// cleanup host info in order to remove isGoogleAccount message from interface
+				this.manualConfig.imapHost = undefined
+				this.manualConfig.smtpHost = undefined
+				this.clearFeedback()
 			}
 		},
 		onImapSslModeChange(value) {

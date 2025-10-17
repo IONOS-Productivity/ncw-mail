@@ -87,14 +87,14 @@ class IonosAccountsControllerTest extends TestCase {
 					'password' => 'tmp',
 					'port' => 1143,
 					'security' => 'none',
-					'username' => 'admin@strado.de',
+					'username' => $emailAddress, // Updated to use actual email address
 				],
 				'smtp' => [
 					'host' => 'mail.localhost',
 					'password' => 'tmp',
 					'port' => 1587,
 					'security' => 'none',
-					'username' => 'admin@strado.de',
+					'username' => $emailAddress, // Updated to use actual email address
 				]
 			]
 		]);
@@ -110,11 +110,8 @@ class IonosAccountsControllerTest extends TestCase {
 
 		$response = $this->controller->create($accountName, $emailAddress);
 
-		$this->assertEquals(201, $response->getStatus());
-		$data = $response->getData();
-		$this->assertTrue($data['success']);
-		$this->assertEquals('Email account created successfully via IONOS', $data['message']);
-		$this->assertEquals($accountData, $data['account']);
+		// The controller now directly returns the AccountsController response
+		$this->assertSame($accountResponse, $response);
 	}
 
 	public function testCreateWithServiceException(): void {
@@ -125,24 +122,23 @@ class IonosAccountsControllerTest extends TestCase {
 		$this->mockCallIonosCreateEmailAPI(null, new ServiceException('Failed to create email account'));
 
 		$this->logger
-			->expects($this->atLeastOnce())
+			->expects($this->once())
 			->method('error')
 			->with(
-				$this->callback(function ($message) {
-					return $message === 'IONOS service error' || $message === 'Unexpected error during IONOS account creation';
-				}),
-				$this->callback(function ($context) use ($emailAddress) {
-					return $context['emailAddress'] === $emailAddress;
-				})
+				'IONOS service error: Failed to create email account',
+				[
+					'emailAddress' => $emailAddress,
+					'error' => 'IONOS_API_ERROR',
+				]
 			);
 
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
+			'emailAddress' => 'test@example.com',
+			'error' => 'IONOS_API_ERROR',
+		]);
 		$response = $this->controller->create($accountName, $emailAddress);
 
-		$this->assertEquals(400, $response->getStatus());
-		$data = $response->getData();
-		$this->assertFalse($data['success']);
-		$this->assertEquals('IONOS_API_ERROR', $data['error']);
-		$this->assertEquals('Failed to create email account', $data['message']);
+		self::assertEquals($expectedResponse, $response);
 	}
 
 	public function testCreateWithGenericException(): void {
@@ -152,32 +148,46 @@ class IonosAccountsControllerTest extends TestCase {
 		// Mock IONOS API to throw a generic exception
 		$this->mockCallIonosCreateEmailAPI(null, new \Exception('Generic error'));
 
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::error('Could not create account',
+			500,
+			[],
+			0
+		);
+		$response = $this->controller->create($accountName, $emailAddress);
+
+		self::assertEquals($expectedResponse, $response);
+	}
+
+	public function testCreateWithSimulatedError(): void {
+		$accountName = 'error'; // This triggers the simulated error
+		$emailAddress = 'test@example.com';
+
 		$this->logger
-			->expects($this->atLeastOnce())
+			->expects($this->once())
 			->method('error')
 			->with(
-				$this->callback(function ($message) {
-					return $message === 'IONOS service error' || $message === 'Unexpected error during IONOS account creation';
-				}),
-				$this->callback(function ($context) use ($emailAddress) {
-					return $context['emailAddress'] === $emailAddress;
-				})
+				'IONOS service error: Failed to create email account',
+				[
+					'emailAddress' => $emailAddress,
+					'error' => 'IONOS_API_ERROR',
+				]
 			);
+
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
+			'emailAddress' => 'test@example.com',
+			'error' => 'IONOS_API_ERROR',
+		]);
 
 		$response = $this->controller->create($accountName, $emailAddress);
 
-		$this->assertEquals(500, $response->getStatus());
-		$data = $response->getData();
-		$this->assertFalse($data['success']);
-		$this->assertEquals('UNKNOWN_ERROR', $data['error']);
-		$this->assertEquals('There was an error while setting up your account', $data['message']);
+		self::assertEquals($expectedResponse, $response);
 	}
 
 	public function testCreateIonosEmailAccountSuccess(): void {
 		$accountName = 'Test Account';
 		$emailAddress = 'test@example.com';
 
-		// Mock successful IONOS API response - using actual mock data
+		// Mock successful IONOS API response - using actual mock data with correct email address
 		$mockResponse = [
 			'success' => true,
 			'mailConfig' => [
@@ -185,13 +195,13 @@ class IonosAccountsControllerTest extends TestCase {
 					'host' => 'mail.localhost',
 					'port' => 1143,
 					'security' => 'none',
-					'username' => 'admin@strado.de',
+					'username' => $emailAddress, // Updated to use actual email address
 				],
 				'smtp' => [
 					'host' => 'mail.localhost',
 					'port' => 1587,
 					'security' => 'none',
-					'username' => 'admin@strado.de',
+					'username' => $emailAddress, // Updated to use actual email address
 				]
 			]
 		];
@@ -204,6 +214,20 @@ class IonosAccountsControllerTest extends TestCase {
 
 		$result = $method->invoke($this->controller, $accountName, $emailAddress);
 		$this->assertEquals($mockResponse['mailConfig'], $result);
+	}
+
+	public function testCreateIonosEmailAccountWithSimulatedError(): void {
+		$accountName = 'error'; // This triggers the simulated error
+		$emailAddress = 'test@example.com';
+
+		$reflection = new ReflectionClass($this->controller);
+		$method = $reflection->getMethod('createIonosEmailAccount');
+		$method->setAccessible(true);
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to create email account');
+
+		$method->invoke($this->controller, $accountName, $emailAddress);
 	}
 
 	public function testCreateIonosEmailAccountFailure(): void {
@@ -256,14 +280,14 @@ class IonosAccountsControllerTest extends TestCase {
 				'host' => 'mail.localhost',
 				'port' => 1143,
 				'security' => 'none',
-				'username' => 'admin@strado.de',
+				'username' => $emailAddress, // Updated to use actual email address
 				'password' => 'tmp'
 			],
 			'smtp' => [
 				'host' => 'mail.localhost',
 				'port' => 1587,
 				'security' => 'none',
-				'username' => 'admin@strado.de',
+				'username' => $emailAddress, // Updated to use actual email address
 				'password' => 'tmp'
 			]
 		];
@@ -279,12 +303,12 @@ class IonosAccountsControllerTest extends TestCase {
 				'mail.localhost',
 				1143,
 				'none',
-				'admin@strado.de',
+				$emailAddress, // Updated to use actual email address
 				'tmp',
 				'mail.localhost',
 				1587,
 				'none',
-				'admin@strado.de',
+				$emailAddress, // Updated to use actual email address
 				'tmp',
 			)
 			->willReturn($expectedResponse);
@@ -298,57 +322,6 @@ class IonosAccountsControllerTest extends TestCase {
 		$this->assertSame($expectedResponse, $result);
 	}
 
-	public function testHandleServiceException(): void {
-		$emailAddress = 'test@example.com';
-		$exception = new ServiceException('Test service error');
-
-		$this->logger
-			->expects($this->once())
-			->method('error')
-			->with('IONOS service error', [
-				'exception' => $exception,
-				'emailAddress' => $emailAddress
-			]);
-
-		$reflection = new ReflectionClass($this->controller);
-		$method = $reflection->getMethod('handleServiceException');
-		$method->setAccessible(true);
-
-		$result = $method->invoke($this->controller, $exception, $emailAddress);
-
-		$this->assertInstanceOf(JSONResponse::class, $result);
-		$this->assertEquals(400, $result->getStatus());
-		$data = $result->getData();
-		$this->assertFalse($data['success']);
-		$this->assertEquals('IONOS_API_ERROR', $data['error']);
-		$this->assertEquals('Test service error', $data['message']);
-	}
-
-	public function testHandleGenericException(): void {
-		$emailAddress = 'test@example.com';
-		$exception = new \Exception('Test generic error');
-
-		$this->logger
-			->expects($this->once())
-			->method('error')
-			->with('Unexpected error during IONOS account creation', [
-				'exception' => $exception,
-				'emailAddress' => $emailAddress
-			]);
-
-		$reflection = new ReflectionClass($this->controller);
-		$method = $reflection->getMethod('handleGenericException');
-		$method->setAccessible(true);
-
-		$result = $method->invoke($this->controller, $exception, $emailAddress);
-
-		$this->assertInstanceOf(JSONResponse::class, $result);
-		$this->assertEquals(500, $result->getStatus());
-		$data = $result->getData();
-		$this->assertFalse($data['success']);
-		$this->assertEquals('UNKNOWN_ERROR', $data['error']);
-		$this->assertEquals('There was an error while setting up your account', $data['message']);
-	}
 
 	public function testCallIonosCreateEmailAPIWithInvalidDomain(): void {
 		$accountName = 'Test Account';
