@@ -8,17 +8,22 @@ declare(strict_types=1);
  */
 namespace OCA\Mail\Controller;
 
+use OCA\Mail\AppInfo\Application;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
+use OCA\Mail\Service\IONOS\ApiMailConfigClientService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\Exceptions\AppConfigException;
+use OCP\IAppConfig;
 use OCP\IRequest;
 use Psr\Log\LoggerInterface;
 
 #[OpenAPI(scope: OpenAPI::SCOPE_IGNORE)]
 class IonosAccountsController extends Controller {
+	public const BRAND = 'IONOS';
 
 	// Error message constants
 	private const ERR_ALL_FIELDS_REQUIRED = 'All fields are required';
@@ -28,6 +33,8 @@ class IonosAccountsController extends Controller {
 	public function __construct(
 		string $appName,
 		IRequest $request,
+		private IAppConfig $appConfig,
+		private ApiMailConfigClientService $apiMailConfigClientService,
 		private AccountsController $accountsController,
 		private LoggerInterface $logger,
 	) {
@@ -118,9 +125,34 @@ class IonosAccountsController extends Controller {
 	}
 
 	/**
-	 * @throws ServiceException
+	 * @throws ServiceException|AppConfigException
 	 */
 	protected function callIonosCreateEmailAPI(string $emailAddress): ?array {
+		$apiBaseUrl = $this->appConfig->getValueString(Application::APP_ID, 'ionos_mailconfig_api_base_url');
+		$allowInsecure = $this->appConfig->getValueBool(Application::APP_ID, 'ionos_mailconfig_api_allow_insecure');
+		$basicAuthUser = $this->appConfig->getValueString(Application::APP_ID, 'ionos_mailconfig_api_auth_user');
+		$basicAuthPass = $this->appConfig->getValueString(Application::APP_ID, 'ionos_mailconfig_api_auth_pass');
+
+		$this->logger->debug('send', [
+			'emailAddress' => $emailAddress,
+			'apiBaseUrl' => $apiBaseUrl
+		]);
+
+		if (empty($apiBaseUrl)) {
+			$this->logger->error('No mailconfig service url is configured');
+			throw new AppConfigException('No mailconfig service configured');
+		}
+
+		if (empty($basicAuthUser)) {
+			$this->logger->error('No mailconfig service user is configured');
+			throw new AppConfigException('No mailconfig user configured');
+		}
+
+		if (empty($basicAuthPass)) {
+			$this->logger->error('No mailconfig service pass is configured');
+			throw new AppConfigException('No mailconfig service pass configured');
+		}
+
 		$atPosition = strrchr($emailAddress, '@');
 		if ($atPosition === false) {
 			throw new ServiceException('Invalid email address: unable to extract domain');
@@ -129,25 +161,46 @@ class IonosAccountsController extends Controller {
 		if ($domain === '') {
 			throw new ServiceException('Invalid email address: unable to extract domain');
 		}
-		return [
-			'success' => true,
-			'message' => 'Email account created successfully via IONOS (mock)',
-			'mailConfig' => [
-				'imap' => [
-					'host' => 'mail.localhost', // 'imap.' . $domain,
-					'password' => 'tmp',
-					'port' => 1143, // 993,
-					'security' => 'none',
-					'username' => $emailAddress,
-				],
-				'smtp' => [
-					'host' => 'mail.localhost', // 'smtp.' . $domain,
-					'password' => 'tmp',
-					'port' => 1587, // 465,
-					'security' => 'none',
-					'username' => $emailAddress,
+
+		$client = $this->apiMailConfigClientService->newClient([
+			'auth' => [$basicAuthUser, $basicAuthPass],
+			'verify' => !$allowInsecure,
+		]);
+
+		$apiInstance = $this->apiMailConfigClientService->newEventAPIApi($client, $apiBaseUrl);
+
+		$extRef = 'extRef_example'; // string
+		$mailCreateData = new \IONOS\MailConfigurationAPI\Client\Model\MailCreateData();
+		$mailCreateData->setNextcloudUserId('foo');
+		$mailCreateData->setMailaddress($emailAddress);
+
+		try {
+			$this->logger->debug('Send message to mailconfig service', ['data' => $mailCreateData]);
+			$result = $apiInstance->createMailbox(self::BRAND, $extRef, $mailCreateData);
+
+			return [
+				'success' => true,
+				'message' => 'Email account created successfully via IONOS (mock)',
+				'mailConfig' => [
+					'imap' => [
+						'host' => 'mail.localhost', // 'imap.' . $domain,
+						'password' => 'tmp',
+						'port' => 1143, // 993,
+						'security' => 'none',
+						'username' => $emailAddress,
+					],
+					'smtp' => [
+						'host' => 'mail.localhost', // 'smtp.' . $domain,
+						'password' => 'tmp',
+						'port' => 1587, // 465,
+						'security' => 'none',
+						'username' => $emailAddress,
+					]
 				]
-			]
-		];
+			];
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when calling MailConfigurationAPIApi->processShareByLinkEvent', ['exception' => $e]);
+			throw new ServiceException('Failed to create ionos mail', $e);
+		}
 	}
 }
