@@ -1,0 +1,176 @@
+<!--
+  - SPDX-FileCopyrightText: 2025 STRATO GmbH
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<template>
+	<div>
+		<NcInputField id="ionos-account-name"
+			v-model="accountName"
+			:label="t('mail', 'Name')"
+			type="text"
+			:placeholder="t('mail', 'Name')"
+			:disabled="loading || localLoading"
+			autofocus />
+		<NcInputField id="ionos-email-address"
+			v-model="emailAddress"
+			:label="t('mail', 'Mail address')"
+			type="email"
+			:placeholder="t('mail', 'Mail address')"
+			:disabled="loading || localLoading"
+			required
+			@change="clearFeedback" />
+		<p v-if="emailAddress && !isValidEmail(emailAddress)" class="account-form--error">
+			{{ t('mail', 'Please enter an email of the format name@example.com') }}
+		</p>
+		<span class="email-domain-hint">@myworkspace.com</span>
+		<NcPasswordField id="ionos-password"
+			v-model="password"
+			:disabled="loading || localLoading"
+			type="password"
+			:label="t('mail', 'Password')"
+			:placeholder="t('mail', 'Password')"
+			required />
+		<div class="account-form__submit-buttons">
+			<NcButton class="account-form__submit-button"
+				type="primary"
+				:disabled="!isFormValid || localLoading"
+				@click="submitForm">
+				<template #icon>
+					<IconLoading v-if="localLoading" :size="20" />
+					<IconCheck v-else :size="20" />
+				</template>
+				{{ buttonText }}
+			</NcButton>
+		</div>
+		<div v-if="feedback" class="account-form--feedback">
+			{{ feedback }}
+		</div>
+	</div>
+</template>
+
+<script>
+import { NcInputField, NcPasswordField, NcButton, NcLoadingIcon as IconLoading } from '@nextcloud/vue'
+import IconCheck from 'vue-material-design-icons/Check.vue'
+import { generateUrl } from '@nextcloud/router'
+import axios from '@nextcloud/axios'
+
+export default {
+	name: 'NewEmailAddressTab',
+	components: {
+		NcInputField,
+		NcPasswordField,
+		NcButton,
+		IconLoading,
+		IconCheck,
+	},
+	props: {
+		loading: {
+			type: Boolean,
+			default: false,
+		},
+		clearFeedback: {
+			type: Function,
+			default: () => {},
+		},
+		isValidEmail: {
+			type: Function,
+			required: true,
+		},
+	},
+	data() {
+		return {
+			accountName: '',
+			emailAddress: '',
+			password: '',
+			localLoading: false,
+			feedback: null,
+		}
+	},
+	computed: {
+		isFormValid() {
+			return this.accountName
+				&& this.isValidEmail(this.emailAddress)
+				&& this.password
+		},
+
+		buttonText() {
+			return this.localLoading
+				? this.t('mail', 'Creating account...')
+				: this.t('mail', 'Create & Connect')
+		},
+	},
+	methods: {
+		async submitForm() {
+			this.clearLocalFeedback()
+			this.clearFeedback()
+			this.localLoading = true
+
+			try {
+				const response = await this.callIonosAPI({
+					accountName: this.accountName,
+					emailAddress: this.emailAddress,
+					password: this.password,
+				})
+
+				this.feedback = response.data.message || this.t('mail', 'Account created successfully')
+
+			} catch (error) {
+				console.error('Account creation failed:', error)
+
+				this.feedback = error.response?.data?.message
+					|| this.t('mail', 'There was an error while setting up your account')
+			} finally {
+				this.localLoading = false
+			}
+		},
+
+		async callIonosAPI({ accountName, emailAddress, password }) {
+			const url = generateUrl('/apps/mail/api/ionos/accounts')
+			return await axios.post(url, {
+				accountName,
+				emailAddress,
+				password,
+			})
+		},
+
+		clearLocalFeedback() {
+			this.feedback = null
+		},
+	},
+}
+</script>
+
+<style scoped>
+.account-form__submit-buttons {
+	display: flex;
+	justify-content: center;
+	margin-top: 16px;
+}
+
+.email-domain-hint {
+	display: block;
+	margin-top: -8px;
+	margin-bottom: 8px;
+	font-size: 13px;
+	color: #888;
+}
+
+.account-form--error {
+	text-align: start;
+	font-size: 14px;
+	color: var(--color-error);
+	margin-top: -8px;
+	margin-bottom: 8px;
+}
+</style>
+
+<style>
+.tabs-component-panels :deep(.input-field) {
+	margin: calc(var(--default-grid-baseline, 4px) * 3) 0;
+}
+
+.tabs-component-panels input {
+	width: 100%;
+	box-sizing: border-box;
+}
+</style>
