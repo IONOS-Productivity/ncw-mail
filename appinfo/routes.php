@@ -116,6 +116,11 @@ return [
 			'verb' => 'POST'
 		],
 		[
+			'name' => 'ionosAccounts#create',
+			'url' => '/api/ionos/accounts',
+			'verb' => 'POST'
+		],
+		[
 			'name' => 'tags#update',
 			'url' => '/api/tags/{id}',
 			'verb' => 'PUT'
