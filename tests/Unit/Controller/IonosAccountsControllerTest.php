@@ -78,7 +78,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock successful IONOS API response - using the actual mock data from controller
-		$this->mockCallIonosCreateEmailAPI([
+		$this->mockCreateEmailAccount([
 			'success' => true,
 			'message' => 'Email account created successfully via IONOS (mock)',
 			'mailConfig' => [
@@ -119,7 +119,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock failed IONOS API response by throwing ServiceException
-		$this->mockCallIonosCreateEmailAPI(null, new ServiceException('Failed to create email account'));
+		$this->mockCreateEmailAccount(null, new ServiceException('Failed to create email account'));
 
 		$this->logger
 			->expects($this->once())
@@ -146,7 +146,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock IONOS API to throw a generic exception
-		$this->mockCallIonosCreateEmailAPI(null, new \Exception('Generic error'));
+		$this->mockCreateEmailAccount(null, new \Exception('Generic error'));
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::error('Could not create account',
 			500,
@@ -181,7 +181,7 @@ class IonosAccountsControllerTest extends TestCase {
 			]
 		];
 
-		$this->mockCallIonosCreateEmailAPI($mockResponse);
+		$this->mockCreateEmailAccount($mockResponse);
 
 		$reflection = new ReflectionClass($this->controller);
 		$method = $reflection->getMethod('createIonosEmailAccount');
@@ -196,7 +196,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock failed IONOS API response
-		$this->mockCallIonosCreateEmailAPI(['success' => false]);
+		$this->mockCreateEmailAccount(['success' => false]);
 
 		$this->logger
 			->expects($this->once())
@@ -217,7 +217,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock IONOS API response without mailConfig
-		$this->mockCallIonosCreateEmailAPI(['success' => true]);
+		$this->mockCreateEmailAccount(['success' => true]);
 
 		$this->logger
 			->expects($this->once())
@@ -289,7 +289,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$emailAddress = 'invalid-email-without-at';
 
 		$reflection = new ReflectionClass($this->controller);
-		$method = $reflection->getMethod('callIonosCreateEmailAPI');
+		$method = $reflection->getMethod('createIonosEmailAccount');
 		$method->setAccessible(true);
 
 		$this->expectException(ServiceException::class);
@@ -299,9 +299,9 @@ class IonosAccountsControllerTest extends TestCase {
 	}
 
 	/**
-	 * Helper method to mock the callIonosCreateEmailAPI method
+	 * Helper method to mock the createIonosEmailAccount method
 	 */
-	private function mockCallIonosCreateEmailAPI($returnValue, $exception = null): void {
+	private function mockCreateEmailAccount($returnValue, $exception = null): void {
 		// Create a partial mock to override the protected method
 		$controllerMock = $this->getMockBuilder(IonosAccountsController::class)
 			->setConstructorArgs([
@@ -310,13 +310,13 @@ class IonosAccountsControllerTest extends TestCase {
 				$this->accountsController,
 				$this->logger
 			])
-			->onlyMethods(['callIonosCreateEmailAPI'])
+			->onlyMethods(['createEmailAccount'])
 			->getMock();
 
 		if ($exception) {
-			$controllerMock->method('callIonosCreateEmailAPI')->willThrowException($exception);
+			$controllerMock->method('createEmailAccount')->willThrowException($exception);
 		} else {
-			$controllerMock->method('callIonosCreateEmailAPI')->willReturn($returnValue);
+			$controllerMock->method('createEmailAccount')->willReturn($returnValue);
 		}
 
 		// Replace the controller instance with the mock
