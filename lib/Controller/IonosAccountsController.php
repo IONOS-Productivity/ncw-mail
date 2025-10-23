@@ -11,6 +11,7 @@ namespace OCA\Mail\Controller;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
+use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
@@ -28,6 +29,7 @@ class IonosAccountsController extends Controller {
 	public function __construct(
 		string $appName,
 		IRequest $request,
+		private IonosMailService $ionosMailService,
 		private AccountsController $accountsController,
 		private LoggerInterface $logger,
 	) {
@@ -78,7 +80,7 @@ class IonosAccountsController extends Controller {
 	 * @throws ServiceException
 	 */
 	private function createIonosEmailAccount(string $accountName, string $emailAddress): array {
-		$ionosResponse = $this->createEmailAccount($emailAddress);
+		$ionosResponse = $this->ionosMailService->createEmailAccount($emailAddress);
 		if ($ionosResponse === null || !($ionosResponse['success'] ?? false)) {
 			$this->logger->error('Failed to create IONOS email account', [ 'emailAddress' => $emailAddress, 'response' => $ionosResponse ]);
 			throw new ServiceException(self::ERR_CREATE_EMAIL_FAILED);
@@ -109,39 +111,5 @@ class IonosAccountsController extends Controller {
 			(string)($smtp['username'] ?? $emailAddress),
 			(string)($smtp['password'] ?? ''),
 		);
-	}
-
-	/**
-	 * @throws ServiceException
-	 */
-	protected function createEmailAccount(string $emailAddress): ?array {
-		$atPosition = strrchr($emailAddress, '@');
-		if ($atPosition === false) {
-			throw new ServiceException('Invalid email address: unable to extract domain');
-		}
-		$domain = substr($atPosition, 1);
-		if ($domain === '') {
-			throw new ServiceException('Invalid email address: unable to extract domain');
-		}
-		return [
-			'success' => true,
-			'message' => 'Email account created successfully via IONOS (mock)',
-			'mailConfig' => [
-				'imap' => [
-					'host' => 'mail.localhost', // 'imap.' . $domain,
-					'password' => 'tmp',
-					'port' => 1143, // 993,
-					'security' => 'none',
-					'username' => $emailAddress,
-				],
-				'smtp' => [
-					'host' => 'mail.localhost', // 'smtp.' . $domain,
-					'password' => 'tmp',
-					'port' => 1587, // 465,
-					'security' => 'none',
-					'username' => $emailAddress,
-				]
-			]
-		];
 	}
 }
