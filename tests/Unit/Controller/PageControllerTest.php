@@ -24,6 +24,7 @@ use OCA\Mail\Service\AliasesService;
 use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\ContextChat\ContextChatSettingsService;
 use OCA\Mail\Service\InternalAddressService;
+use OCA\Mail\Service\IONOS\IonosConfigService;
 use OCA\Mail\Service\MailManager;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
@@ -122,6 +123,8 @@ class PageControllerTest extends TestCase {
 	private ContextChatSettingsService $contextChatSettingsService;
 
 	private ClassificationSettingsService|MockObject $classificationSettingsService;
+
+	private IonosConfigService&MockObject $ionosConfigService;
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -152,6 +155,7 @@ class PageControllerTest extends TestCase {
 		$this->appManager->method('getAppVersion')->willReturn('0.0.1-dev.0');
 		$this->contextChatSettingsService = $this->createMock(ContextChatSettingsService::class);
 		$this->contextChatSettingsService->method('isIndexingEnabled')->willReturn(true);
+		$this->ionosConfigService = $this->createMock(IonosConfigService::class);
 
 		$this->classificationSettingsService = $this->createMock(ClassificationSettingsService::class);
 		$this->controller = new PageController(
@@ -180,7 +184,8 @@ class PageControllerTest extends TestCase {
 			$this->appManager,
 			$this->contextChatSettingsService,
 			$this->classificationSettingsService,
-			$this->appConfig
+			$this->appConfig,
+			$this->ionosConfigService,
 		);
 	}
 
@@ -312,6 +317,9 @@ class PageControllerTest extends TestCase {
 			->method('getValueBool')
 			->with(Application::APP_ID, ConfigLexicon::ALLOW_NEW_MAIL_ACCOUNTS, true)
 			->willReturn(true);
+		$this->ionosConfigService->expects($this->once())
+			->method('getMailDomain')
+			->willReturn('example.tld');
 		$this->aiIntegrationsService->expects(self::exactly(4))
 			->method('isLlmProcessingEnabled')
 			->willReturn(false);
@@ -369,6 +377,7 @@ class PageControllerTest extends TestCase {
 					'reply-mode' => 'bottom',
 					'app-version' => '1.2.3',
 					'ionos-mailconfig-enabled' => false,
+					'ionos-mailconfig-domain' => 'example.tld',
 					'collect-data' => 'true',
 					'start-mailbox-id' => '123',
 					'search-priority-body' => 'false',
