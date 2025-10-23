@@ -13,7 +13,10 @@ use OCA\Mail\AppInfo\Application;
 use OCP\Exceptions\AppConfigException;
 use OCP\IAppConfig;
 use OCP\IConfig;
+use Pdp\Domain;
+use Pdp\Rules;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * Service for managing IONOS API configuration
@@ -124,5 +127,50 @@ class IonosConfigService {
 			'basicAuthUser' => $this->getBasicAuthUser(),
 			'basicAuthPass' => $this->getBasicAuthPassword(),
 		];
+	}
+
+	/**
+	 * Get the mail domain from customer domain
+	 *
+	 * Extracts the registrable domain (mail domain) from the customer domain
+	 * configured in system settings.
+	 */
+	public function getMailDomain(): string {
+		$customerDomain = $this->config->getSystemValue('ncw.customerDomain', '');
+		return $this->extractMailDomain($customerDomain);
+	}
+
+	/**
+	 * Extract the registrable domain (mail domain) from a customer domain.
+	 *
+	 * Uses the Public Suffix List via Pdp library to properly extract the
+	 * registrable domain, handling multi-level TLDs like .co.uk correctly.
+	 *
+	 * Examples:
+	 * - foo.bar.lol -> bar.lol
+	 * - mail.test.co.uk -> test.co.uk
+	 * - sub.domain.example.com -> example.com
+	 *
+	 * @param string $customerDomain The full customer domain
+	 * @return string The extracted mail domain, or empty string if input is empty
+	 */
+	private function extractMailDomain(string $customerDomain): string {
+		if (empty($customerDomain)) {
+			return '';
+		}
+
+		try {
+			$publicSuffixList = Rules::fromPath(__DIR__ . '/../../../resources/public_suffix_list.dat');
+			$domain = Domain::fromIDNA2008($customerDomain);
+			$result = $publicSuffixList->resolve($domain);
+			return $result->registrableDomain()->toString();
+		} catch (Throwable $e) {
+			// Fallback to simple extraction if Pdp fails
+			$parts = explode('.', $customerDomain);
+			if (count($parts) >= 2) {
+				return $parts[count($parts) - 2] . '.' . $parts[count($parts) - 1];
+			}
+			return $customerDomain;
+		}
 	}
 }

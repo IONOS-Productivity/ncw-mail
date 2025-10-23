@@ -23,7 +23,7 @@
 		<p v-if="emailAddress && !isValidEmail(emailAddress)" class="account-form--error">
 			{{ t('mail', 'Please enter an email of the format name@example.com') }}
 		</p>
-		<span class="email-domain-hint">@myworkspace.com</span>
+		<span class="email-domain-hint">@{{ emailDomain }}</span>
 		<div class="account-form__submit-buttons">
 			<NcButton class="account-form__submit-button"
 				type="primary"
@@ -94,6 +94,10 @@ export default {
 			return this.localLoading
 				? t('mail', 'Creating account...')
 				: t('mail', 'Create & Connect')
+		},
+
+		emailDomain() {
+			return this.mainStore.getPreference('ionos-mailconfig-domain', 'myworkspace.com')
 		},
 	},
 	methods: {

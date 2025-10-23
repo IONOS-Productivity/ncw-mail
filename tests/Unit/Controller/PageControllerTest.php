@@ -21,6 +21,7 @@ use OCA\Mail\Service\AiIntegrations\AiIntegrationsService;
 use OCA\Mail\Service\AliasesService;
 use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\InternalAddressService;
+use OCA\Mail\Service\IONOS\IonosConfigService;
 use OCA\Mail\Service\MailManager;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
@@ -115,6 +116,8 @@ class PageControllerTest extends TestCase {
 	private IAvailabilityCoordinator&MockObject $availabilityCoordinator;
 	private IAppManager $appManager;
 
+	private IonosConfigService&MockObject $ionosConfigService;
+
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -143,6 +146,7 @@ class PageControllerTest extends TestCase {
 		$this->quickActionsService = $this->createMock(QuickActionsService::class);
 		$this->appManager = $this->createMock(IAppManager::class);
 		$this->appManager->method('getAppVersion')->willReturn('0.0.1-dev.0');
+		$this->ionosConfigService = $this->createMock(IonosConfigService::class);
 
 		$this->controller = new PageController(
 			$this->appName,
@@ -169,6 +173,7 @@ class PageControllerTest extends TestCase {
 			$this->availabilityCoordinator,
 			$this->quickActionsService,
 			$this->appManager,
+			$this->ionosConfigService,
 		);
 	}
 
@@ -287,8 +292,10 @@ class PageControllerTest extends TestCase {
 				$this->returnValue(''),
 				$this->returnValue('cron'),
 				$this->returnValue('yes'),
-				$this->returnValue('no')
 			);
+		$this->ionosConfigService->expects($this->once())
+			->method('getMailDomain')
+			->willReturn('example.tld');
 		$this->aiIntegrationsService->expects(self::exactly(4))
 			->method('isLlmProcessingEnabled')
 			->willReturn(false);
@@ -341,6 +348,7 @@ class PageControllerTest extends TestCase {
 					'reply-mode' => 'bottom',
 					'app-version' => '1.2.3',
 					'ionos-mailconfig-enabled' => false,
+					'ionos-mailconfig-domain' => 'example.tld',
 					'collect-data' => 'true',
 					'start-mailbox-id' => '123',
 					'tag-classified-messages' => 'false',
