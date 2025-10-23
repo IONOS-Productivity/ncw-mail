@@ -172,4 +172,49 @@ class IonosConfigServiceTest extends TestCase {
 			'basicAuthPass' => 'testpass',
 		], $result);
 	}
+
+	public function testGetMailDomainWithValidDomain(): void {
+		$this->config->method('getSystemValue')
+			->with('ncw.customerDomain', '')
+			->willReturn('mail.example.com');
+
+		$result = $this->service->getMailDomain();
+		$this->assertEquals('example.com', $result);
+	}
+
+	public function testGetMailDomainWithEmptyDomain(): void {
+		$this->config->method('getSystemValue')
+			->with('ncw.customerDomain', '')
+			->willReturn('');
+
+		$result = $this->service->getMailDomain();
+		$this->assertEquals('', $result);
+	}
+
+	public function testGetMailDomainWithMultiLevelTld(): void {
+		$this->config->method('getSystemValue')
+			->with('ncw.customerDomain', '')
+			->willReturn('mail.test.co.uk');
+
+		$result = $this->service->getMailDomain();
+		$this->assertEquals('test.co.uk', $result);
+	}
+
+	public function testGetMailDomainWithSubdomain(): void {
+		$this->config->method('getSystemValue')
+			->with('ncw.customerDomain', '')
+			->willReturn('foo.bar.lol');
+
+		$result = $this->service->getMailDomain();
+		$this->assertEquals('bar.lol', $result);
+	}
+
+	public function testGetMailDomainWithSimpleDomain(): void {
+		$this->config->method('getSystemValue')
+			->with('ncw.customerDomain', '')
+			->willReturn('example.com');
+
+		$result = $this->service->getMailDomain();
+		$this->assertEquals('example.com', $result);
+	}
 }
