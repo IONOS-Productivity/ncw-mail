@@ -42,6 +42,10 @@ export default function initAfterAppCreation() {
 		value: preferences['ionos-mailconfig-enabled'],
 	})
 	mainStore.savePreferenceMutation({
+		key: 'ionos-mailconfig-domain',
+		value: preferences['ionos-mailconfig-domain'],
+	})
+	mainStore.savePreferenceMutation({
 		key: 'external-avatars',
 		value: preferences['external-avatars'],
 	})

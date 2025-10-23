@@ -21,6 +21,7 @@ use OCA\Mail\Service\AiIntegrations\AiIntegrationsService;
 use OCA\Mail\Service\AliasesService;
 use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\InternalAddressService;
+use OCA\Mail\Service\IONOS\IonosConfigService;
 use OCA\Mail\Service\MailManager;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
@@ -113,6 +114,8 @@ class PageControllerTest extends TestCase {
 
 	private IAvailabilityCoordinator&MockObject $availabilityCoordinator;
 
+	private IonosConfigService&MockObject $ionosConfigService;
+
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -139,6 +142,7 @@ class PageControllerTest extends TestCase {
 		$this->internalAddressService = $this->createMock(InternalAddressService::class);
 		$this->availabilityCoordinator = $this->createMock(IAvailabilityCoordinator::class);
 		$this->quickActionsService = $this->createMock(QuickActionsService::class);
+		$this->ionosConfigService = $this->createMock(IonosConfigService::class);
 
 		$this->controller = new PageController(
 			$this->appName,
@@ -164,6 +168,7 @@ class PageControllerTest extends TestCase {
 			$this->internalAddressService,
 			$this->availabilityCoordinator,
 			$this->quickActionsService,
+			$this->ionosConfigService,
 		);
 	}
 
@@ -282,8 +287,10 @@ class PageControllerTest extends TestCase {
 				$this->returnValue(''),
 				$this->returnValue('cron'),
 				$this->returnValue('yes'),
-				$this->returnValue('no')
 			);
+		$this->ionosConfigService->expects($this->once())
+			->method('getMailDomain')
+			->willReturn('example.tld');
 		$this->aiIntegrationsService->expects(self::exactly(4))
 			->method('isLlmProcessingEnabled')
 			->willReturn(false);
@@ -335,6 +342,7 @@ class PageControllerTest extends TestCase {
 					'reply-mode' => 'bottom',
 					'app-version' => '1.2.3',
 					'ionos-mailconfig-enabled' => false,
+					'ionos-mailconfig-domain' => 'example.tld',
 					'collect-data' => 'true',
 					'start-mailbox-id' => '123',
 					'tag-classified-messages' => 'false',
