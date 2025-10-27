@@ -58,10 +58,10 @@ class IonosAccountsController extends Controller {
 
 		try {
 			$this->logger->info('Starting IONOS email account creation', [ 'emailAddress' => $emailAddress, 'accountName' => $accountName ]);
-			$mailConfig = $this->createIonosEmailAccount($accountName, $emailAddress);
+			$ionosResponse = $this->ionosMailService->createEmailAccount($emailAddress);
 
 			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $emailAddress ]);
-			return $this->createNextcloudMailAccount($accountName, $emailAddress, $mailConfig);
+			return $this->createNextcloudMailAccount($accountName, $emailAddress, $ionosResponse['mailConfig']);
 		} catch (ServiceException $e) {
 
 			$data = [
@@ -74,23 +74,6 @@ class IonosAccountsController extends Controller {
 		} catch (\Exception $e) {
 			return MailJsonResponse::error('Could not create account');
 		}
-	}
-
-	/**
-	 * @throws ServiceException
-	 */
-	private function createIonosEmailAccount(string $accountName, string $emailAddress): array {
-		$ionosResponse = $this->ionosMailService->createEmailAccount($emailAddress);
-		if ($ionosResponse === null || !($ionosResponse['success'] ?? false)) {
-			$this->logger->error('Failed to create IONOS email account', [ 'emailAddress' => $emailAddress, 'response' => $ionosResponse ]);
-			throw new ServiceException(self::ERR_CREATE_EMAIL_FAILED);
-		}
-		$mailConfig = $ionosResponse['mailConfig'] ?? null;
-		if (!is_array($mailConfig)) {
-			$this->logger->error('IONOS API response missing mailConfig', [ 'emailAddress' => $emailAddress, 'response' => $ionosResponse ]);
-			throw new ServiceException('Invalid IONOS API response: missing mail configuration');
-		}
-		return $mailConfig;
 	}
 
 	private function createNextcloudMailAccount(string $accountName, string $emailAddress, array $mailConfig): JSONResponse {
