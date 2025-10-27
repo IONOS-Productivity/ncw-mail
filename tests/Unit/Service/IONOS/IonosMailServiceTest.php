@@ -12,6 +12,11 @@ namespace OCA\Mail\Tests\Unit\Service\IONOS;
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use GuzzleHttp\ClientInterface;
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
+use IONOS\MailConfigurationAPI\Client\Model\ErrorMessage;
+use IONOS\MailConfigurationAPI\Client\Model\Imap;
+use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
+use IONOS\MailConfigurationAPI\Client\Model\MailServer;
+use IONOS\MailConfigurationAPI\Client\Model\Smtp;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Service\IONOS\ApiMailConfigClientService;
 use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
@@ -77,22 +82,54 @@ class IonosMailServiceTest extends TestCase {
 			->with($client, 'https://api.example.com')
 			->willReturn($apiInstance);
 
-		$apiInstance->method('createMailbox')->willReturn(null);
+		// Mock API response - use getMockBuilder with onlyMethods for existing methods
+		$imapServer = $this->getMockBuilder(Imap::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
+			->getMock();
+		$imapServer->method('getHost')->willReturn('imap.example.com');
+		$imapServer->method('getPort')->willReturn(993);
+		$imapServer->method('getSslMode')->willReturn('ssl');
+
+		$smtpServer = $this->getMockBuilder(Smtp::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
+			->getMock();
+		$smtpServer->method('getHost')->willReturn('smtp.example.com');
+		$smtpServer->method('getPort')->willReturn(587);
+		$smtpServer->method('getSslMode')->willReturn('tls');
+
+		$mailServer = $this->getMockBuilder(MailServer::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getImap', 'getSmtp'])
+			->getMock();
+		$mailServer->method('getImap')->willReturn($imapServer);
+		$mailServer->method('getSmtp')->willReturn($smtpServer);
+
+		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getEmail', 'getPassword', 'getServer'])
+			->getMock();
+		$mailAccountResponse->method('getEmail')->willReturn($emailAddress);
+		$mailAccountResponse->method('getPassword')->willReturn('test-password');
+		$mailAccountResponse->method('getServer')->willReturn($mailServer);
+
+		$apiInstance->method('createMailbox')->willReturn($mailAccountResponse);
 
 		$result = $this->service->createEmailAccount($emailAddress);
 
 		$this->assertInstanceOf(MailAccountConfig::class, $result);
 		$this->assertEquals($emailAddress, $result->getEmail());
-		$this->assertEquals('mail.localhost', $result->getImap()->getHost());
-		$this->assertEquals(1143, $result->getImap()->getPort());
-		$this->assertEquals('none', $result->getImap()->getSecurity());
+		$this->assertEquals('imap.example.com', $result->getImap()->getHost());
+		$this->assertEquals(993, $result->getImap()->getPort());
+		$this->assertEquals('ssl', $result->getImap()->getSecurity());
 		$this->assertEquals($emailAddress, $result->getImap()->getUsername());
-		$this->assertEquals('tmp', $result->getImap()->getPassword());
-		$this->assertEquals('mail.localhost', $result->getSmtp()->getHost());
-		$this->assertEquals(1587, $result->getSmtp()->getPort());
-		$this->assertEquals('none', $result->getSmtp()->getSecurity());
+		$this->assertEquals('test-password', $result->getImap()->getPassword());
+		$this->assertEquals('smtp.example.com', $result->getSmtp()->getHost());
+		$this->assertEquals(587, $result->getSmtp()->getPort());
+		$this->assertEquals('tls', $result->getSmtp()->getSecurity());
 		$this->assertEquals($emailAddress, $result->getSmtp()->getUsername());
-		$this->assertEquals('tmp', $result->getSmtp()->getPassword());
+		$this->assertEquals('test-password', $result->getSmtp()->getPassword());
 	}
 
 	public function testCreateEmailAccountWithApiException(): void {
@@ -127,6 +164,83 @@ class IonosMailServiceTest extends TestCase {
 		$this->logger->expects($this->once())
 			->method('error')
 			->with('Exception when calling MailConfigurationAPIApi->createMailbox', $this->anything());
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to create ionos mail');
+
+		$this->service->createEmailAccount($emailAddress);
+	}
+
+	public function testCreateEmailAccountWithErrorMessageResponse(): void {
+		$emailAddress = 'test@example.com';
+
+		// Mock config
+		$this->configService->method('getApiConfig')
+			->willReturn([
+				'extRef' => 'test-ext-ref',
+				'apiBaseUrl' => 'https://api.example.com',
+				'allowInsecure' => false,
+				'basicAuthUser' => 'testuser',
+				'basicAuthPass' => 'testpass',
+			]);
+
+		// Mock user session
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser123');
+		$this->userSession->method('getUser')->willReturn($user);
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+
+		// Mock ErrorMessage response
+		$errorMessage = $this->getMockBuilder(ErrorMessage::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getStatus', 'getMessage'])
+			->getMock();
+		$errorMessage->method('getStatus')->willReturn(400);
+		$errorMessage->method('getMessage')->willReturn('Bad Request');
+
+		$apiInstance->method('createMailbox')->willReturn($errorMessage);
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to create ionos mail');
+
+		$this->service->createEmailAccount($emailAddress);
+	}
+
+	public function testCreateEmailAccountWithUnknownResponseType(): void {
+		$emailAddress = 'test@example.com';
+
+		// Mock config
+		$this->configService->method('getApiConfig')
+			->willReturn([
+				'extRef' => 'test-ext-ref',
+				'apiBaseUrl' => 'https://api.example.com',
+				'allowInsecure' => false,
+				'basicAuthUser' => 'testuser',
+				'basicAuthPass' => 'testpass',
+			]);
+
+		// Mock user session
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser123');
+		$this->userSession->method('getUser')->willReturn($user);
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+
+		// Mock unknown response type (return a stdClass instead of expected types)
+		$unknownResponse = new \stdClass();
+		$apiInstance->method('createMailbox')->willReturn($unknownResponse);
+
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
@@ -176,5 +290,27 @@ class IonosMailServiceTest extends TestCase {
 		$this->expectExceptionMessage('Invalid email address: unable to extract domain');
 
 		$this->service->extractDomain('user@');
+	}
+
+	public function testExtractUsernameSuccess(): void {
+		$result = $this->service->extractUsername('user@example.com');
+		$this->assertEquals('user', $result);
+
+		$result = $this->service->extractUsername('test.user@subdomain.example.com');
+		$this->assertEquals('test.user', $result);
+	}
+
+	public function testExtractUsernameWithNoAtSign(): void {
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Invalid email address: unable to extract username');
+
+		$this->service->extractUsername('invalid-email');
+	}
+
+	public function testExtractUsernameWithEmptyUsername(): void {
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Invalid email address: unable to extract username');
+
+		$this->service->extractUsername('@example.com');
 	}
 }
