@@ -14,6 +14,7 @@ use GuzzleHttp\ClientInterface;
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Service\IONOS\ApiMailConfigClientService;
+use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
 use OCA\Mail\Service\IONOS\IonosConfigService;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\IUser;
@@ -80,11 +81,18 @@ class IonosMailServiceTest extends TestCase {
 
 		$result = $this->service->createEmailAccount($emailAddress);
 
-		$this->assertIsArray($result);
-		$this->assertTrue($result['success']);
-		$this->assertArrayHasKey('mailConfig', $result);
-		$this->assertEquals('mail.localhost', $result['mailConfig']['imap']['host']);
-		$this->assertEquals($emailAddress, $result['mailConfig']['imap']['username']);
+		$this->assertInstanceOf(MailAccountConfig::class, $result);
+		$this->assertEquals($emailAddress, $result->getEmail());
+		$this->assertEquals('mail.localhost', $result->getImap()->getHost());
+		$this->assertEquals(1143, $result->getImap()->getPort());
+		$this->assertEquals('none', $result->getImap()->getSecurity());
+		$this->assertEquals($emailAddress, $result->getImap()->getUsername());
+		$this->assertEquals('tmp', $result->getImap()->getPassword());
+		$this->assertEquals('mail.localhost', $result->getSmtp()->getHost());
+		$this->assertEquals(1587, $result->getSmtp()->getPort());
+		$this->assertEquals('none', $result->getSmtp()->getSecurity());
+		$this->assertEquals($emailAddress, $result->getSmtp()->getUsername());
+		$this->assertEquals('tmp', $result->getSmtp()->getPassword());
 	}
 
 	public function testCreateEmailAccountWithApiException(): void {

@@ -13,6 +13,8 @@ use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Controller\AccountsController;
 use OCA\Mail\Controller\IonosAccountsController;
 use OCA\Mail\Exception\ServiceException;
+use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
+use OCA\Mail\Service\IONOS\Dto\MailServerConfig;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
@@ -82,29 +84,33 @@ class IonosAccountsControllerTest extends TestCase {
 		$accountName = 'Test Account';
 		$emailAddress = 'test@example.com';
 
+		// Create MailAccountConfig DTO
+		$imapConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1143,
+			security: 'none',
+			username: $emailAddress,
+			password: 'tmp',
+		);
+
+		$smtpConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1587,
+			security: 'none',
+			username: $emailAddress,
+			password: 'tmp',
+		);
+
+		$mailAccountConfig = new MailAccountConfig(
+			email: $emailAddress,
+			imap: $imapConfig,
+			smtp: $smtpConfig,
+		);
+
 		// Mock successful IONOS mail service response
 		$this->ionosMailService->method('createEmailAccount')
 			->with($emailAddress)
-			->willReturn([
-				'success' => true,
-				'message' => 'Email account created successfully via IONOS (mock)',
-				'mailConfig' => [
-					'imap' => [
-						'host' => 'mail.localhost',
-						'password' => 'tmp',
-						'port' => 1143,
-						'security' => 'none',
-						'username' => $emailAddress,
-					],
-					'smtp' => [
-						'host' => 'mail.localhost',
-						'password' => 'tmp',
-						'port' => 1587,
-						'security' => 'none',
-						'username' => $emailAddress,
-					]
-				]
-			]);
+			->willReturn($mailAccountConfig);
 
 		// Mock account creation response
 		$accountData = ['id' => 1, 'emailAddress' => $emailAddress];
@@ -113,6 +119,20 @@ class IonosAccountsControllerTest extends TestCase {
 
 		$this->accountsController
 			->method('create')
+			->with(
+				$accountName,
+				$emailAddress,
+				'mail.localhost',
+				1143,
+				'none',
+				$emailAddress,
+				'tmp',
+				'mail.localhost',
+				1587,
+				'none',
+				$emailAddress,
+				'tmp',
+			)
 			->willReturn($accountResponse);
 
 		$response = $this->controller->create($accountName, $emailAddress);
@@ -173,22 +193,28 @@ class IonosAccountsControllerTest extends TestCase {
 	public function testCreateNextcloudMailAccount(): void {
 		$accountName = 'Test Account';
 		$emailAddress = 'test@example.com';
-		$mailConfig = [
-			'imap' => [
-				'host' => 'mail.localhost',
-				'port' => 1143,
-				'security' => 'none',
-				'username' => $emailAddress, // Updated to use actual email address
-				'password' => 'tmp'
-			],
-			'smtp' => [
-				'host' => 'mail.localhost',
-				'port' => 1587,
-				'security' => 'none',
-				'username' => $emailAddress, // Updated to use actual email address
-				'password' => 'tmp'
-			]
-		];
+
+		$imapConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1143,
+			security: 'none',
+			username: $emailAddress,
+			password: 'tmp',
+		);
+
+		$smtpConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1587,
+			security: 'none',
+			username: $emailAddress,
+			password: 'tmp',
+		);
+
+		$mailConfig = new MailAccountConfig(
+			email: $emailAddress,
+			imap: $imapConfig,
+			smtp: $smtpConfig,
+		);
 
 		$expectedResponse = $this->createMock(JSONResponse::class);
 
@@ -201,12 +227,12 @@ class IonosAccountsControllerTest extends TestCase {
 				'mail.localhost',
 				1143,
 				'none',
-				$emailAddress, // Updated to use actual email address
+				$emailAddress,
 				'tmp',
 				'mail.localhost',
 				1587,
 				'none',
-				$emailAddress, // Updated to use actual email address
+				$emailAddress,
 				'tmp',
 			)
 			->willReturn($expectedResponse);
