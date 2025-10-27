@@ -11,6 +11,8 @@ namespace OCA\Mail\Service\IONOS;
 
 use IONOS\MailConfigurationAPI\Client\Model\MailCreateData;
 use OCA\Mail\Exception\ServiceException;
+use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
+use OCA\Mail\Service\IONOS\Dto\MailServerConfig;
 use OCP\Exceptions\AppConfigException;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
@@ -32,11 +34,11 @@ class IonosMailService {
 	/**
 	 * Create an IONOS email account via API
 	 *
-	 * @return array{success: bool, message: string, mailConfig: array} Response with mail configuration
+	 * @return MailAccountConfig Mail account configuration
 	 * @throws ServiceException
 	 * @throws AppConfigException
 	 */
-	public function createEmailAccount(string $emailAddress): array {
+	public function createEmailAccount(string $emailAddress): MailAccountConfig {
 		$config = $this->configService->getApiConfig();
 		$userId = $this->getCurrentUserId();
 		$domain = $this->extractDomain($emailAddress);
@@ -104,28 +106,29 @@ class IonosMailService {
 	 * TODO: Replace mock values with actual API response data
 	 * @param string $emailAddress
 	 *
-	 * @return array{success: bool, message: string, mailConfig: array}
+	 * @return MailAccountConfig
 	 */
-	private function buildSuccessResponse(string $emailAddress): array {
-		return [
-			'success' => true,
-			'message' => 'Email account created successfully via IONOS (mock)',
-			'mailConfig' => [
-				'imap' => [
-					'host' => 'mail.localhost', // 'imap.' . $domain,
-					'password' => 'tmp',
-					'port' => 1143, // 993,
-					'security' => 'none',
-					'username' => $emailAddress,
-				],
-				'smtp' => [
-					'host' => 'mail.localhost', // 'smtp.' . $domain,
-					'password' => 'tmp',
-					'port' => 1587, // 465,
-					'security' => 'none',
-					'username' => $emailAddress,
-				]
-			]
-		];
+	private function buildSuccessResponse(string $emailAddress): MailAccountConfig {
+		$imapConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1143,
+			security: 'none',
+			username: $emailAddress,
+			password: 'tmp',
+		);
+
+		$smtpConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1587,
+			security: 'none',
+			username: $emailAddress,
+			password: 'tmp',
+		);
+
+		return new MailAccountConfig(
+			email: $emailAddress,
+			imap: $imapConfig,
+			smtp: $smtpConfig,
+		);
 	}
 }
