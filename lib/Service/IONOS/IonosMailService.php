@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace OCA\Mail\Service\IONOS;
 
+use IONOS\MailConfigurationAPI\Client\Model\ErrorMessage;
+use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailCreateData;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
@@ -41,6 +43,7 @@ class IonosMailService {
 	public function createEmailAccount(string $emailAddress): MailAccountConfig {
 		$config = $this->configService->getApiConfig();
 		$userId = $this->getCurrentUserId();
+		$userName = $this->extractUsername($emailAddress);
 		$domain = $this->extractDomain($emailAddress);
 
 		$this->logger->debug('Sending request to mailconfig service', [
@@ -58,13 +61,28 @@ class IonosMailService {
 
 		$mailCreateData = new MailCreateData();
 		$mailCreateData->setNextcloudUserId($userId);
-		$mailCreateData->setMailaddress($emailAddress);
+		$mailCreateData->setDomainPart($domain);
+		$mailCreateData->setLocalPart($userName);
+
+		if (!$mailCreateData->valid()) {
+			$this->logger->error('Validate message to mailconfig service', ['data' => $mailCreateData->listInvalidProperties()]);
+			throw new ServiceException('Invalid mail configuration', 0);
+		}
 
 		try {
 			$this->logger->debug('Send message to mailconfig service', ['data' => $mailCreateData]);
 			$result = $apiInstance->createMailbox(self::BRAND, $config['extRef'], $mailCreateData);
 
-			return $this->buildSuccessResponse($emailAddress);
+			if ($result instanceof ErrorMessage) {
+				$this->logger->error('Failed to create ionos mail', ['status code' => $result->getStatus(), 'message' => $result->getMessage()]);
+				throw new ServiceException('Failed to create ionos mail', $result->getStatus());
+			}
+			if ($result instanceof MailAccountResponse) {
+				return $this->buildSuccessResponse($emailAddress, $result);
+			}
+
+			$this->logger->debug('Failed to create ionos mail: Unknown response type', ['data' => $result ]);
+			throw new ServiceException('Failed to create ionos mail', 0);
 		} catch (\Exception $e) {
 			$this->logger->error('Exception when calling MailConfigurationAPIApi->createMailbox', ['exception' => $e]);
 			throw new ServiceException('Failed to create ionos mail', 0, $e);
@@ -89,6 +107,23 @@ class IonosMailService {
 	}
 
 	/**
+	 * Extract username from email address
+	 *
+	 * @throws ServiceException
+	 */
+	public function extractUsername(string $emailAddress): string {
+		$atPosition = strrpos($emailAddress, '@');
+		if ($atPosition === false) {
+			throw new ServiceException('Invalid email address: unable to extract username');
+		}
+		$userName = substr($emailAddress, 0, $atPosition);
+		if ($userName === '') {
+			throw new ServiceException('Invalid email address: unable to extract username');
+		}
+		return $userName;
+	}
+
+	/**
 	 * Get the current user ID
 	 *
 	 * @throws ServiceException
@@ -103,26 +138,29 @@ class IonosMailService {
 
 	/**
 	 * Build success response with mail configuration
-	 * TODO: Replace mock values with actual API response data
-	 * @param string $emailAddress
 	 *
+	 * @param string $emailAddress
+	 * @param MailAccountResponse $response
 	 * @return MailAccountConfig
 	 */
-	private function buildSuccessResponse(string $emailAddress): MailAccountConfig {
+	private function buildSuccessResponse(string $emailAddress, MailAccountResponse $response): MailAccountConfig {
+		$smtpServer = $response->getServer()->getSmtp();
+		$imapServer = $response->getServer()->getImap();
+
 		$imapConfig = new MailServerConfig(
-			host: 'mail.localhost',
-			port: 1143,
-			security: 'none',
-			username: $emailAddress,
-			password: 'tmp',
+			host: $imapServer->getHost(),
+			port: $imapServer->getPort(),
+			security: $imapServer->getSslMode(),
+			username: $response->getEmail(),
+			password: $response->getPassword(),
 		);
 
 		$smtpConfig = new MailServerConfig(
-			host: 'mail.localhost',
-			port: 1587,
-			security: 'none',
-			username: $emailAddress,
-			password: 'tmp',
+			host: $smtpServer->getHost(),
+			port: $smtpServer->getPort(),
+			security: $smtpServer->getSslMode(),
+			username: $response->getEmail(),
+			password: $response->getPassword(),
 		);
 
 		return new MailAccountConfig(
