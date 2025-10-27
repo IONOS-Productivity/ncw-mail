@@ -11,6 +11,7 @@ namespace OCA\Mail\Controller;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
+use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
@@ -61,7 +62,7 @@ class IonosAccountsController extends Controller {
 			$ionosResponse = $this->ionosMailService->createEmailAccount($emailAddress);
 
 			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $emailAddress ]);
-			return $this->createNextcloudMailAccount($accountName, $emailAddress, $ionosResponse['mailConfig']);
+			return $this->createNextcloudMailAccount($accountName, $emailAddress, $ionosResponse);
 		} catch (ServiceException $e) {
 
 			$data = [
@@ -76,23 +77,23 @@ class IonosAccountsController extends Controller {
 		}
 	}
 
-	private function createNextcloudMailAccount(string $accountName, string $emailAddress, array $mailConfig): JSONResponse {
-		$imap = $mailConfig['imap'];
-		$smtp = $mailConfig['smtp'];
+	private function createNextcloudMailAccount(string $accountName, string $emailAddress, MailAccountConfig $mailConfig): JSONResponse {
+		$imap = $mailConfig->getImap();
+		$smtp = $mailConfig->getSmtp();
 
 		return $this->accountsController->create(
 			$accountName,
 			$emailAddress,
-			(string)$imap['host'],
-			(int)$imap['port'],
-			(string)$imap['security'],
-			(string)($imap['username'] ?? $emailAddress),
-			(string)($imap['password'] ?? ''),
-			(string)$smtp['host'],
-			(int)$smtp['port'],
-			(string)$smtp['security'],
-			(string)($smtp['username'] ?? $emailAddress),
-			(string)($smtp['password'] ?? ''),
+			$imap->getHost(),
+			$imap->getPort(),
+			$imap->getSecurity(),
+			$imap->getUsername(),
+			$imap->getPassword(),
+			$smtp->getHost(),
+			$smtp->getPort(),
+			$smtp->getSecurity(),
+			$smtp->getUsername(),
+			$smtp->getPassword(),
 		);
 	}
 }
