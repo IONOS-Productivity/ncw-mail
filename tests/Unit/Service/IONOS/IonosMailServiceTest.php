@@ -313,4 +313,120 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->service->extractUsername('@example.com');
 	}
+
+	/**
+	 * Test SSL mode normalization with various API response values
+	 *
+	 * @dataProvider sslModeNormalizationProvider
+	 */
+	public function testSslModeNormalization(string $apiSslMode, string $expectedSecurity): void {
+		$emailAddress = 'test@example.com';
+
+		// Mock config
+		$this->configService->method('getApiConfig')
+			->willReturn([
+				'extRef' => 'test-ext-ref',
+				'apiBaseUrl' => 'https://api.example.com',
+				'allowInsecure' => false,
+				'basicAuthUser' => 'testuser',
+				'basicAuthPass' => 'testpass',
+			]);
+
+		// Mock user session
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser123');
+		$this->userSession->method('getUser')->willReturn($user);
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+
+		// Mock API response with specific SSL mode
+		$imapServer = $this->getMockBuilder(Imap::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
+			->getMock();
+		$imapServer->method('getHost')->willReturn('imap.example.com');
+		$imapServer->method('getPort')->willReturn(993);
+		$imapServer->method('getSslMode')->willReturn($apiSslMode);
+
+		$smtpServer = $this->getMockBuilder(Smtp::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
+			->getMock();
+		$smtpServer->method('getHost')->willReturn('smtp.example.com');
+		$smtpServer->method('getPort')->willReturn(587);
+		$smtpServer->method('getSslMode')->willReturn($apiSslMode);
+
+		$mailServer = $this->getMockBuilder(MailServer::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getImap', 'getSmtp'])
+			->getMock();
+		$mailServer->method('getImap')->willReturn($imapServer);
+		$mailServer->method('getSmtp')->willReturn($smtpServer);
+
+		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getEmail', 'getPassword', 'getServer'])
+			->getMock();
+		$mailAccountResponse->method('getEmail')->willReturn($emailAddress);
+		$mailAccountResponse->method('getPassword')->willReturn('test-password');
+		$mailAccountResponse->method('getServer')->willReturn($mailServer);
+
+		$apiInstance->method('createMailbox')->willReturn($mailAccountResponse);
+
+		$result = $this->service->createEmailAccount($emailAddress);
+
+		$this->assertEquals($expectedSecurity, $result->getImap()->getSecurity());
+		$this->assertEquals($expectedSecurity, $result->getSmtp()->getSecurity());
+	}
+
+	/**
+	 * Data provider for SSL mode normalization tests
+	 *
+	 * @return array<string, array{apiSslMode: string, expectedSecurity: string}>
+	 */
+	public static function sslModeNormalizationProvider(): array {
+		return [
+			'SSL should map to ssl' => [
+				'apiSslMode' => 'SSL',
+				'expectedSecurity' => 'ssl',
+			],
+			'ssl should map to ssl' => [
+				'apiSslMode' => 'ssl',
+				'expectedSecurity' => 'ssl',
+			],
+			'TLS should map to tls' => [
+				'apiSslMode' => 'TLS',
+				'expectedSecurity' => 'tls',
+			],
+			'tls should map to tls' => [
+				'apiSslMode' => 'tls',
+				'expectedSecurity' => 'tls',
+			],
+			'STARTTLS should map to tls' => [
+				'apiSslMode' => 'STARTTLS',
+				'expectedSecurity' => 'tls',
+			],
+			'starttls should map to tls' => [
+				'apiSslMode' => 'starttls',
+				'expectedSecurity' => 'tls',
+			],
+			'none should map to none' => [
+				'apiSslMode' => 'none',
+				'expectedSecurity' => 'none',
+			],
+			'NONE should map to none' => [
+				'apiSslMode' => 'NONE',
+				'expectedSecurity' => 'none',
+			],
+			'unknown value should default to none' => [
+				'apiSslMode' => 'unknown',
+				'expectedSecurity' => 'none',
+			],
+		];
+	}
 }
