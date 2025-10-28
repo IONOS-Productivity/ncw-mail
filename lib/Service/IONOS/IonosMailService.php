@@ -137,6 +137,28 @@ class IonosMailService {
 	}
 
 	/**
+	 * Normalize SSL mode from API response to expected format
+	 *
+	 * Maps API SSL mode values (e.g., "TLS", "SSL") to standard values ("tls", "ssl", "none")
+	 *
+	 * @param string $apiSslMode SSL mode from API response
+	 * @return string Normalized SSL mode: "tls", "ssl", or "none"
+	 */
+	private function normalizeSslMode(string $apiSslMode): string {
+		$normalized = strtolower($apiSslMode);
+
+		if (str_contains($normalized, 'tls') || str_contains($normalized, 'starttls')) {
+			return 'tls';
+		}
+
+		if (str_contains($normalized, 'ssl')) {
+			return 'ssl';
+		}
+
+		return 'none';
+	}
+
+	/**
 	 * Build success response with mail configuration
 	 *
 	 * @param string $emailAddress
@@ -150,7 +172,7 @@ class IonosMailService {
 		$imapConfig = new MailServerConfig(
 			host: $imapServer->getHost(),
 			port: $imapServer->getPort(),
-			security: $imapServer->getSslMode(),
+			security: $this->normalizeSslMode($imapServer->getSslMode()),
 			username: $response->getEmail(),
 			password: $response->getPassword(),
 		);
@@ -158,7 +180,7 @@ class IonosMailService {
 		$smtpConfig = new MailServerConfig(
 			host: $smtpServer->getHost(),
 			port: $smtpServer->getPort(),
-			security: $smtpServer->getSslMode(),
+			security: $this->normalizeSslMode($smtpServer->getSslMode()),
 			username: $response->getEmail(),
 			password: $response->getPassword(),
 		);
