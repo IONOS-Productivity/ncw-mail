@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\Mail\Service\IONOS;
 
+use IONOS\MailConfigurationAPI\Client\ApiException;
 use IONOS\MailConfigurationAPI\Client\Model\ErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailCreateData;
@@ -83,6 +84,14 @@ class IonosMailService {
 
 			$this->logger->debug('Failed to create ionos mail: Unknown response type', ['data' => $result ]);
 			throw new ServiceException('Failed to create ionos mail', 0);
+		} catch (ApiException $e) {
+			$statusCode = $e->getCode();
+			$this->logger->error('API Exception when calling MailConfigurationAPIApi->createMailbox', [
+				'statusCode' => $statusCode,
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody()
+			]);
+			throw new ServiceException('Failed to create ionos mail: ' . $e->getMessage(), $statusCode, $e);
 		} catch (\Exception $e) {
 			$this->logger->error('Exception when calling MailConfigurationAPIApi->createMailbox', ['exception' => $e]);
 			throw new ServiceException('Failed to create ionos mail', 0, $e);
