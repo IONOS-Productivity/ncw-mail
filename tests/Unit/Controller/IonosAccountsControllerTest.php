@@ -158,12 +158,45 @@ class IonosAccountsControllerTest extends TestCase {
 				[
 					'emailAddress' => $emailAddress,
 					'error' => 'IONOS_API_ERROR',
+					'statusCode' => 0,
 				]
 			);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
 			'emailAddress' => 'test@example.com',
 			'error' => 'IONOS_API_ERROR',
+			'statusCode' => 0,
+		]);
+		$response = $this->controller->create($accountName, $emailAddress);
+
+		self::assertEquals($expectedResponse, $response);
+	}
+
+	public function testCreateWithServiceExceptionWithStatusCode(): void {
+		$accountName = 'Test Account';
+		$emailAddress = 'test@example.com';
+
+		// Mock IONOS mail service to throw ServiceException with HTTP 409 (Duplicate)
+		$this->ionosMailService->method('createEmailAccount')
+			->with($emailAddress)
+			->willThrowException(new ServiceException('Duplicate email account', 409));
+
+		$this->logger
+			->expects($this->once())
+			->method('error')
+			->with(
+				'IONOS service error: Duplicate email account',
+				[
+					'emailAddress' => $emailAddress,
+					'error' => 'IONOS_API_ERROR',
+					'statusCode' => 409,
+				]
+			);
+
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
+			'emailAddress' => 'test@example.com',
+			'error' => 'IONOS_API_ERROR',
+			'statusCode' => 409,
 		]);
 		$response = $this->controller->create($accountName, $emailAddress);
 
