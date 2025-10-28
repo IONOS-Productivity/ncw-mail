@@ -64,10 +64,10 @@ class IonosAccountsController extends Controller {
 			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $emailAddress ]);
 			return $this->createNextcloudMailAccount($accountName, $emailAddress, $ionosResponse);
 		} catch (ServiceException $e) {
-
 			$data = [
 				'emailAddress' => $emailAddress,
 				'error' => self::ERR_IONOS_API_ERROR,
+				'statusCode' => $e->getCode(),
 			];
 			$this->logger->error('IONOS service error: ' . $e->getMessage(), $data);
 
