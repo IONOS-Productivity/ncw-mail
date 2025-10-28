@@ -118,7 +118,27 @@ export default {
 				console.error('Account creation failed:', error)
 
 				if (error.data?.error === 'IONOS_API_ERROR') {
-					this.feedback = t('mail', 'There was an error while setting up your account')
+					const statusCode = error.data?.statusCode
+
+					switch (statusCode) {
+					case 400:
+						this.feedback = t('mail', 'Invalid email address or account data provided')
+						break
+					case 404:
+						this.feedback = t('mail', 'Email service not found. Please contact support')
+						break
+					case 409:
+						this.feedback = t('mail', 'This email address already exists')
+						break
+					case 412:
+						this.feedback = t('mail', 'Account state conflict. Please try again later')
+						break
+					case 500:
+						this.feedback = t('mail', 'Server error. Please try again later')
+						break
+					default:
+						this.feedback = t('mail', 'There was an error while setting up your account')
+					}
 				} else {
 					this.feedback = t('mail', 'There was an error while setting up your account')
 				}
@@ -135,7 +155,7 @@ export default {
 				.then((resp) => resp.data.data)
 				.then(fixAccountId)
 				.catch((e) => {
-					if (e.response && e.response.status === 400) {
+					if (e.response && e.response.data) {
 						throw e.response.data
 					}
 
