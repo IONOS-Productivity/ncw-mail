@@ -72,7 +72,7 @@ export default {
 		},
 		isValidEmail: {
 			type: Function,
-			required: true,
+			default: () => {},
 		},
 	},
 	data() {
