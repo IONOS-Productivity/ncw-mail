@@ -41,14 +41,14 @@ class IonosMailService {
 	 * @throws ServiceException
 	 * @throws AppConfigException
 	 */
-	public function createEmailAccount(string $emailAddress): MailAccountConfig {
+	public function createEmailAccount(string $userName): MailAccountConfig {
 		$userId = $this->getCurrentUserId();
-		$userName = $this->extractUsername($emailAddress);
-		$domain = $this->extractDomain($emailAddress);
+		$domain = $this->configService->getMailDomain();
 
 		$this->logger->debug('Sending request to mailconfig service', [
 			'extRef' => $this->configService->getExternalReference(),
-			'emailAddress' => $emailAddress,
+			'userName' => $userName,
+			'domain' => $domain,
 			'apiBaseUrl' => $this->configService->getApiBaseUrl()
 		]);
 
@@ -95,40 +95,6 @@ class IonosMailService {
 			$this->logger->error('Exception when calling MailConfigurationAPIApi->createMailbox', ['exception' => $e]);
 			throw new ServiceException('Failed to create ionos mail', 0, $e);
 		}
-	}
-
-	/**
-	 * Extract domain from email address
-	 *
-	 * @throws ServiceException
-	 */
-	public function extractDomain(string $emailAddress): string {
-		$atPosition = strrchr($emailAddress, '@');
-		if ($atPosition === false) {
-			throw new ServiceException('Invalid email address: unable to extract domain');
-		}
-		$domain = substr($atPosition, 1);
-		if ($domain === '') {
-			throw new ServiceException('Invalid email address: unable to extract domain');
-		}
-		return $domain;
-	}
-
-	/**
-	 * Extract username from email address
-	 *
-	 * @throws ServiceException
-	 */
-	public function extractUsername(string $emailAddress): string {
-		$atPosition = strrpos($emailAddress, '@');
-		if ($atPosition === false) {
-			throw new ServiceException('Invalid email address: unable to extract username');
-		}
-		$userName = substr($emailAddress, 0, $atPosition);
-		if ($userName === '') {
-			throw new ServiceException('Invalid email address: unable to extract username');
-		}
-		return $userName;
 	}
 
 	/**

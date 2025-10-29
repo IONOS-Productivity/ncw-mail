@@ -13,15 +13,15 @@
 			@change="clearAllFeedback"
 			autofocus />
 		<NcInputField id="ionos-email-address"
-			v-model="emailAddress"
-			:label="t('mail', 'Mail address')"
-			type="email"
-			:placeholder="t('mail', 'Mail address')"
+			v-model="emailUser"
+			:label="t('mail', 'User')"
+			type="text"
+			:placeholder="t('mail', 'User')"
 			:disabled="loading || localLoading"
 			required
 			@change="clearAllFeedback" />
-		<p v-if="emailAddress && !isValidEmail(emailAddress)" class="account-form--error">
-			{{ t('mail', 'Please enter an email of the format name@example.com') }}
+		<p v-if="emailUser && !isValidEmail(fullEmailAddress)" class="account-form--error">
+			{{ t('mail', 'Please enter a valid email user name') }}
 		</p>
 		<span class="email-domain-hint">@{{ emailDomain }}</span>
 		<div class="account-form__submit-buttons">
@@ -78,16 +78,21 @@ export default {
 	data() {
 		return {
 			accountName: '',
-			emailAddress: '',
+			emailUser: '',
 			localLoading: false,
 			feedback: null,
 		}
 	},
 	computed: {
 		...mapStores(useMainStore),
+		fullEmailAddress() {
+			return this.emailUser ? `${this.emailUser}@${this.emailDomain}` : ''
+		},
+
 		isFormValid() {
 			return this.accountName
-				&& this.isValidEmail(this.emailAddress)
+				&& this.emailUser
+				&& this.isValidEmail(this.fullEmailAddress)
 		},
 
 		buttonText() {
@@ -108,7 +113,7 @@ export default {
 			try {
 				const account = await this.callIonosAPI({
 					accountName: this.accountName,
-					emailAddress: this.emailAddress,
+					emailUser: this.emailUser,
 				})
 
 				logger.debug(`account ${account.id} created`, { account })
@@ -151,11 +156,11 @@ export default {
 			}
 		},
 
-		async callIonosAPI({ accountName, emailAddress }) {
+		async callIonosAPI({ accountName, emailUser }) {
 			const url = generateUrl('/apps/mail/api/ionos/accounts')
 
 			return axios
-				.post(url, { accountName, emailAddress })
+				.post(url, { accountName, emailUser })
 				.then((resp) => resp.data.data)
 				.then(fixAccountId)
 				.catch((e) => {
