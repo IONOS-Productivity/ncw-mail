@@ -42,23 +42,22 @@ class IonosMailService {
 	 * @throws AppConfigException
 	 */
 	public function createEmailAccount(string $emailAddress): MailAccountConfig {
-		$config = $this->configService->getApiConfig();
 		$userId = $this->getCurrentUserId();
 		$userName = $this->extractUsername($emailAddress);
 		$domain = $this->extractDomain($emailAddress);
 
 		$this->logger->debug('Sending request to mailconfig service', [
-			'extRef' => $config['extRef'],
+			'extRef' => $this->configService->getExternalReference(),
 			'emailAddress' => $emailAddress,
-			'apiBaseUrl' => $config['apiBaseUrl']
+			'apiBaseUrl' => $this->configService->getApiBaseUrl()
 		]);
 
 		$client = $this->apiClientService->newClient([
-			'auth' => [$config['basicAuthUser'], $config['basicAuthPass']],
-			'verify' => !$config['allowInsecure'],
+			'auth' => [$this->configService->getBasicAuthUser(), $this->configService->getBasicAuthPassword()],
+			'verify' => !$this->configService->getAllowInsecure(),
 		]);
 
-		$apiInstance = $this->apiClientService->newEventAPIApi($client, $config['apiBaseUrl']);
+		$apiInstance = $this->apiClientService->newEventAPIApi($client, $this->configService->getApiBaseUrl());
 
 		$mailCreateData = new MailCreateData();
 		$mailCreateData->setNextcloudUserId($userId);
@@ -72,7 +71,7 @@ class IonosMailService {
 
 		try {
 			$this->logger->debug('Send message to mailconfig service', ['data' => $mailCreateData]);
-			$result = $apiInstance->createMailbox(self::BRAND, $config['extRef'], $mailCreateData);
+			$result = $apiInstance->createMailbox(self::BRAND, $this->configService->getExternalReference(), $mailCreateData);
 
 			if ($result instanceof ErrorMessage) {
 				$this->logger->error('Failed to create ionos mail', ['status code' => $result->getStatus(), 'message' => $result->getMessage()]);
