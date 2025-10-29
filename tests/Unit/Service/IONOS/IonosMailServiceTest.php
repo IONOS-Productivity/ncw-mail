@@ -54,14 +54,11 @@ class IonosMailServiceTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock config
-		$this->configService->method('getApiConfig')
-			->willReturn([
-				'extRef' => 'test-ext-ref',
-				'apiBaseUrl' => 'https://api.example.com',
-				'allowInsecure' => false,
-				'basicAuthUser' => 'testuser',
-				'basicAuthPass' => 'testpass',
-			]);
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
@@ -136,14 +133,11 @@ class IonosMailServiceTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock config
-		$this->configService->method('getApiConfig')
-			->willReturn([
-				'extRef' => 'test-ext-ref',
-				'apiBaseUrl' => 'https://api.example.com',
-				'allowInsecure' => false,
-				'basicAuthUser' => 'testuser',
-				'basicAuthPass' => 'testpass',
-			]);
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
@@ -175,14 +169,11 @@ class IonosMailServiceTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock config
-		$this->configService->method('getApiConfig')
-			->willReturn([
-				'extRef' => 'test-ext-ref',
-				'apiBaseUrl' => 'https://api.example.com',
-				'allowInsecure' => false,
-				'basicAuthUser' => 'testuser',
-				'basicAuthPass' => 'testpass',
-			]);
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
@@ -216,14 +207,11 @@ class IonosMailServiceTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock config
-		$this->configService->method('getApiConfig')
-			->willReturn([
-				'extRef' => 'test-ext-ref',
-				'apiBaseUrl' => 'https://api.example.com',
-				'allowInsecure' => false,
-				'basicAuthUser' => 'testuser',
-				'basicAuthPass' => 'testpass',
-			]);
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
@@ -252,14 +240,11 @@ class IonosMailServiceTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock config
-		$this->configService->method('getApiConfig')
-			->willReturn([
-				'extRef' => 'test-ext-ref',
-				'apiBaseUrl' => 'https://api.example.com',
-				'allowInsecure' => false,
-				'basicAuthUser' => 'testuser',
-				'basicAuthPass' => 'testpass',
-			]);
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
 
 		// Mock no user session
 		$this->userSession->method('getUser')->willReturn(null);
@@ -323,14 +308,11 @@ class IonosMailServiceTest extends TestCase {
 		$emailAddress = 'test@example.com';
 
 		// Mock config
-		$this->configService->method('getApiConfig')
-			->willReturn([
-				'extRef' => 'test-ext-ref',
-				'apiBaseUrl' => 'https://api.example.com',
-				'allowInsecure' => false,
-				'basicAuthUser' => 'testuser',
-				'basicAuthPass' => 'testpass',
-			]);
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
