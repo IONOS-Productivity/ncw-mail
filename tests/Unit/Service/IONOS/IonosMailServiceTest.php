@@ -51,7 +51,9 @@ class IonosMailServiceTest extends TestCase {
 	}
 
 	public function testCreateEmailAccountSuccess(): void {
-		$emailAddress = 'test@example.com';
+		$userName = 'test';
+		$domain = 'example.com';
+		$emailAddress = $userName . '@' . $domain;
 
 		// Mock config
 		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
@@ -59,6 +61,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->configService->method('getAllowInsecure')->willReturn(false);
 		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
 		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->configService->method('getMailDomain')->willReturn($domain);
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
@@ -113,7 +116,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->method('createMailbox')->willReturn($mailAccountResponse);
 
-		$result = $this->service->createEmailAccount($emailAddress);
+		$result = $this->service->createEmailAccount($userName);
 
 		$this->assertInstanceOf(MailAccountConfig::class, $result);
 		$this->assertEquals($emailAddress, $result->getEmail());
@@ -130,7 +133,8 @@ class IonosMailServiceTest extends TestCase {
 	}
 
 	public function testCreateEmailAccountWithApiException(): void {
-		$emailAddress = 'test@example.com';
+		$userName = 'test';
+		$domain = 'example.com';
 
 		// Mock config
 		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
@@ -138,6 +142,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->configService->method('getAllowInsecure')->willReturn(false);
 		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
 		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->configService->method('getMailDomain')->willReturn($domain);
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
@@ -162,11 +167,12 @@ class IonosMailServiceTest extends TestCase {
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
 
-		$this->service->createEmailAccount($emailAddress);
+		$this->service->createEmailAccount($userName);
 	}
 
 	public function testCreateEmailAccountWithErrorMessageResponse(): void {
-		$emailAddress = 'test@example.com';
+		$userName = 'test';
+		$domain = 'example.com';
 
 		// Mock config
 		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
@@ -174,6 +180,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->configService->method('getAllowInsecure')->willReturn(false);
 		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
 		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->configService->method('getMailDomain')->willReturn($domain);
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
@@ -200,11 +207,12 @@ class IonosMailServiceTest extends TestCase {
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
 
-		$this->service->createEmailAccount($emailAddress);
+		$this->service->createEmailAccount($userName);
 	}
 
 	public function testCreateEmailAccountWithUnknownResponseType(): void {
-		$emailAddress = 'test@example.com';
+		$userName = 'test';
+		$domain = 'example.com';
 
 		// Mock config
 		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
@@ -212,6 +220,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->configService->method('getAllowInsecure')->willReturn(false);
 		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
 		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->configService->method('getMailDomain')->willReturn($domain);
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
@@ -233,11 +242,11 @@ class IonosMailServiceTest extends TestCase {
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
 
-		$this->service->createEmailAccount($emailAddress);
+		$this->service->createEmailAccount($userName);
 	}
 
 	public function testCreateEmailAccountWithNoUserSession(): void {
-		$emailAddress = 'test@example.com';
+		$userName = 'test';
 
 		// Mock config
 		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
@@ -252,51 +261,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('No user session found');
 
-		$this->service->createEmailAccount($emailAddress);
-	}
-
-	public function testExtractDomainSuccess(): void {
-		$result = $this->service->extractDomain('user@example.com');
-		$this->assertEquals('example.com', $result);
-
-		$result = $this->service->extractDomain('test.user@subdomain.example.com');
-		$this->assertEquals('subdomain.example.com', $result);
-	}
-
-	public function testExtractDomainWithNoAtSign(): void {
-		$this->expectException(ServiceException::class);
-		$this->expectExceptionMessage('Invalid email address: unable to extract domain');
-
-		$this->service->extractDomain('invalid-email');
-	}
-
-	public function testExtractDomainWithEmptyDomain(): void {
-		$this->expectException(ServiceException::class);
-		$this->expectExceptionMessage('Invalid email address: unable to extract domain');
-
-		$this->service->extractDomain('user@');
-	}
-
-	public function testExtractUsernameSuccess(): void {
-		$result = $this->service->extractUsername('user@example.com');
-		$this->assertEquals('user', $result);
-
-		$result = $this->service->extractUsername('test.user@subdomain.example.com');
-		$this->assertEquals('test.user', $result);
-	}
-
-	public function testExtractUsernameWithNoAtSign(): void {
-		$this->expectException(ServiceException::class);
-		$this->expectExceptionMessage('Invalid email address: unable to extract username');
-
-		$this->service->extractUsername('invalid-email');
-	}
-
-	public function testExtractUsernameWithEmptyUsername(): void {
-		$this->expectException(ServiceException::class);
-		$this->expectExceptionMessage('Invalid email address: unable to extract username');
-
-		$this->service->extractUsername('@example.com');
+		$this->service->createEmailAccount($userName);
 	}
 
 	/**
@@ -305,7 +270,9 @@ class IonosMailServiceTest extends TestCase {
 	 * @dataProvider sslModeNormalizationProvider
 	 */
 	public function testSslModeNormalization(string $apiSslMode, string $expectedSecurity): void {
-		$emailAddress = 'test@example.com';
+		$userName = 'test';
+		$domain = 'example.com';
+		$emailAddress = $userName . '@' . $domain;
 
 		// Mock config
 		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
@@ -313,6 +280,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->configService->method('getAllowInsecure')->willReturn(false);
 		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
 		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->configService->method('getMailDomain')->willReturn($domain);
 
 		// Mock user session
 		$user = $this->createMock(IUser::class);
@@ -360,7 +328,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->method('createMailbox')->willReturn($mailAccountResponse);
 
-		$result = $this->service->createEmailAccount($emailAddress);
+		$result = $this->service->createEmailAccount($userName);
 
 		$this->assertEquals($expectedSecurity, $result->getImap()->getSecurity());
 		$this->assertEquals($expectedSecurity, $result->getSmtp()->getSecurity());

@@ -38,12 +38,9 @@ class IonosAccountsController extends Controller {
 	}
 
 	// Helper: input validation
-	private function validateInput(string $accountName, string $emailAddress): ?JSONResponse {
-		if ($accountName === '' || $emailAddress === '') {
+	private function validateInput(string $accountName, string $emailUser): ?JSONResponse {
+		if ($accountName === '' || $emailUser === '') {
 			return new JSONResponse(['success' => false, 'message' => self::ERR_ALL_FIELDS_REQUIRED, 'error' => self::ERR_IONOS_API_ERROR], 400);
-		}
-		if (!filter_var($emailAddress, FILTER_VALIDATE_EMAIL)) {
-			return new JSONResponse(['success' => false, 'message' => 'Invalid email address format', 'error' => self::ERR_IONOS_API_ERROR], 400);
 		}
 		return null;
 	}
@@ -52,20 +49,19 @@ class IonosAccountsController extends Controller {
 	 * @NoAdminRequired
 	 */
 	#[TrapError]
-	public function create(string $accountName, string $emailAddress): JSONResponse {
-		if ($error = $this->validateInput($accountName, $emailAddress)) {
+	public function create(string $accountName, string $emailUser): JSONResponse {
+		if ($error = $this->validateInput($accountName, $emailUser)) {
 			return $error;
 		}
 
 		try {
-			$this->logger->info('Starting IONOS email account creation', [ 'emailAddress' => $emailAddress, 'accountName' => $accountName ]);
-			$ionosResponse = $this->ionosMailService->createEmailAccount($emailAddress);
+			$this->logger->info('Starting IONOS email account creation', [ 'emailAddress' => $emailUser, 'accountName' => $accountName ]);
+			$ionosResponse = $this->ionosMailService->createEmailAccount($emailUser);
 
-			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $emailAddress ]);
-			return $this->createNextcloudMailAccount($accountName, $emailAddress, $ionosResponse);
+			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $ionosResponse->getEmail() ]);
+			return $this->createNextcloudMailAccount($accountName, $ionosResponse);
 		} catch (ServiceException $e) {
 			$data = [
-				'emailAddress' => $emailAddress,
 				'error' => self::ERR_IONOS_API_ERROR,
 				'statusCode' => $e->getCode(),
 			];
@@ -77,13 +73,13 @@ class IonosAccountsController extends Controller {
 		}
 	}
 
-	private function createNextcloudMailAccount(string $accountName, string $emailAddress, MailAccountConfig $mailConfig): JSONResponse {
+	private function createNextcloudMailAccount(string $accountName, MailAccountConfig $mailConfig): JSONResponse {
 		$imap = $mailConfig->getImap();
 		$smtp = $mailConfig->getSmtp();
 
 		return $this->accountsController->create(
 			$accountName,
-			$emailAddress,
+			$mailConfig->getEmail(),
 			$imap->getHost(),
 			$imap->getPort(),
 			$imap->getSecurity(),

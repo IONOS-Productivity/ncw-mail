@@ -55,14 +55,14 @@ class IonosAccountsControllerTest extends TestCase {
 
 	public function testCreateWithMissingFields(): void {
 		// Test with empty account name
-		$response = $this->controller->create('', 'test@example.com');
+		$response = $this->controller->create('', 'testuser');
 		$this->assertEquals(400, $response->getStatus());
 		$data = $response->getData();
 		$this->assertFalse($data['success']);
 		$this->assertEquals('All fields are required', $data['message']);
 		$this->assertEquals('IONOS_API_ERROR', $data['error']);
 
-		// Test with empty email address
+		// Test with empty email user
 		$response = $this->controller->create('Test Account', '');
 		$this->assertEquals(400, $response->getStatus());
 		$data = $response->getData();
@@ -71,17 +71,9 @@ class IonosAccountsControllerTest extends TestCase {
 		$this->assertEquals('IONOS_API_ERROR', $data['error']);
 	}
 
-	public function testCreateWithInvalidEmailFormat(): void {
-		$response = $this->controller->create('Test Account', 'invalid-email');
-		$this->assertEquals(400, $response->getStatus());
-		$data = $response->getData();
-		$this->assertFalse($data['success']);
-		$this->assertEquals('Invalid email address format', $data['message']);
-		$this->assertEquals('IONOS_API_ERROR', $data['error']);
-	}
-
 	public function testCreateSuccess(): void {
 		$accountName = 'Test Account';
+		$emailUser = 'test';
 		$emailAddress = 'test@example.com';
 
 		// Create MailAccountConfig DTO
@@ -109,7 +101,7 @@ class IonosAccountsControllerTest extends TestCase {
 
 		// Mock successful IONOS mail service response
 		$this->ionosMailService->method('createEmailAccount')
-			->with($emailAddress)
+			->with($emailUser)
 			->willReturn($mailAccountConfig);
 
 		// Mock account creation response
@@ -135,7 +127,7 @@ class IonosAccountsControllerTest extends TestCase {
 			)
 			->willReturn($accountResponse);
 
-		$response = $this->controller->create($accountName, $emailAddress);
+		$response = $this->controller->create($accountName, $emailUser);
 
 		// The controller now directly returns the AccountsController response
 		$this->assertSame($accountResponse, $response);
@@ -143,11 +135,11 @@ class IonosAccountsControllerTest extends TestCase {
 
 	public function testCreateWithServiceException(): void {
 		$accountName = 'Test Account';
-		$emailAddress = 'test@example.com';
+		$emailUser = 'test';
 
 		// Mock IONOS mail service to throw ServiceException
 		$this->ionosMailService->method('createEmailAccount')
-			->with($emailAddress)
+			->with($emailUser)
 			->willThrowException(new ServiceException('Failed to create email account'));
 
 		$this->logger
@@ -156,29 +148,27 @@ class IonosAccountsControllerTest extends TestCase {
 			->with(
 				'IONOS service error: Failed to create email account',
 				[
-					'emailAddress' => $emailAddress,
 					'error' => 'IONOS_API_ERROR',
 					'statusCode' => 0,
 				]
 			);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
-			'emailAddress' => 'test@example.com',
 			'error' => 'IONOS_API_ERROR',
 			'statusCode' => 0,
 		]);
-		$response = $this->controller->create($accountName, $emailAddress);
+		$response = $this->controller->create($accountName, $emailUser);
 
 		self::assertEquals($expectedResponse, $response);
 	}
 
 	public function testCreateWithServiceExceptionWithStatusCode(): void {
 		$accountName = 'Test Account';
-		$emailAddress = 'test@example.com';
+		$emailUser = 'test';
 
 		// Mock IONOS mail service to throw ServiceException with HTTP 409 (Duplicate)
 		$this->ionosMailService->method('createEmailAccount')
-			->with($emailAddress)
+			->with($emailUser)
 			->willThrowException(new ServiceException('Duplicate email account', 409));
 
 		$this->logger
@@ -187,29 +177,27 @@ class IonosAccountsControllerTest extends TestCase {
 			->with(
 				'IONOS service error: Duplicate email account',
 				[
-					'emailAddress' => $emailAddress,
 					'error' => 'IONOS_API_ERROR',
 					'statusCode' => 409,
 				]
 			);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
-			'emailAddress' => 'test@example.com',
 			'error' => 'IONOS_API_ERROR',
 			'statusCode' => 409,
 		]);
-		$response = $this->controller->create($accountName, $emailAddress);
+		$response = $this->controller->create($accountName, $emailUser);
 
 		self::assertEquals($expectedResponse, $response);
 	}
 
 	public function testCreateWithGenericException(): void {
 		$accountName = 'Test Account';
-		$emailAddress = 'test@example.com';
+		$emailUser = 'test';
 
 		// Mock IONOS mail service to throw a generic exception
 		$this->ionosMailService->method('createEmailAccount')
-			->with($emailAddress)
+			->with($emailUser)
 			->willThrowException(new \Exception('Generic error'));
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::error('Could not create account',
@@ -217,7 +205,7 @@ class IonosAccountsControllerTest extends TestCase {
 			[],
 			0
 		);
-		$response = $this->controller->create($accountName, $emailAddress);
+		$response = $this->controller->create($accountName, $emailUser);
 
 		self::assertEquals($expectedResponse, $response);
 	}
@@ -274,7 +262,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$method = $reflection->getMethod('createNextcloudMailAccount');
 		$method->setAccessible(true);
 
-		$result = $method->invoke($this->controller, $accountName, $emailAddress, $mailConfig);
+		$result = $method->invoke($this->controller, $accountName, $mailConfig);
 
 		$this->assertSame($expectedResponse, $result);
 	}
