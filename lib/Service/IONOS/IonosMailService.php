@@ -78,7 +78,7 @@ class IonosMailService {
 				throw new ServiceException('Failed to create ionos mail', $result->getStatus());
 			}
 			if ($result instanceof MailAccountResponse) {
-				return $this->buildSuccessResponse($emailAddress, $result);
+				return $this->buildSuccessResponse($result);
 			}
 
 			$this->logger->debug('Failed to create ionos mail: Unknown response type', ['data' => $result ]);
@@ -169,11 +169,10 @@ class IonosMailService {
 	/**
 	 * Build success response with mail configuration
 	 *
-	 * @param string $emailAddress
 	 * @param MailAccountResponse $response
 	 * @return MailAccountConfig
 	 */
-	private function buildSuccessResponse(string $emailAddress, MailAccountResponse $response): MailAccountConfig {
+	private function buildSuccessResponse(MailAccountResponse $response): MailAccountConfig {
 		$smtpServer = $response->getServer()->getSmtp();
 		$imapServer = $response->getServer()->getImap();
 
@@ -194,7 +193,7 @@ class IonosMailService {
 		);
 
 		return new MailAccountConfig(
-			email: $emailAddress,
+			email: $response->getEmail(),
 			imap: $imapConfig,
 			smtp: $smtpConfig,
 		);
