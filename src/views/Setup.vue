@@ -111,7 +111,7 @@ export default {
 		flex-grow: 0;
 
 		background-color: var(--ion-surface-secondary);
-		padding: calc(3 * var(--default-grid-baseline));
+		padding: calc(5 * var(--default-grid-baseline));
 		border-radius: var(--border-radius-container);
 
 		/* overrides for custom icon size and full opacity */
