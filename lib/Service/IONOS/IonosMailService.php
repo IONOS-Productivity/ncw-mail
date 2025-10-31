@@ -64,7 +64,11 @@ class IonosMailService {
 		$mailCreateData->setLocalPart($userName);
 
 		if (!$mailCreateData->valid()) {
-			$this->logger->error('Validate message to mailconfig service', ['data' => $mailCreateData->listInvalidProperties()]);
+			$this->logger->error('Validate message to mailconfig service', [
+				'data' => $mailCreateData->listInvalidProperties(),
+				'userId' => $userId,
+				'userName' => $userName
+			]);
 			throw new ServiceException('Invalid mail configuration', 0);
 		}
 
@@ -73,15 +77,32 @@ class IonosMailService {
 			$result = $apiInstance->createMailbox(self::BRAND, $this->configService->getExternalReference(), $mailCreateData);
 
 			if ($result instanceof ErrorMessage) {
-				$this->logger->error('Failed to create ionos mail', ['status code' => $result->getStatus(), 'message' => $result->getMessage()]);
+				$this->logger->error('Failed to create ionos mail', [
+					'status code' => $result->getStatus(),
+					'message' => $result->getMessage(),
+					'userId' => $userId,
+					'userName' => $userName
+				]);
 				throw new ServiceException('Failed to create ionos mail', $result->getStatus());
 			}
 			if ($result instanceof MailAccountResponse) {
+				$this->logger->info('Successfully created IONOS mail account', [
+					'email' => $result->getEmail(),
+					'userId' => $userId,
+					'userName' => $userName
+				]);
 				return $this->buildSuccessResponse($result);
 			}
 
-			$this->logger->debug('Failed to create ionos mail: Unknown response type', ['data' => $result ]);
+			$this->logger->error('Failed to create ionos mail: Unknown response type', [
+				'data' => $result,
+				'userId' => $userId,
+				'userName' => $userName
+			]);
 			throw new ServiceException('Failed to create ionos mail', 0);
+		} catch (ServiceException $e) {
+			// Re-throw ServiceException without modification
+			throw $e;
 		} catch (ApiException $e) {
 			$statusCode = $e->getCode();
 			$this->logger->error('API Exception when calling MailConfigurationAPIApi->createMailbox', [
@@ -91,7 +112,11 @@ class IonosMailService {
 			]);
 			throw new ServiceException('Failed to create ionos mail: ' . $e->getMessage(), $statusCode, $e);
 		} catch (\Exception $e) {
-			$this->logger->error('Exception when calling MailConfigurationAPIApi->createMailbox', ['exception' => $e]);
+			$this->logger->error('Exception when calling MailConfigurationAPIApi->createMailbox', [
+				'exception' => $e,
+				'userId' => $userId,
+				'userName' => $userName
+			]);
 			throw new ServiceException('Failed to create ionos mail', 0, $e);
 		}
 	}
@@ -104,6 +129,7 @@ class IonosMailService {
 	private function getCurrentUserId(): string {
 		$user = $this->userSession->getUser();
 		if ($user === null) {
+			$this->logger->error('No user session found when attempting to create IONOS mail account');
 			throw new ServiceException('No user session found');
 		}
 		return $user->getUID();
@@ -121,14 +147,19 @@ class IonosMailService {
 		$normalized = strtolower($apiSslMode);
 
 		if (str_contains($normalized, 'tls') || str_contains($normalized, 'starttls')) {
-			return 'tls';
+			$result = 'tls';
+		} elseif (str_contains($normalized, 'ssl')) {
+			$result = 'ssl';
+		} else {
+			$result = 'none';
 		}
 
-		if (str_contains($normalized, 'ssl')) {
-			return 'ssl';
-		}
+		$this->logger->debug('Normalized SSL mode', [
+			'input' => $apiSslMode,
+			'output' => $result
+		]);
 
-		return 'none';
+		return $result;
 	}
 
 	/**
