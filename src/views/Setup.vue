@@ -43,7 +43,7 @@ import { NcAppContent as AppContent, NcEmptyContent as EmptyContent, NcContent }
 import { mapStores } from 'pinia'
 import AccountForm from '../components/AccountForm.vue'
 import Navigation from '../components/Navigation.vue'
-import FluidMail from '../../img/mail-fluid.svg'
+import FluidMail from '../../img/mail.svg'
 import logger from '../logger.js'
 import useMainStore from '../store/mainStore.js'
 
@@ -135,6 +135,9 @@ export default {
 					height: 128px !important;
 					max-width: 128px !important;
 					max-height: 128px !important;
+					path {
+						fill: var(--ion-color-primary) !important;
+					}
 				}
 			}
 		}
