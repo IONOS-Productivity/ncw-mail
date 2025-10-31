@@ -61,7 +61,6 @@ class IonosMailService {
 
 		$mailCreateData = new MailCreateData();
 		$mailCreateData->setNextcloudUserId($userId);
-		$mailCreateData->setDomainPart($domain);
 		$mailCreateData->setLocalPart($userName);
 
 		if (!$mailCreateData->valid()) {
