@@ -186,6 +186,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
+		$this->expectExceptionCode(500);
 
 		$this->service->createEmailAccount($userName);
 	}
@@ -239,6 +240,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
+		$this->expectExceptionCode(400);
 
 		$this->service->createEmailAccount($userName);
 	}
@@ -284,6 +286,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
+		$this->expectExceptionCode(500);
 
 		$this->service->createEmailAccount($userName);
 	}
