@@ -24,7 +24,6 @@ class IonosAccountsController extends Controller {
 
 	// Error message constants
 	private const ERR_ALL_FIELDS_REQUIRED = 'All fields are required';
-	private const ERR_CREATE_EMAIL_FAILED = 'Failed to create email account';
 	private const ERR_IONOS_API_ERROR = 'IONOS_API_ERROR';
 
 	public function __construct(
