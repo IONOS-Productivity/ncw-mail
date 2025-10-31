@@ -39,7 +39,7 @@ import { NcContent, NcAppContent as AppContent, NcEmptyContent as EmptyContent }
 import { loadState } from '@nextcloud/initial-state'
 
 import AccountForm from '../components/AccountForm.vue'
-import FluidMail from '../../img/mail-fluid.svg'
+import FluidMail from '../../img/mail.svg'
 import Navigation from '../components/Navigation.vue'
 import logger from '../logger.js'
 import { mapStores } from 'pinia'
@@ -129,6 +129,9 @@ export default {
 					height: 128px !important;
 					max-width: 128px !important;
 					max-height: 128px !important;
+					path {
+						fill: var(--ion-color-primary) !important;
+					}
 				}
 			}
 		}
