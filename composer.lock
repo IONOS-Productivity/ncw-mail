@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8db2c534831326ffe7a255677dcf4743",
+    "content-hash": "70675cc8588f0a896589ec933cc79c23",
     "packages": [
         {
             "name": "amphp/amp",
@@ -1983,7 +1983,7 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/ionos-productivity/ionos-mail-configuration-api-client.git",
-                "reference": "2.0.0-6ebd22a"
+                "reference": "2.0.0-20251031093901"
             },
             "type": "library",
             "autoload": {
