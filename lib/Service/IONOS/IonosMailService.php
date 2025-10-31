@@ -69,7 +69,7 @@ class IonosMailService {
 				'userId' => $userId,
 				'userName' => $userName
 			]);
-			throw new ServiceException('Invalid mail configuration', 0);
+			throw new ServiceException('Invalid mail configuration', 500);
 		}
 
 		try {
@@ -99,7 +99,7 @@ class IonosMailService {
 				'userId' => $userId,
 				'userName' => $userName
 			]);
-			throw new ServiceException('Failed to create ionos mail', 0);
+			throw new ServiceException('Failed to create ionos mail', 500);
 		} catch (ServiceException $e) {
 			// Re-throw ServiceException without modification
 			throw $e;
@@ -117,7 +117,7 @@ class IonosMailService {
 				'userId' => $userId,
 				'userName' => $userName
 			]);
-			throw new ServiceException('Failed to create ionos mail', 0, $e);
+			throw new ServiceException('Failed to create ionos mail', 500, $e);
 		}
 	}
 
