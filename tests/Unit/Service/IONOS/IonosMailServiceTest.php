@@ -116,6 +116,18 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->method('createMailbox')->willReturn($mailAccountResponse);
 
+		// Expect logging calls
+		$this->logger->expects($this->exactly(4))
+			->method('debug');
+
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Successfully created IONOS mail account', $this->callback(function ($context) use ($emailAddress) {
+				return $context['email'] === $emailAddress
+					&& $context['userId'] === 'testuser123'
+					&& $context['userName'] === 'test';
+			}));
+
 		$result = $this->service->createEmailAccount($userName);
 
 		$this->assertInstanceOf(MailAccountConfig::class, $result);
@@ -160,9 +172,17 @@ class IonosMailServiceTest extends TestCase {
 		$apiInstance->method('createMailbox')
 			->willThrowException(new \Exception('API call failed'));
 
+		// Expect logging calls
+		$this->logger->expects($this->exactly(2))
+			->method('debug');
+
 		$this->logger->expects($this->once())
 			->method('error')
-			->with('Exception when calling MailConfigurationAPIApi->createMailbox', $this->anything());
+			->with('Exception when calling MailConfigurationAPIApi->createMailbox', $this->callback(function ($context) use ($userName) {
+				return isset($context['exception'])
+					&& $context['userId'] === 'testuser123'
+					&& $context['userName'] === $userName;
+			}));
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
@@ -204,6 +224,19 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->method('createMailbox')->willReturn($errorMessage);
 
+		// Expect logging calls
+		$this->logger->expects($this->exactly(2))
+			->method('debug');
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Failed to create ionos mail', $this->callback(function ($context) use ($userName) {
+				return $context['status code'] === 400
+					&& $context['message'] === 'Bad Request'
+					&& $context['userId'] === 'testuser123'
+					&& $context['userName'] === $userName;
+			}));
+
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
 
@@ -238,6 +271,16 @@ class IonosMailServiceTest extends TestCase {
 		$unknownResponse = new \stdClass();
 		$apiInstance->method('createMailbox')->willReturn($unknownResponse);
 
+		// Expect logging calls
+		$this->logger->expects($this->exactly(2))
+			->method('debug');
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Failed to create ionos mail: Unknown response type', $this->callback(function ($context) use ($userName) {
+				return $context['userId'] === 'testuser123'
+					&& $context['userName'] === $userName;
+			}));
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
@@ -257,6 +300,11 @@ class IonosMailServiceTest extends TestCase {
 
 		// Mock no user session
 		$this->userSession->method('getUser')->willReturn(null);
+
+		// Expect logging call
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('No user session found when attempting to create IONOS mail account');
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('No user session found');
