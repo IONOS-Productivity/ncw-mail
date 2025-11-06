@@ -21,11 +21,11 @@ use OCP\Defaults;
 use OCP\IConfig;
 use OCP\IInitialStateService;
 use OCP\LDAP\ILDAPProvider;
-use OCP\Settings\ISettings;
+use OCP\Settings\IDelegatedSettings;
 use OCP\TextProcessing\FreePromptTaskType;
 use OCP\TextProcessing\SummaryTaskType;
 
-class AdminSettings implements ISettings {
+class AdminSettings implements IDelegatedSettings {
 	/** @var IInitialStateService */
 	private $initialStateService;
 
@@ -165,5 +165,15 @@ class AdminSettings implements ISettings {
 	#[\Override]
 	public function getPriority() {
 		return 90;
+	}
+
+	#[\Override]
+	public function getName(): ?string {
+		return null;
+	}
+
+	#[\Override]
+	public function getAuthorizedAppConfig(): array {
+		return [];
 	}
 }
