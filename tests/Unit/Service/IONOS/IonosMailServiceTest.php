@@ -12,9 +12,9 @@ namespace OCA\Mail\Tests\Unit\Service\IONOS;
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use GuzzleHttp\ClientInterface;
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
-use IONOS\MailConfigurationAPI\Client\Model\ErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\Imap;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
+use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailServer;
 use IONOS\MailConfigurationAPI\Client\Model\Smtp;
 use OCA\Mail\Exception\ServiceException;
@@ -191,7 +191,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->service->createEmailAccount($userName);
 	}
 
-	public function testCreateEmailAccountWithErrorMessageResponse(): void {
+	public function testCreateEmailAccountWithMailAddonErrorMessageResponse(): void {
 		$userName = 'test';
 		$domain = 'example.com';
 
@@ -215,12 +215,12 @@ class IonosMailServiceTest extends TestCase {
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
 
-		// Mock ErrorMessage response
-		$errorMessage = $this->getMockBuilder(ErrorMessage::class)
+		// Mock MailAddonErrorMessage response
+		$errorMessage = $this->getMockBuilder(MailAddonErrorMessage::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getStatus', 'getMessage'])
 			->getMock();
-		$errorMessage->method('getStatus')->willReturn(400);
+		$errorMessage->method('getStatus')->willReturn(MailAddonErrorMessage::STATUS__400_BAD_REQUEST);
 		$errorMessage->method('getMessage')->willReturn('Bad Request');
 
 		$apiInstance->method('createMailbox')->willReturn($errorMessage);
@@ -232,7 +232,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->logger->expects($this->once())
 			->method('error')
 			->with('Failed to create ionos mail', $this->callback(function ($context) use ($userName) {
-				return $context['status code'] === 400
+				return $context['status code'] === MailAddonErrorMessage::STATUS__400_BAD_REQUEST
 					&& $context['message'] === 'Bad Request'
 					&& $context['userId'] === 'testuser123'
 					&& $context['userName'] === $userName;
