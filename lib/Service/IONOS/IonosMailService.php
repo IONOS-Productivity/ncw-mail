@@ -10,8 +10,8 @@ declare(strict_types=1);
 namespace OCA\Mail\Service\IONOS;
 
 use IONOS\MailConfigurationAPI\Client\ApiException;
-use IONOS\MailConfigurationAPI\Client\Model\ErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
+use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailCreateData;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
@@ -143,7 +143,7 @@ class IonosMailService {
 			$this->logger->debug('Send message to mailconfig service', ['data' => $mailCreateData]);
 			$result = $apiInstance->createMailbox(self::BRAND, $this->configService->getExternalReference(), $mailCreateData);
 
-			if ($result instanceof ErrorMessage) {
+			if ($result instanceof MailAddonErrorMessage) {
 				$this->logger->error('Failed to create ionos mail', [
 					'status code' => $result->getStatus(),
 					'message' => $result->getMessage(),
@@ -168,7 +168,7 @@ class IonosMailService {
 			]);
 			throw new ServiceException('Failed to create ionos mail', 500);
 		} catch (ServiceException $e) {
-			// Re-throw ServiceException without modification
+			// Re-throw ServiceException without additional logging
 			throw $e;
 		} catch (ApiException $e) {
 			$statusCode = $e->getCode();
