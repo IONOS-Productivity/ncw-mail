@@ -22,6 +22,7 @@ use OCA\Mail\Service\AliasesService;
 use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\InternalAddressService;
 use OCA\Mail\Service\IONOS\IonosConfigService;
+use OCA\Mail\Service\IONOS\IonosMailConfigService;
 use OCA\Mail\Service\MailManager;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
@@ -118,6 +119,8 @@ class PageControllerTest extends TestCase {
 
 	private IonosConfigService&MockObject $ionosConfigService;
 
+	private IonosMailConfigService&MockObject $ionosMailConfigService;
+
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -147,6 +150,7 @@ class PageControllerTest extends TestCase {
 		$this->appManager = $this->createMock(IAppManager::class);
 		$this->appManager->method('getAppVersion')->willReturn('0.0.1-dev.0');
 		$this->ionosConfigService = $this->createMock(IonosConfigService::class);
+		$this->ionosMailConfigService = $this->createMock(IonosMailConfigService::class);
 
 		$this->controller = new PageController(
 			$this->appName,
@@ -174,6 +178,7 @@ class PageControllerTest extends TestCase {
 			$this->quickActionsService,
 			$this->appManager,
 			$this->ionosConfigService,
+			$this->ionosMailConfigService,
 		);
 	}
 
@@ -272,10 +277,9 @@ class PageControllerTest extends TestCase {
 				['version', '0.0.0', '26.0.0'],
 				['app.mail.attachment-size-limit', 0, 123],
 			]);
-		$this->config->expects($this->exactly(8))
+		$this->config->expects($this->exactly(7))
 			->method('getAppValue')
 			->withConsecutive(
-				[ 'mail', 'ionos-mailconfig-enabled' ],
 				[ 'mail', 'installed_version' ],
 				['mail', 'layout_message_view' ],
 				['mail', 'google_oauth_client_id' ],
@@ -284,7 +288,6 @@ class PageControllerTest extends TestCase {
 				['core', 'backgroundjobs_mode', 'ajax' ],
 				['mail', 'allow_new_mail_accounts', 'yes'],
 			)->willReturnOnConsecutiveCalls(
-				$this->returnValue('no'),
 				$this->returnValue('1.2.3'),
 				$this->returnValue('threaded'),
 				$this->returnValue(''),
@@ -293,6 +296,9 @@ class PageControllerTest extends TestCase {
 				$this->returnValue('cron'),
 				$this->returnValue('yes'),
 			);
+		$this->ionosMailConfigService->expects($this->once())
+			->method('isMailConfigAvailable')
+			->willReturn(false);
 		$this->ionosConfigService->expects($this->once())
 			->method('getMailDomain')
 			->willReturn('example.tld');
