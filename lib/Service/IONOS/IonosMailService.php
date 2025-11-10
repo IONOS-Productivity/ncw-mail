@@ -35,6 +35,73 @@ class IonosMailService {
 	}
 
 	/**
+	 * Check if the current logged-in user already has an IONOS email account
+	 *
+	 * @return bool true if account exists, false otherwise
+	 */
+	public function mailAccountExistsForCurrentUser(): bool {
+		$userId = $this->getCurrentUserId();
+		return $this->mailAccountExistsForCurrentUserId($userId);
+	}
+
+	/**
+	 * Check if a specific user has an IONOS email account
+	 *
+	 * @param string $userId The user ID to check
+	 * @return bool true if account exists, false otherwise
+	 */
+	public function mailAccountExistsForCurrentUserId(string $userId): bool {
+		try {
+			$this->logger->debug('Checking if user has email account', [
+				'userId' => $userId,
+				'extRef' => $this->configService->getExternalReference(),
+			]);
+
+			$client = $this->apiClientService->newClient([
+				'auth' => [$this->configService->getBasicAuthUser(), $this->configService->getBasicAuthPassword()],
+				'verify' => !$this->configService->getAllowInsecure(),
+			]);
+
+			$apiInstance = $this->apiClientService->newEventAPIApi($client, $this->configService->getApiBaseUrl());
+
+			$result = $apiInstance->getFunctionalAccount(self::BRAND, $this->configService->getExternalReference(), $userId);
+
+			if ($result instanceof MailAccountResponse) {
+				$this->logger->debug('User has existing IONOS mail account', [
+					'email' => $result->getEmail(),
+					'userId' => $userId
+				]);
+				return true;
+			}
+
+			return false;
+		} catch (ApiException $e) {
+			$statusCode = $e->getCode();
+			// 404 - no account exists
+			if ($statusCode === 404) {
+				$this->logger->debug('User does not have IONOS mail account', [
+					'userId' => $userId,
+					'statusCode' => $statusCode
+				]);
+				return false;
+			}
+
+			$this->logger->error('API Exception when checking for existing mail account', [
+				'statusCode' => $statusCode,
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody()
+			]);
+			return false;
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when checking for existing mail account', [
+				'exception' => $e,
+				'userId' => $userId
+			]);
+			return false;
+		}
+	}
+
+	/**
 	 * Create an IONOS email account via API
 	 *
 	 * @return MailAccountConfig Mail account configuration

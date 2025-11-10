@@ -24,6 +24,7 @@ use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\ContextChat\ContextChatSettingsService;
 use OCA\Mail\Service\InternalAddressService;
 use OCA\Mail\Service\IONOS\IonosConfigService;
+use OCA\Mail\Service\IONOS\IonosMailConfigService;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
 use OCA\Mail\Service\SmimeService;
@@ -94,6 +95,7 @@ class PageController extends Controller {
 		private ClassificationSettingsService $classificationSettingsService,
 		private IAppConfig $appConfig,
 		private IonosConfigService $ionosConfigService,
+		private IonosMailConfigService $ionosMailConfigService,
 	) {
 		parent::__construct($appName, $request);
 
@@ -229,10 +231,9 @@ class PageController extends Controller {
 
 		$response = new TemplateResponse($this->appName, 'index');
 
-
 		$this->initialStateService->provideInitialState('preferences', [
 			'attachment-size-limit' => $this->config->getSystemValue('app.mail.attachment-size-limit', 0),
-			'ionos-mailconfig-enabled' => $this->config->getAppValue('mail', 'ionos-mailconfig-enabled', 'no') === 'yes',
+			'ionos-mailconfig-enabled' => $this->ionosMailConfigService->isMailConfigAvailable(),
 			'ionos-mailconfig-domain' => $this->ionosConfigService->getMailDomain(),
 			'app-version' => $this->config->getAppValue('mail', 'installed_version'),
 			'external-avatars' => $this->preferences->getPreference($this->userId, 'external-avatars', 'true'),
