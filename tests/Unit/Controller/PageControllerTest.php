@@ -25,6 +25,7 @@ use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\ContextChat\ContextChatSettingsService;
 use OCA\Mail\Service\InternalAddressService;
 use OCA\Mail\Service\IONOS\IonosConfigService;
+use OCA\Mail\Service\IONOS\IonosMailConfigService;
 use OCA\Mail\Service\MailManager;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
@@ -125,6 +126,9 @@ class PageControllerTest extends TestCase {
 	private ClassificationSettingsService|MockObject $classificationSettingsService;
 
 	private IonosConfigService&MockObject $ionosConfigService;
+
+	private IonosMailConfigService&MockObject $ionosMailConfigService;
+
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -156,6 +160,7 @@ class PageControllerTest extends TestCase {
 		$this->contextChatSettingsService = $this->createMock(ContextChatSettingsService::class);
 		$this->contextChatSettingsService->method('isIndexingEnabled')->willReturn(true);
 		$this->ionosConfigService = $this->createMock(IonosConfigService::class);
+		$this->ionosMailConfigService = $this->createMock(IonosMailConfigService::class);
 
 		$this->classificationSettingsService = $this->createMock(ClassificationSettingsService::class);
 		$this->controller = new PageController(
@@ -186,6 +191,7 @@ class PageControllerTest extends TestCase {
 			$this->classificationSettingsService,
 			$this->appConfig,
 			$this->ionosConfigService,
+			$this->ionosMailConfigService,
 		);
 	}
 
@@ -289,14 +295,12 @@ class PageControllerTest extends TestCase {
 				['version', '0.0.0', '26.0.0'],
 				['app.mail.attachment-size-limit', 0, 123],
 			]);
-		$this->config->expects($this->exactly(3))
+		$this->config->expects($this->exactly(2))
 			->method('getAppValue')
 			->withConsecutive(
-				['mail', 'ionos-mailconfig-enabled'],
 				['mail', 'installed_version'],
 				['core', 'backgroundjobs_mode', 'ajax'],
 			)->willReturnOnConsecutiveCalls(
-				'no',
 				'1.2.3',
 				'cron',
 			);
@@ -317,6 +321,9 @@ class PageControllerTest extends TestCase {
 			->method('getValueBool')
 			->with(Application::APP_ID, ConfigLexicon::ALLOW_NEW_MAIL_ACCOUNTS, true)
 			->willReturn(true);
+		$this->ionosMailConfigService->expects($this->once())
+			->method('isMailConfigAvailable')
+			->willReturn(false);
 		$this->ionosConfigService->expects($this->once())
 			->method('getMailDomain')
 			->willReturn('example.tld');
