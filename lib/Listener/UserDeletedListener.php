@@ -40,10 +40,11 @@ class UserDeletedListener implements IEventListener {
 		}
 
 		$user = $event->getUser();
-		foreach ($this->accountService->findByUserId($user->getUID()) as $account) {
+		$userId = $user->getUID();
+		foreach ($this->accountService->findByUserId($userId) as $account) {
 			try {
 				$this->accountService->delete(
-					$user->getUID(),
+					$userId,
 					$account->getId()
 				);
 			} catch (ClientException $e) {
