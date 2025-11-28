@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\Mail\Service\IONOS;
 
+use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
 use IONOS\MailConfigurationAPI\Client\ApiException;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
@@ -25,6 +26,8 @@ use Psr\Log\LoggerInterface;
  */
 class IonosMailService {
 	private const BRAND = 'IONOS';
+	private const HTTP_NOT_FOUND = 404;
+	private const HTTP_INTERNAL_SERVER_ERROR = 500;
 
 	public function __construct(
 		private ApiMailConfigClientService $apiClientService,
@@ -57,12 +60,7 @@ class IonosMailService {
 				'extRef' => $this->configService->getExternalReference(),
 			]);
 
-			$client = $this->apiClientService->newClient([
-				'auth' => [$this->configService->getBasicAuthUser(), $this->configService->getBasicAuthPassword()],
-				'verify' => !$this->configService->getAllowInsecure(),
-			]);
-
-			$apiInstance = $this->apiClientService->newEventAPIApi($client, $this->configService->getApiBaseUrl());
+			$apiInstance = $this->createApiInstance();
 
 			$result = $apiInstance->getFunctionalAccount(self::BRAND, $this->configService->getExternalReference(), $userId);
 
@@ -76,18 +74,17 @@ class IonosMailService {
 
 			return false;
 		} catch (ApiException $e) {
-			$statusCode = $e->getCode();
 			// 404 - no account exists
-			if ($statusCode === 404) {
+			if ($e->getCode() === self::HTTP_NOT_FOUND) {
 				$this->logger->debug('User does not have IONOS mail account', [
 					'userId' => $userId,
-					'statusCode' => $statusCode
+					'statusCode' => $e->getCode()
 				]);
 				return false;
 			}
 
 			$this->logger->error('API Exception when checking for existing mail account', [
-				'statusCode' => $statusCode,
+				'statusCode' => $e->getCode(),
 				'message' => $e->getMessage(),
 				'responseBody' => $e->getResponseBody()
 			]);
@@ -119,12 +116,7 @@ class IonosMailService {
 			'apiBaseUrl' => $this->configService->getApiBaseUrl()
 		]);
 
-		$client = $this->apiClientService->newClient([
-			'auth' => [$this->configService->getBasicAuthUser(), $this->configService->getBasicAuthPassword()],
-			'verify' => !$this->configService->getAllowInsecure(),
-		]);
-
-		$apiInstance = $this->apiClientService->newEventAPIApi($client, $this->configService->getApiBaseUrl());
+		$apiInstance = $this->createApiInstance();
 
 		$mailCreateData = new MailCreateData();
 		$mailCreateData->setNextcloudUserId($userId);
@@ -136,7 +128,7 @@ class IonosMailService {
 				'userId' => $userId,
 				'userName' => $userName
 			]);
-			throw new ServiceException('Invalid mail configuration', 500);
+			throw new ServiceException('Invalid mail configuration', self::HTTP_INTERNAL_SERVER_ERROR);
 		}
 
 		try {
@@ -166,25 +158,24 @@ class IonosMailService {
 				'userId' => $userId,
 				'userName' => $userName
 			]);
-			throw new ServiceException('Failed to create ionos mail', 500);
+			throw new ServiceException('Failed to create ionos mail', self::HTTP_INTERNAL_SERVER_ERROR);
 		} catch (ServiceException $e) {
 			// Re-throw ServiceException without additional logging
 			throw $e;
 		} catch (ApiException $e) {
-			$statusCode = $e->getCode();
 			$this->logger->error('API Exception when calling MailConfigurationAPIApi->createMailbox', [
-				'statusCode' => $statusCode,
+				'statusCode' => $e->getCode(),
 				'message' => $e->getMessage(),
 				'responseBody' => $e->getResponseBody()
 			]);
-			throw new ServiceException('Failed to create ionos mail: ' . $e->getMessage(), $statusCode, $e);
+			throw new ServiceException('Failed to create ionos mail: ' . $e->getMessage(), $e->getCode(), $e);
 		} catch (\Exception $e) {
 			$this->logger->error('Exception when calling MailConfigurationAPIApi->createMailbox', [
 				'exception' => $e,
 				'userId' => $userId,
 				'userName' => $userName
 			]);
-			throw new ServiceException('Failed to create ionos mail', 500, $e);
+			throw new ServiceException('Failed to create ionos mail', self::HTTP_INTERNAL_SERVER_ERROR, $e);
 		}
 	}
 
@@ -200,6 +191,20 @@ class IonosMailService {
 			throw new ServiceException('No user session found');
 		}
 		return $user->getUID();
+	}
+
+	/**
+	 * Create and configure API instance with authentication
+	 *
+	 * @return MailConfigurationAPIApi
+	 */
+	private function createApiInstance(): MailConfigurationAPIApi {
+		$client = $this->apiClientService->newClient([
+			'auth' => [$this->configService->getBasicAuthUser(), $this->configService->getBasicAuthPassword()],
+			'verify' => !$this->configService->getAllowInsecure(),
+		]);
+
+		return $this->apiClientService->newEventAPIApi($client, $this->configService->getApiBaseUrl());
 	}
 
 	/**
