@@ -10,14 +10,14 @@ declare(strict_types=1);
 namespace OCA\Mail\Tests\Unit\Service\IONOS;
 
 use ChristophWurst\Nextcloud\Testing\TestCase;
+use OCA\Mail\Service\IONOS\IonosConfigService;
 use OCA\Mail\Service\IONOS\IonosMailConfigService;
 use OCA\Mail\Service\IONOS\IonosMailService;
-use OCP\IConfig;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
 class IonosMailConfigServiceTest extends TestCase {
-	private IConfig&MockObject $config;
+	private IonosConfigService&MockObject $ionosConfigService;
 	private IonosMailService&MockObject $ionosMailService;
 	private LoggerInterface&MockObject $logger;
 	private IonosMailConfigService $service;
@@ -25,22 +25,21 @@ class IonosMailConfigServiceTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$this->config = $this->createMock(IConfig::class);
+		$this->ionosConfigService = $this->createMock(IonosConfigService::class);
 		$this->ionosMailService = $this->createMock(IonosMailService::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->service = new IonosMailConfigService(
-			$this->config,
+			$this->ionosConfigService,
 			$this->ionosMailService,
 			$this->logger,
 		);
 	}
 
 	public function testIsMailConfigAvailableReturnsFalseWhenFeatureDisabled(): void {
-		$this->config->expects($this->once())
-			->method('getAppValue')
-			->with('mail', 'ionos-mailconfig-enabled', 'no')
-			->willReturn('no');
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailConfigEnabled')
+			->willReturn(false);
 
 		$this->ionosMailService->expects($this->never())
 			->method('mailAccountExistsForCurrentUser');
@@ -51,10 +50,9 @@ class IonosMailConfigServiceTest extends TestCase {
 	}
 
 	public function testIsMailConfigAvailableReturnsTrueWhenUserHasNoAccount(): void {
-		$this->config->expects($this->once())
-			->method('getAppValue')
-			->with('mail', 'ionos-mailconfig-enabled', 'no')
-			->willReturn('yes');
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailConfigEnabled')
+			->willReturn(true);
 
 		$this->ionosMailService->expects($this->once())
 			->method('mailAccountExistsForCurrentUser')
@@ -69,10 +67,9 @@ class IonosMailConfigServiceTest extends TestCase {
 	}
 
 	public function testIsMailConfigAvailableReturnsFalseWhenUserHasAccount(): void {
-		$this->config->expects($this->once())
-			->method('getAppValue')
-			->with('mail', 'ionos-mailconfig-enabled', 'no')
-			->willReturn('yes');
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailConfigEnabled')
+			->willReturn(true);
 
 		$this->ionosMailService->expects($this->once())
 			->method('mailAccountExistsForCurrentUser')
@@ -88,10 +85,9 @@ class IonosMailConfigServiceTest extends TestCase {
 	}
 
 	public function testIsMailConfigAvailableReturnsFalseOnException(): void {
-		$this->config->expects($this->once())
-			->method('getAppValue')
-			->with('mail', 'ionos-mailconfig-enabled', 'no')
-			->willReturn('yes');
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailConfigEnabled')
+			->willReturn(true);
 
 		$exception = new \Exception('Test exception');
 
