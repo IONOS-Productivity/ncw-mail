@@ -137,6 +137,35 @@ class IonosConfigService {
 	}
 
 	/**
+	 * Check if IONOS integration is fully enabled and configured
+	 *
+	 * Returns true only if:
+	 * 1. The mail config feature is enabled
+	 * 2. All required API configuration is valid
+	 *
+	 * @return bool True if IONOS integration is enabled and configured, false otherwise
+	 */
+	public function isIonosIntegrationEnabled(): bool {
+		try {
+			// Check if feature is enabled
+			if (!$this->isMailConfigEnabled()) {
+				return false;
+			}
+
+			// Verify all required API configuration is valid
+			$this->getApiConfig();
+
+			return true;
+		} catch (AppConfigException $e) {
+			// Configuration is missing or invalid
+			$this->logger->debug('IONOS integration not available - configuration error', [
+				'exception' => $e,
+			]);
+			return false;
+		}
+	}
+
+	/**
 	 * Get the mail domain from customer domain
 	 *
 	 * Extracts the registrable domain (mail domain) from the customer domain
