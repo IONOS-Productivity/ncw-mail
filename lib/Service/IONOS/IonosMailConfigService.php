@@ -26,15 +26,15 @@ class IonosMailConfigService {
 	 * Check if IONOS mail configuration should be available for the current user
 	 *
 	 * The configuration is available only if:
-	 * 1. The feature is enabled in app config
+	 * 1. The IONOS integration is enabled and properly configured
 	 * 2. The user does NOT already have an IONOS mail account
 	 *
 	 * @return bool True if mail configuration should be shown, false otherwise
 	 */
 	public function isMailConfigAvailable(): bool {
 		try {
-			// Check if feature is enabled in app config
-			if (!$this->ionosConfigService->isMailConfigEnabled()) {
+			// Check if IONOS integration is enabled and configured
+			if (!$this->ionosConfigService->isIonosIntegrationEnabled()) {
 				return false;
 			}
 

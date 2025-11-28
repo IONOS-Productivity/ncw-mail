@@ -38,7 +38,7 @@ class IonosMailConfigServiceTest extends TestCase {
 
 	public function testIsMailConfigAvailableReturnsFalseWhenFeatureDisabled(): void {
 		$this->ionosConfigService->expects($this->once())
-			->method('isMailConfigEnabled')
+			->method('isIonosIntegrationEnabled')
 			->willReturn(false);
 
 		$this->ionosMailService->expects($this->never())
@@ -51,7 +51,7 @@ class IonosMailConfigServiceTest extends TestCase {
 
 	public function testIsMailConfigAvailableReturnsTrueWhenUserHasNoAccount(): void {
 		$this->ionosConfigService->expects($this->once())
-			->method('isMailConfigEnabled')
+			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
 		$this->ionosMailService->expects($this->once())
@@ -68,7 +68,7 @@ class IonosMailConfigServiceTest extends TestCase {
 
 	public function testIsMailConfigAvailableReturnsFalseWhenUserHasAccount(): void {
 		$this->ionosConfigService->expects($this->once())
-			->method('isMailConfigEnabled')
+			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
 		$this->ionosMailService->expects($this->once())
@@ -86,7 +86,7 @@ class IonosMailConfigServiceTest extends TestCase {
 
 	public function testIsMailConfigAvailableReturnsFalseOnException(): void {
 		$this->ionosConfigService->expects($this->once())
-			->method('isMailConfigEnabled')
+			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
 		$exception = new \Exception('Test exception');
