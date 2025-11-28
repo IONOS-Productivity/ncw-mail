@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace OCA\Mail\Service\IONOS;
 
-use OCP\IConfig;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -17,7 +16,7 @@ use Psr\Log\LoggerInterface;
  */
 class IonosMailConfigService {
 	public function __construct(
-		private IConfig $config,
+		private IonosConfigService $ionosConfigService,
 		private IonosMailService $ionosMailService,
 		private LoggerInterface $logger,
 	) {
@@ -35,8 +34,7 @@ class IonosMailConfigService {
 	public function isMailConfigAvailable(): bool {
 		try {
 			// Check if feature is enabled in app config
-			$isEnabled = $this->config->getAppValue('mail', 'ionos-mailconfig-enabled', 'no') === 'yes';
-			if (!$isEnabled) {
+			if (!$this->ionosConfigService->isMailConfigEnabled()) {
 				return false;
 			}
 
