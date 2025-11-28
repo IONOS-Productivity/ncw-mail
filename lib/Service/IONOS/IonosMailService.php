@@ -266,4 +266,87 @@ class IonosMailService {
 			smtp: $smtpConfig,
 		);
 	}
+
+	/**
+	 * Delete an IONOS email account via API
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return bool true if deletion was successful, false otherwise
+	 * @throws ServiceException
+	 */
+	public function deleteEmailAccount(string $userId): bool {
+		$this->logger->info('Attempting to delete IONOS email account', [
+			'userId' => $userId,
+			'extRef' => $this->configService->getExternalReference(),
+		]);
+
+		try {
+			$apiInstance = $this->createApiInstance();
+
+			$apiInstance->deleteMailbox(self::BRAND, $this->configService->getExternalReference(), $userId);
+
+			$this->logger->info('Successfully deleted IONOS email account', [
+				'userId' => $userId
+			]);
+
+			return true;
+		} catch (ApiException $e) {
+			// 404 means the mailbox doesn't exist - treat as success
+			if ($e->getCode() === self::HTTP_NOT_FOUND) {
+				$this->logger->debug('IONOS mailbox does not exist (already deleted or never created)', [
+					'userId' => $userId,
+					'statusCode' => $e->getCode()
+				]);
+				return true;
+			}
+
+			$this->logger->error('API Exception when calling MailConfigurationAPIApi->deleteMailbox', [
+				'statusCode' => $e->getCode(),
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody(),
+				'userId' => $userId
+			]);
+
+			throw new ServiceException('Failed to delete IONOS mail: ' . $e->getMessage(), $e->getCode(), $e);
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when calling MailConfigurationAPIApi->deleteMailbox', [
+				'exception' => $e,
+				'userId' => $userId
+			]);
+
+			throw new ServiceException('Failed to delete IONOS mail', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
+	}
+
+	/**
+	 * Delete an IONOS email account without throwing exceptions (fire and forget)
+	 *
+	 * This method checks if IONOS integration is enabled and attempts to delete
+	 * the email account. All errors are logged but not thrown, making it safe
+	 * to call in event listeners or other contexts where exceptions should not
+	 * interrupt the flow.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return void
+	 */
+	public function tryDeleteEmailAccount(string $userId): void {
+		// Check if IONOS integration is enabled
+		if (!$this->configService->isIonosIntegrationEnabled()) {
+			$this->logger->debug('IONOS integration is not enabled, skipping email account deletion', [
+				'userId' => $userId
+			]);
+			return;
+		}
+
+		try {
+			$this->deleteEmailAccount($userId);
+			// Success is already logged by deleteEmailAccount
+		} catch (ServiceException $e) {
+			$this->logger->error('Failed to delete IONOS mailbox for user', [
+				'userId' => $userId,
+				'exception' => $e,
+			]);
+			// Don't throw - this is a fire and forget operation
+		}
+	}
 }
