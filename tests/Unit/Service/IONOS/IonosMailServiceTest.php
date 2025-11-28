@@ -600,4 +600,441 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->assertFalse($result);
 	}
+
+
+	public function testDeleteEmailAccountSuccess(): void {
+		$userId = 'testuser123';
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')
+			->with([
+				'auth' => ['testuser', 'testpass'],
+				'verify' => true,
+			])
+			->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')
+			->with($client, 'https://api.example.com')
+			->willReturn($apiInstance);
+
+		// Mock successful deletion (returns void)
+		$apiInstance->expects($this->once())
+			->method('deleteMailbox')
+			->with('IONOS', 'test-ext-ref', $userId);
+
+		// Expect logging calls
+		$callCount = 0;
+		$this->logger->expects($this->exactly(2))
+			->method('info')
+			->willReturnCallback(function ($message, $context) use ($userId, &$callCount) {
+				$callCount++;
+				if ($callCount === 1) {
+					$this->assertEquals('Attempting to delete IONOS email account', $message);
+					$this->assertEquals($userId, $context['userId']);
+					$this->assertEquals('test-ext-ref', $context['extRef']);
+				} elseif ($callCount === 2) {
+					$this->assertEquals('Successfully deleted IONOS email account', $message);
+					$this->assertEquals($userId, $context['userId']);
+				}
+			});
+
+		$result = $this->service->deleteEmailAccount($userId);
+
+		$this->assertTrue($result);
+	}
+
+	public function testDeleteEmailAccountReturns404AlreadyDeleted(): void {
+		$userId = 'testuser123';
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Mock API to throw 404 exception (mailbox doesn't exist)
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Not Found',
+			404,
+			[],
+			'{"error": "Not Found"}'
+		);
+
+		$apiInstance->expects($this->once())
+			->method('deleteMailbox')
+			->with('IONOS', 'test-ext-ref', $userId)
+			->willThrowException($apiException);
+
+		// Expect logging calls
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Attempting to delete IONOS email account', $this->callback(function ($context) use ($userId) {
+				return $context['userId'] === $userId
+					&& $context['extRef'] === 'test-ext-ref';
+			}));
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('IONOS mailbox does not exist (already deleted or never created)', $this->callback(function ($context) use ($userId) {
+				return $context['userId'] === $userId
+					&& $context['statusCode'] === 404;
+			}));
+
+		// Should return true for 404 (treat as success)
+		$result = $this->service->deleteEmailAccount($userId);
+
+		$this->assertTrue($result);
+	}
+
+	public function testDeleteEmailAccountThrowsExceptionOnApiError(): void {
+		$userId = 'testuser123';
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Mock API to throw 500 exception
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Internal Server Error',
+			500,
+			[],
+			'{"error": "Server error"}'
+		);
+
+		$apiInstance->expects($this->once())
+			->method('deleteMailbox')
+			->with('IONOS', 'test-ext-ref', $userId)
+			->willThrowException($apiException);
+
+		// Expect logging calls
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Attempting to delete IONOS email account', $this->callback(function ($context) use ($userId) {
+				return $context['userId'] === $userId
+					&& $context['extRef'] === 'test-ext-ref';
+			}));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('API Exception when calling MailConfigurationAPIApi->deleteMailbox', $this->callback(function ($context) use ($userId) {
+				return $context['statusCode'] === 500
+					&& $context['message'] === 'Internal Server Error'
+					&& $context['userId'] === $userId;
+			}));
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to delete IONOS mail: Internal Server Error');
+		$this->expectExceptionCode(500);
+
+		$this->service->deleteEmailAccount($userId);
+	}
+
+	public function testDeleteEmailAccountThrowsExceptionOnGeneralError(): void {
+		$userId = 'testuser123';
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Mock API to throw general exception
+		$generalException = new \Exception('Unexpected error');
+
+		$apiInstance->expects($this->once())
+			->method('deleteMailbox')
+			->with('IONOS', 'test-ext-ref', $userId)
+			->willThrowException($generalException);
+
+		// Expect logging calls
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Attempting to delete IONOS email account', $this->callback(function ($context) use ($userId) {
+				return $context['userId'] === $userId
+					&& $context['extRef'] === 'test-ext-ref';
+			}));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Exception when calling MailConfigurationAPIApi->deleteMailbox', $this->callback(function ($context) use ($userId) {
+				return isset($context['exception'])
+					&& $context['userId'] === $userId;
+			}));
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to delete IONOS mail');
+		$this->expectExceptionCode(500);
+
+		$this->service->deleteEmailAccount($userId);
+	}
+
+	public function testDeleteEmailAccountWithInsecureConnection(): void {
+		$userId = 'testuser123';
+
+		// Mock config with insecure connection allowed
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(true);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client - verify should be false
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')
+			->with([
+				'auth' => ['testuser', 'testpass'],
+				'verify' => false,
+			])
+			->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')
+			->with($client, 'https://api.example.com')
+			->willReturn($apiInstance);
+
+		// Mock successful deletion
+		$apiInstance->expects($this->once())
+			->method('deleteMailbox')
+			->with('IONOS', 'test-ext-ref', $userId);
+
+		$this->logger->expects($this->exactly(2))
+			->method('info');
+
+		$result = $this->service->deleteEmailAccount($userId);
+
+		$this->assertTrue($result);
+	}
+
+	public function testTryDeleteEmailAccountWhenIntegrationDisabled(): void {
+		$userId = 'testuser123';
+
+		// Mock integration as disabled
+		$this->configService->expects($this->once())
+			->method('isIonosIntegrationEnabled')
+			->willReturn(false);
+
+		// Should log that integration is not enabled
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with(
+				'IONOS integration is not enabled, skipping email account deletion',
+				['userId' => $userId]
+			);
+
+		// Should not attempt to create API client
+		$this->apiClientService->expects($this->never())
+			->method('newClient');
+
+		// Call tryDeleteEmailAccount - should not throw exception
+		$this->service->tryDeleteEmailAccount($userId);
+
+		$this->addToAssertionCount(1);
+	}
+
+	public function testTryDeleteEmailAccountWhenIntegrationEnabledSuccess(): void {
+		$userId = 'testuser123';
+
+		// Mock integration as enabled
+		$this->configService->expects($this->once())
+			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')
+			->with([
+				'auth' => ['testuser', 'testpass'],
+				'verify' => true,
+			])
+			->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')
+			->with($client, 'https://api.example.com')
+			->willReturn($apiInstance);
+
+		// Mock successful deletion
+		$apiInstance->expects($this->once())
+			->method('deleteMailbox')
+			->with('IONOS', 'test-ext-ref', $userId);
+
+		// Should log success at info level (from deleteEmailAccount only)
+		$this->logger->expects($this->exactly(2))
+			->method('info')
+			->willReturnCallback(function ($message, $context) use ($userId) {
+				if ($message === 'Attempting to delete IONOS email account') {
+					$this->assertSame($userId, $context['userId']);
+					$this->assertSame('test-ext-ref', $context['extRef']);
+				} elseif ($message === 'Successfully deleted IONOS email account') {
+					$this->assertSame($userId, $context['userId']);
+				}
+			});
+
+		// Call tryDeleteEmailAccount - should not throw exception
+		$this->service->tryDeleteEmailAccount($userId);
+
+		$this->addToAssertionCount(1);
+	}
+
+	public function testTryDeleteEmailAccountWhenIntegrationEnabledButDeletionFails(): void {
+		$userId = 'testuser123';
+
+		// Mock integration as enabled
+		$this->configService->expects($this->once())
+			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')
+			->with([
+				'auth' => ['testuser', 'testpass'],
+				'verify' => true,
+			])
+			->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')
+			->with($client, 'https://api.example.com')
+			->willReturn($apiInstance);
+
+		// Mock API exception
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException('API Error', 500);
+		$apiInstance->expects($this->once())
+			->method('deleteMailbox')
+			->with('IONOS', 'test-ext-ref', $userId)
+			->willThrowException($apiException);
+
+		// Should log the error from deleteEmailAccount and then from tryDeleteEmailAccount
+		$this->logger->expects($this->exactly(2))
+			->method('error')
+			->willReturnCallback(function ($message, $context) use ($userId) {
+				if ($message === 'API Exception when calling MailConfigurationAPIApi->deleteMailbox') {
+					// This is from deleteEmailAccount
+					$this->assertSame($userId, $context['userId']);
+					$this->assertSame(500, $context['statusCode']);
+				} elseif ($message === 'Failed to delete IONOS mailbox for user') {
+					// This is from tryDeleteEmailAccount
+					$this->assertSame($userId, $context['userId']);
+					$this->assertInstanceOf(ServiceException::class, $context['exception']);
+				}
+			});
+
+		// Call tryDeleteEmailAccount - should NOT throw exception (fire and forget)
+		$this->service->tryDeleteEmailAccount($userId);
+
+		$this->addToAssertionCount(1);
+	}
+
+	public function testTryDeleteEmailAccountWhenMailboxNotFound(): void {
+		$userId = 'testuser123';
+
+		// Mock integration as enabled
+		$this->configService->expects($this->once())
+			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')
+			->with([
+				'auth' => ['testuser', 'testpass'],
+				'verify' => true,
+			])
+			->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')
+			->with($client, 'https://api.example.com')
+			->willReturn($apiInstance);
+
+		// Mock 404 API exception (mailbox already deleted or never existed)
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException('Not Found', 404);
+		$apiInstance->expects($this->once())
+			->method('deleteMailbox')
+			->with('IONOS', 'test-ext-ref', $userId)
+			->willThrowException($apiException);
+
+		// Should log at info level (from deleteEmailAccount) and debug (404 is treated as success)
+		$this->logger->expects($this->once())
+			->method('info')
+			->with(
+				'Attempting to delete IONOS email account',
+				[
+					'userId' => $userId,
+					'extRef' => 'test-ext-ref',
+				]
+			);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with(
+				'IONOS mailbox does not exist (already deleted or never created)',
+				[
+					'userId' => $userId,
+					'statusCode' => 404
+				]
+			);
+
+		// Call tryDeleteEmailAccount - should NOT throw exception
+		$this->service->tryDeleteEmailAccount($userId);
+
+		$this->addToAssertionCount(1);
+	}
 }
