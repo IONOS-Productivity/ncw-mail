@@ -204,7 +204,7 @@ class IonosMailService {
 			'verify' => !$this->configService->getAllowInsecure(),
 		]);
 
-		return $this->apiClientService->newEventAPIApi($client, $this->configService->getApiBaseUrl());
+		return $this->apiClientService->newMailConfigurationAPIApi($client, $this->configService->getApiBaseUrl());
 	}
 
 	/**
