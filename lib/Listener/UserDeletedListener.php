@@ -12,6 +12,7 @@ namespace OCA\Mail\Listener;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\DelegationService;
+use OCA\Mail\Service\IONOS\IonosMailService;
 use OCA\Mail\Service\TextBlockService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
@@ -27,6 +28,7 @@ class UserDeletedListener implements IEventListener {
 		private TextBlockService $textBlockService,
 		private DelegationService $delegationService,
 		private LoggerInterface $logger,
+		private readonly IonosMailService $ionosMailService,
 	) {
 	}
 
@@ -39,6 +41,11 @@ class UserDeletedListener implements IEventListener {
 
 		$user = $event->getUser();
 		$userId = $user->getUID();
+
+		// Delete IONOS mailbox if IONOS integration is enabled
+		$this->ionosMailService->tryDeleteEmailAccount($userId);
+
+		// Delete all mail accounts in Nextcloud
 		foreach ($this->accountService->findByUserId($userId) as $account) {
 			try {
 				$this->accountService->delete(
