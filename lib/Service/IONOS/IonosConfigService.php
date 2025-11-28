@@ -130,6 +130,13 @@ class IonosConfigService {
 	}
 
 	/**
+	 * Check if IONOS mail configuration feature is enabled
+	 */
+	public function isMailConfigEnabled(): bool {
+		return $this->config->getAppValue('mail', 'ionos-mailconfig-enabled', 'no') === 'yes';
+	}
+
+	/**
 	 * Get the mail domain from customer domain
 	 *
 	 * Extracts the registrable domain (mail domain) from the customer domain
