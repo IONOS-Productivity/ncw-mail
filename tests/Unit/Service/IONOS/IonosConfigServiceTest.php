@@ -217,4 +217,77 @@ class IonosConfigServiceTest extends TestCase {
 		$result = $this->service->getMailDomain();
 		$this->assertEquals('example.com', $result);
 	}
+
+	public function testIsMailConfigEnabledWhenEnabled(): void {
+		$this->config->method('getAppValue')
+			->with('mail', 'ionos-mailconfig-enabled', 'no')
+			->willReturn('yes');
+
+		$result = $this->service->isMailConfigEnabled();
+		$this->assertTrue($result);
+	}
+
+	public function testIsMailConfigEnabledWhenDisabled(): void {
+		$this->config->method('getAppValue')
+			->with('mail', 'ionos-mailconfig-enabled', 'no')
+			->willReturn('no');
+
+		$result = $this->service->isMailConfigEnabled();
+		$this->assertFalse($result);
+	}
+
+	public function testIsIonosIntegrationEnabledWhenFullyConfigured(): void {
+		$this->config->method('getAppValue')
+			->with('mail', 'ionos-mailconfig-enabled', 'no')
+			->willReturn('yes');
+
+		$this->config->method('getSystemValue')
+			->with('ncw.ext_ref')
+			->willReturn('test-ext-ref');
+
+		$this->appConfig->method('getValueString')
+			->willReturnCallback(function ($appId, $key) {
+				$values = [
+					'ionos_mailconfig_api_base_url' => 'https://api.example.com',
+					'ionos_mailconfig_api_auth_user' => 'testuser',
+					'ionos_mailconfig_api_auth_pass' => 'testpass',
+				];
+				return $values[$key] ?? '';
+			});
+
+		$this->appConfig->method('getValueBool')
+			->with(Application::APP_ID, 'ionos_mailconfig_api_allow_insecure', false)
+			->willReturn(false);
+
+		$result = $this->service->isIonosIntegrationEnabled();
+		$this->assertTrue($result);
+	}
+
+	public function testIsIonosIntegrationEnabledWhenFeatureDisabled(): void {
+		$this->config->method('getAppValue')
+			->with('mail', 'ionos-mailconfig-enabled', 'no')
+			->willReturn('no');
+
+		$result = $this->service->isIonosIntegrationEnabled();
+		$this->assertFalse($result);
+	}
+
+	public function testIsIonosIntegrationEnabledWhenConfigurationMissing(): void {
+		$this->config->method('getAppValue')
+			->with('mail', 'ionos-mailconfig-enabled', 'no')
+			->willReturn('yes');
+
+		$this->config->method('getSystemValue')
+			->with('ncw.ext_ref')
+			->willReturn('');
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('IONOS integration not available - configuration error', $this->callback(function ($context) {
+				return isset($context['exception']) && $context['exception'] instanceof AppConfigException;
+			}));
+
+		$result = $this->service->isIonosIntegrationEnabled();
+		$this->assertFalse($result);
+	}
 }
