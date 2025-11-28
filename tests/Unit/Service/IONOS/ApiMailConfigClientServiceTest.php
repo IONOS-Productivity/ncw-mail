@@ -57,7 +57,7 @@ class ApiMailConfigClientServiceTest extends TestCase {
 		$client = $this->createMock(ClientInterface::class);
 		$apiBaseUrl = 'https://api.example.com';
 
-		$apiInstance = $this->service->newEventAPIApi($client, $apiBaseUrl);
+		$apiInstance = $this->service->newMailConfigurationAPIApi($client, $apiBaseUrl);
 
 		$this->assertInstanceOf(MailConfigurationAPIApi::class, $apiInstance);
 		$this->assertEquals($apiBaseUrl, $apiInstance->getConfig()->getHost());
@@ -70,7 +70,7 @@ class ApiMailConfigClientServiceTest extends TestCase {
 		$this->expectException(\InvalidArgumentException::class);
 		$this->expectExceptionMessage('API base URL is required');
 
-		$this->service->newEventAPIApi($client, $apiBaseUrl);
+		$this->service->newMailConfigurationAPIApi($client, $apiBaseUrl);
 	}
 
 	public function testNewEventAPIApiWithDifferentUrls(): void {
@@ -84,7 +84,7 @@ class ApiMailConfigClientServiceTest extends TestCase {
 		];
 
 		foreach ($urls as $url) {
-			$apiInstance = $this->service->newEventAPIApi($client, $url);
+			$apiInstance = $this->service->newMailConfigurationAPIApi($client, $url);
 			$this->assertInstanceOf(MailConfigurationAPIApi::class, $apiInstance);
 			$this->assertEquals($url, $apiInstance->getConfig()->getHost());
 		}
@@ -104,8 +104,8 @@ class ApiMailConfigClientServiceTest extends TestCase {
 		$client = $this->createMock(ClientInterface::class);
 		$apiBaseUrl = 'https://api.example.com';
 
-		$api1 = $this->service->newEventAPIApi($client, $apiBaseUrl);
-		$api2 = $this->service->newEventAPIApi($client, $apiBaseUrl);
+		$api1 = $this->service->newMailConfigurationAPIApi($client, $apiBaseUrl);
+		$api2 = $this->service->newMailConfigurationAPIApi($client, $apiBaseUrl);
 
 		// Each call should return a new instance
 		$this->assertNotSame($api1, $api2);

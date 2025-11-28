@@ -24,13 +24,13 @@ class ApiMailConfigClientService {
 	}
 
 	/**
-	 * Create a new EventAPIApi
+	 * Create a new MailConfigurationAPIApi
 	 *
 	 * @param ClientInterface $client
 	 * @param string $apiBaseUrl
 	 * @return MailConfigurationAPIApi
 	 */
-	public function newEventAPIApi(ClientInterface $client, string $apiBaseUrl): MailConfigurationAPIApi {
+	public function newMailConfigurationAPIApi(ClientInterface $client, string $apiBaseUrl): MailConfigurationAPIApi {
 
 		if (empty($apiBaseUrl)) {
 			throw new \InvalidArgumentException('API base URL is required');

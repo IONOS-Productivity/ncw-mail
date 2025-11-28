@@ -78,7 +78,7 @@ class IonosMailServiceTest extends TestCase {
 			->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newEventAPIApi')
+		$this->apiClientService->method('newMailConfigurationAPIApi')
 			->with($client, 'https://api.example.com')
 			->willReturn($apiInstance);
 
@@ -166,7 +166,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// Mock API to throw exception
 		$apiInstance->method('createMailbox')
@@ -213,7 +213,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// Mock MailAddonErrorMessage response
 		$errorMessage = $this->getMockBuilder(MailAddonErrorMessage::class)
@@ -267,7 +267,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// Mock unknown response type (return a stdClass instead of expected types)
 		$unknownResponse = new \stdClass();
@@ -343,7 +343,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// Mock API response with specific SSL mode
 		$imapServer = $this->getMockBuilder(Imap::class)
@@ -449,7 +449,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// Mock API response with existing account
 		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
@@ -489,7 +489,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// Mock API to throw 404 exception
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
@@ -530,7 +530,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// Mock API to throw 500 exception
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
@@ -578,7 +578,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newEventAPIApi')->willReturn($apiInstance);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// Mock API to throw general exception
 		$apiInstance->method('getFunctionalAccount')
