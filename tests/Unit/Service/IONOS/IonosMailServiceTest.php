@@ -550,7 +550,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->logger->expects($this->once())
 			->method('error')
-			->with('API Exception when checking for existing mail account', $this->callback(function ($context) {
+			->with('API Exception when getting IONOS mail account', $this->callback(function ($context) {
 				return $context['statusCode'] === 500
 				&& $context['message'] === 'Internal Server Error';
 			}));
@@ -591,7 +591,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->logger->expects($this->once())
 			->method('error')
-			->with('Exception when checking for existing mail account', $this->callback(function ($context) {
+			->with('Exception when getting IONOS mail account', $this->callback(function ($context) {
 				return isset($context['exception'])
 				&& $context['userId'] === 'testuser123';
 			}));
