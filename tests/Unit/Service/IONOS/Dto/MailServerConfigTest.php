@@ -165,4 +165,23 @@ class MailServerConfigTest extends TestCase {
 		$this->assertEquals('tls', $tlsConfig->getSecurity());
 		$this->assertEquals('none', $noneConfig->getSecurity());
 	}
+
+	public function testWithPassword(): void {
+		$newPassword = 'new-secure-password';
+
+		// Create a new config with updated password
+		$updatedConfig = $this->config->withPassword($newPassword);
+
+		// Original config should remain unchanged (immutable)
+		$this->assertEquals('secret123', $this->config->getPassword());
+
+		// New config should have the new password
+		$this->assertEquals($newPassword, $updatedConfig->getPassword());
+
+		// Other properties should remain the same
+		$this->assertEquals($this->config->getHost(), $updatedConfig->getHost());
+		$this->assertEquals($this->config->getPort(), $updatedConfig->getPort());
+		$this->assertEquals($this->config->getSecurity(), $updatedConfig->getSecurity());
+		$this->assertEquals($this->config->getUsername(), $updatedConfig->getUsername());
+	}
 }
