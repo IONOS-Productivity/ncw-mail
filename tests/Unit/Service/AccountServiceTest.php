@@ -19,6 +19,7 @@ use OCA\Mail\Exception\ClientException;
 use OCA\Mail\IMAP\IMAPClientFactory;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\AliasesService;
+use OCA\Mail\Service\IONOS\IonosAccountDeletionService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\IConfig;
@@ -61,6 +62,7 @@ class AccountServiceTest extends TestCase {
 
 	private IConfig&MockObject $config;
 	private ITimeFactory&MockObject $time;
+	private IonosAccountDeletionService&MockObject $ionosAccountDeletionService;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -72,6 +74,7 @@ class AccountServiceTest extends TestCase {
 		$this->imapClientFactory = $this->createMock(IMAPClientFactory::class);
 		$this->config = $this->createMock(IConfig::class);
 		$this->time = $this->createMock(ITimeFactory::class);
+		$this->ionosAccountDeletionService = $this->createMock(IonosAccountDeletionService::class);
 		$this->accountService = new AccountService(
 			$this->mapper,
 			$this->aliasesService,
@@ -79,6 +82,7 @@ class AccountServiceTest extends TestCase {
 			$this->imapClientFactory,
 			$this->config,
 			$this->time,
+			$this->ionosAccountDeletionService,
 		);
 
 		$this->account1 = new MailAccount();
@@ -139,6 +143,10 @@ class AccountServiceTest extends TestCase {
 	public function testDelete() {
 		$accountId = 33;
 
+		$this->ionosAccountDeletionService->expects($this->once())
+			->method('handleMailAccountDeletion')
+			->with($this->account1);
+
 		$this->mapper->expects($this->once())
 			->method('find')
 			->with($this->user, $accountId)
@@ -152,6 +160,10 @@ class AccountServiceTest extends TestCase {
 
 	public function testDeleteByAccountId() {
 		$accountId = 33;
+
+		$this->ionosAccountDeletionService->expects($this->once())
+			->method('handleMailAccountDeletion')
+			->with($this->account1);
 
 		$this->mapper->expects($this->once())
 			->method('findById')
