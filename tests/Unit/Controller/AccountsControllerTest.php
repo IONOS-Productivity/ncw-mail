@@ -236,10 +236,39 @@ class AccountsControllerTest extends TestCase {
 		$account = $this->createMock(Account::class);
 		$this->setupService->expects(self::once())
 			->method('createNewAccount')
-			->with($accountName, $email, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $this->userId, 'password')
+			->with($accountName, $email, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $this->userId, 'password', null, false)
 			->willReturn($account);
 
 		$response = $this->controller->create($accountName, $email, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword);
+
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::success($account, Http::STATUS_CREATED);
+
+		self::assertEquals($expectedResponse, $response);
+	}
+
+	public function testCreateManualSuccessWithSkipConnectivityTest(): void {
+		$this->config->expects(self::once())
+			->method('getAppValue')
+			->willReturn('yes');
+		$email = 'user@domain.tld';
+		$accountName = 'Mail';
+		$imapHost = 'localhost';
+		$imapPort = 993;
+		$imapSslMode = 'ssl';
+		$imapUser = 'user@domain.tld';
+		$imapPassword = 'mypassword';
+		$smtpHost = 'localhost';
+		$smtpPort = 465;
+		$smtpSslMode = 'none';
+		$smtpUser = 'user@domain.tld';
+		$smtpPassword = 'mypassword';
+		$account = $this->createMock(Account::class);
+		$this->setupService->expects(self::once())
+			->method('createNewAccount')
+			->with($accountName, $email, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $this->userId, 'password', null, true)
+			->willReturn($account);
+
+		$response = $this->controller->create($accountName, $email, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, 'password', true);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::success($account, Http::STATUS_CREATED);
 
@@ -289,7 +318,7 @@ class AccountsControllerTest extends TestCase {
 		$smtpPassword = 'mypassword';
 		$this->setupService->expects(self::once())
 			->method('createNewAccount')
-			->with($accountName, $email, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $this->userId, 'password')
+			->with($accountName, $email, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $this->userId, 'password', null, false)
 			->willThrowException(new ClientException());
 		$this->expectException(ClientException::class);
 
