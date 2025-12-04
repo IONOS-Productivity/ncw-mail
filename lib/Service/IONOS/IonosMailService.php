@@ -120,21 +120,39 @@ class IonosMailService {
 	}
 
 	/**
-	 * Create an IONOS email account via API
+	 * Create an IONOS email account via API for the current logged-in user
 	 *
+	 * @param string $userName The local part of the email address (before @domain)
 	 * @return MailAccountConfig Mail account configuration
 	 * @throws ServiceException
 	 * @throws AppConfigException
 	 */
 	public function createEmailAccount(string $userName): MailAccountConfig {
 		$userId = $this->getCurrentUserId();
+		return $this->createEmailAccountForUser($userId, $userName);
+	}
+
+	/**
+	 * Create an IONOS email account via API for a specific user
+	 *
+	 * This method allows creating email accounts without relying on the user session,
+	 * making it suitable for use in OCC commands or admin operations.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $userName The local part of the email address (before @domain)
+	 * @return MailAccountConfig Mail account configuration
+	 * @throws ServiceException
+	 * @throws AppConfigException
+	 */
+	public function createEmailAccountForUser(string $userId, string $userName): MailAccountConfig {
 		$domain = $this->configService->getMailDomain();
 
 		$this->logger->debug('Sending request to mailconfig service', [
 			'extRef' => $this->configService->getExternalReference(),
 			'userName' => $userName,
 			'domain' => $domain,
-			'apiBaseUrl' => $this->configService->getApiBaseUrl()
+			'apiBaseUrl' => $this->configService->getApiBaseUrl(),
+			'userId' => $userId
 		]);
 
 		$apiInstance = $this->createApiInstance();
