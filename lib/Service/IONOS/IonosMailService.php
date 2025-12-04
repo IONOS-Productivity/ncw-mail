@@ -54,25 +54,44 @@ class IonosMailService {
 	 * @return bool true if account exists, false otherwise
 	 */
 	public function mailAccountExistsForCurrentUserId(string $userId): bool {
+		$response = $this->getMailAccountResponse($userId);
+
+		if ($response !== null) {
+			$this->logger->debug('User has existing IONOS mail account', [
+				'email' => $response->getEmail(),
+				'userId' => $userId
+			]);
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Get the IONOS mail account response for a specific user
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return MailAccountResponse|null The account response if it exists, null otherwise
+	 */
+	private function getMailAccountResponse(string $userId): ?MailAccountResponse {
 		try {
-			$this->logger->debug('Checking if user has email account', [
+			$this->logger->debug('Getting IONOS mail account for user', [
 				'userId' => $userId,
 				'extRef' => $this->configService->getExternalReference(),
 			]);
 
 			$apiInstance = $this->createApiInstance();
-
-			$result = $apiInstance->getFunctionalAccount(self::BRAND, $this->configService->getExternalReference(), $userId);
+			$result = $apiInstance->getFunctionalAccount(
+				self::BRAND,
+				$this->configService->getExternalReference(),
+				$userId
+			);
 
 			if ($result instanceof MailAccountResponse) {
-				$this->logger->debug('User has existing IONOS mail account', [
-					'email' => $result->getEmail(),
-					'userId' => $userId
-				]);
-				return true;
+				return $result;
 			}
 
-			return false;
+			return null;
 		} catch (ApiException $e) {
 			// 404 - no account exists
 			if ($e->getCode() === self::HTTP_NOT_FOUND) {
@@ -80,21 +99,22 @@ class IonosMailService {
 					'userId' => $userId,
 					'statusCode' => $e->getCode()
 				]);
-				return false;
+				return null;
 			}
 
 			$this->logger->error('API Exception when getting IONOS mail account', [
 				'statusCode' => $e->getCode(),
 				'message' => $e->getMessage(),
-				'responseBody' => $e->getResponseBody()
+				'responseBody' => $e->getResponseBody(),
+				'userId' => $userId
 			]);
-			return false;
+			return null;
 		} catch (\Exception $e) {
 			$this->logger->error('Exception when getting IONOS mail account', [
 				'exception' => $e,
 				'userId' => $userId
 			]);
-			return false;
+			return null;
 		}
 	}
 
