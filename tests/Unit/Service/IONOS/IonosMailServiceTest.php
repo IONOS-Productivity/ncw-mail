@@ -320,6 +320,41 @@ class IonosMailServiceTest extends TestCase {
 		$this->service->createEmailAccount(self::TEST_USER_NAME);
 	}
 
+	public function testCreateEmailAccountForUserSuccess(): void {
+		$userId = 'admin123';
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		// No user session needed for this method
+
+		$mailAccountResponse = $this->createMockMailAccountResponse();
+		$apiInstance->method('createMailbox')->willReturn($mailAccountResponse);
+
+		$this->logger->expects($this->exactly(4))->method('debug');
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Successfully created IONOS mail account', $this->callback(function ($context) use ($userId) {
+				return $context['email'] === self::TEST_EMAIL
+					&& $context['userId'] === $userId
+					&& $context['userName'] === self::TEST_USER_NAME;
+			}));
+
+		$result = $this->service->createEmailAccountForUser($userId, self::TEST_USER_NAME);
+
+		$this->assertInstanceOf(MailAccountConfig::class, $result);
+		$this->assertEquals(self::TEST_EMAIL, $result->getEmail());
+		$this->assertEquals(self::IMAP_HOST, $result->getImap()->getHost());
+		$this->assertEquals(self::IMAP_PORT, $result->getImap()->getPort());
+		$this->assertEquals('ssl', $result->getImap()->getSecurity());
+		$this->assertEquals(self::TEST_EMAIL, $result->getImap()->getUsername());
+		$this->assertEquals(self::TEST_PASSWORD, $result->getImap()->getPassword());
+		$this->assertEquals(self::SMTP_HOST, $result->getSmtp()->getHost());
+		$this->assertEquals(self::SMTP_PORT, $result->getSmtp()->getPort());
+		$this->assertEquals('tls', $result->getSmtp()->getSecurity());
+		$this->assertEquals(self::TEST_EMAIL, $result->getSmtp()->getUsername());
+		$this->assertEquals(self::TEST_PASSWORD, $result->getSmtp()->getPassword());
+	}
+
 	/**
 	 * Test SSL mode normalization with various API response values
 	 *
