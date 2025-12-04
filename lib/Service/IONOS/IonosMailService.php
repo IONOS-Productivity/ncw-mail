@@ -339,6 +339,27 @@ class IonosMailService {
 	}
 
 	/**
+	 * Get the email address of the IONOS account for a specific user
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return string|null The email address if account exists, null otherwise
+	 */
+	public function getIonosEmailForUser(string $userId): ?string {
+		$response = $this->getMailAccountResponse($userId);
+
+		if ($response !== null) {
+			$email = $response->getEmail();
+			$this->logger->debug('Found IONOS mail account for user', [
+				'email' => $email,
+				'userId' => $userId
+			]);
+			return $email;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Delete an IONOS email account without throwing exceptions (fire and forget)
 	 *
 	 * This method checks if IONOS integration is enabled and attempts to delete
