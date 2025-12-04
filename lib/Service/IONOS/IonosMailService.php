@@ -218,6 +218,45 @@ class IonosMailService {
 	}
 
 	/**
+	 * Get IONOS account configuration for a specific user
+	 *
+	 * This method retrieves the configuration of an existing IONOS mail account.
+	 * Useful when an account was previously created but Nextcloud account creation failed.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return MailAccountConfig|null Mail account configuration if exists, null otherwise
+	 * @throws ServiceException
+	 */
+	public function getAccountConfigForUser(string $userId): ?MailAccountConfig {
+		$response = $this->getMailAccountResponse($userId);
+
+		if ($response === null) {
+			$this->logger->debug('No existing IONOS account found for user', [
+				'userId' => $userId
+			]);
+			return null;
+		}
+
+		$this->logger->info('Retrieved existing IONOS account configuration', [
+			'email' => $response->getEmail(),
+			'userId' => $userId
+		]);
+
+		return $this->buildSuccessResponse($response);
+	}
+
+	/**
+	 * Get IONOS account configuration for the current logged-in user
+	 *
+	 * @return MailAccountConfig|null Mail account configuration if exists, null otherwise
+	 * @throws ServiceException
+	 */
+	public function getAccountConfigForCurrentUser(): ?MailAccountConfig {
+		$userId = $this->getCurrentUserId();
+		return $this->getAccountConfigForUser($userId);
+	}
+
+	/**
 	 * Get the current user ID
 	 *
 	 * @throws ServiceException

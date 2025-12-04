@@ -13,8 +13,10 @@ use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Controller\AccountsController;
 use OCA\Mail\Controller\IonosAccountsController;
 use OCA\Mail\Exception\ServiceException;
+use OCA\Mail\Service\IONOS\ConflictResolutionResult;
 use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
 use OCA\Mail\Service\IONOS\Dto\MailServerConfig;
+use OCA\Mail\Service\IONOS\IonosAccountConflictResolver;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
@@ -29,6 +31,8 @@ class IonosAccountsControllerTest extends TestCase {
 
 	private IonosMailService&MockObject $ionosMailService;
 
+	private IonosAccountConflictResolver&MockObject $conflictResolver;
+
 	private AccountsController&MockObject $accountsController;
 
 	private LoggerInterface|MockObject $logger;
@@ -41,6 +45,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$this->appName = 'mail';
 		$this->request = $this->createMock(IRequest::class);
 		$this->ionosMailService = $this->createMock(IonosMailService::class);
+		$this->conflictResolver = $this->createMock(IonosAccountConflictResolver::class);
 		$this->accountsController = $this->createMock(AccountsController::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
@@ -48,6 +53,7 @@ class IonosAccountsControllerTest extends TestCase {
 			$this->appName,
 			$this->request,
 			$this->ionosMailService,
+			$this->conflictResolver,
 			$this->accountsController,
 			$this->logger,
 		);
@@ -142,6 +148,11 @@ class IonosAccountsControllerTest extends TestCase {
 			->with($emailUser)
 			->willThrowException(new ServiceException('Failed to create email account'));
 
+		// Mock conflict resolver to return no existing account
+		$this->conflictResolver->method('resolveConflict')
+			->with($emailUser)
+			->willReturn(ConflictResolutionResult::noExistingAccount());
+
 		$this->logger
 			->expects($this->once())
 			->method('error')
@@ -150,12 +161,14 @@ class IonosAccountsControllerTest extends TestCase {
 				[
 					'error' => 'IONOS_API_ERROR',
 					'statusCode' => 0,
+					'message' => 'Failed to create email account',
 				]
 			);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
 			'error' => 'IONOS_API_ERROR',
 			'statusCode' => 0,
+			'message' => 'Failed to create email account',
 		]);
 		$response = $this->controller->create($accountName, $emailUser);
 
@@ -171,6 +184,11 @@ class IonosAccountsControllerTest extends TestCase {
 			->with($emailUser)
 			->willThrowException(new ServiceException('Duplicate email account', 409));
 
+		// Mock conflict resolver to return no existing account
+		$this->conflictResolver->method('resolveConflict')
+			->with($emailUser)
+			->willReturn(ConflictResolutionResult::noExistingAccount());
+
 		$this->logger
 			->expects($this->once())
 			->method('error')
@@ -179,12 +197,14 @@ class IonosAccountsControllerTest extends TestCase {
 				[
 					'error' => 'IONOS_API_ERROR',
 					'statusCode' => 409,
+					'message' => 'Duplicate email account',
 				]
 			);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
 			'error' => 'IONOS_API_ERROR',
 			'statusCode' => 409,
+			'message' => 'Duplicate email account',
 		]);
 		$response = $this->controller->create($accountName, $emailUser);
 
@@ -265,5 +285,184 @@ class IonosAccountsControllerTest extends TestCase {
 		$result = $method->invoke($this->controller, $accountName, $mailConfig);
 
 		$this->assertSame($expectedResponse, $result);
+	}
+
+	public function testCreateWithServiceExceptionRetriesWithMatchingEmail(): void {
+		$accountName = 'Test Account';
+		$emailUser = 'test';
+		$emailAddress = 'test@example.com';
+
+		// Mock IONOS mail service to throw ServiceException on createEmailAccount
+		$this->ionosMailService->method('createEmailAccount')
+			->with($emailUser)
+			->willThrowException(new ServiceException('Account creation failed', 500));
+
+		// Create MailAccountConfig DTO for existing account
+		$imapConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1143,
+			security: 'none',
+			username: $emailAddress,
+			password: 'tmp',
+		);
+
+		$smtpConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1587,
+			security: 'none',
+			username: $emailAddress,
+			password: 'tmp',
+		);
+
+		$mailAccountConfig = new MailAccountConfig(
+			email: $emailAddress,
+			imap: $imapConfig,
+			smtp: $smtpConfig,
+		);
+
+		// Mock conflict resolver to return retry result with matching email
+		$this->conflictResolver->method('resolveConflict')
+			->with($emailUser)
+			->willReturn(ConflictResolutionResult::retry($mailAccountConfig));
+
+		// Mock account creation response
+		$accountData = ['id' => 1, 'emailAddress' => $emailAddress];
+		$accountResponse = $this->createMock(JSONResponse::class);
+		$accountResponse->method('getData')->willReturn($accountData);
+
+		$this->accountsController
+			->expects($this->once())
+			->method('create')
+			->with(
+				$accountName,
+				$emailAddress,
+				'mail.localhost',
+				1143,
+				'none',
+				$emailAddress,
+				'tmp',
+				'mail.localhost',
+				1587,
+				'none',
+				$emailAddress,
+				'tmp',
+				'password',
+				true
+			)
+			->willReturn($accountResponse);
+
+		$this->logger
+			->expects($this->once())
+			->method('info')
+			->with(
+				'Starting IONOS email account creation',
+				['emailAddress' => $emailUser, 'accountName' => $accountName]
+			);
+
+		$response = $this->controller->create($accountName, $emailUser);
+
+		$this->assertInstanceOf(JSONResponse::class, $response);
+		$this->assertEquals($accountData, $response->getData());
+	}
+
+	public function testCreateWithServiceExceptionRetriesWithMismatchedEmail(): void {
+		$accountName = 'Test Account';
+		$emailUser = 'test';
+		$expectedEmail = 'test@example.com';
+		$existingEmail = 'different@example.com';
+
+		// Mock IONOS mail service to throw ServiceException on createEmailAccount
+		$this->ionosMailService->method('createEmailAccount')
+			->with($emailUser)
+			->willThrowException(new ServiceException('Account creation failed', 500));
+
+		// Mock conflict resolver to return email mismatch result
+		$this->conflictResolver->method('resolveConflict')
+			->with($emailUser)
+			->willReturn(ConflictResolutionResult::emailMismatch($expectedEmail, $existingEmail));
+
+		// Should NOT call accountsController->create since emails don't match
+		$this->accountsController
+			->expects($this->never())
+			->method('create');
+
+		$this->logger
+			->expects($this->once())
+			->method('info')
+			->with(
+				'Starting IONOS email account creation',
+				['emailAddress' => $emailUser, 'accountName' => $accountName]
+			);
+
+
+		$this->logger
+			->expects($this->once())
+			->method('error')
+			->with(
+				'Email mismatch during retry',
+				[
+					'error' => 'IONOS_API_ERROR',
+					'statusCode' => 409,
+					'message' => 'IONOS account exists but email mismatch. Expected: ' . $expectedEmail . ', Found: ' . $existingEmail,
+				]
+			);
+
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
+			'error' => 'IONOS_API_ERROR',
+			'statusCode' => 409,
+			'message' => 'IONOS account exists but email mismatch. Expected: ' . $expectedEmail . ', Found: ' . $existingEmail,
+		]);
+		$response = $this->controller->create($accountName, $emailUser);
+
+		self::assertEquals($expectedResponse, $response);
+	}
+
+	public function testCreateWithServiceExceptionRetriesWhenNoExistingAccount(): void {
+		$accountName = 'Test Account';
+		$emailUser = 'test';
+
+		// Mock IONOS mail service to throw ServiceException on createEmailAccount
+		$this->ionosMailService->method('createEmailAccount')
+			->with($emailUser)
+			->willThrowException(new ServiceException('Account creation failed', 500));
+
+		// Mock conflict resolver to return no existing account
+		$this->conflictResolver->method('resolveConflict')
+			->with($emailUser)
+			->willReturn(ConflictResolutionResult::noExistingAccount());
+
+		// Should NOT call accountsController->create since no existing account
+		$this->accountsController
+			->expects($this->never())
+			->method('create');
+
+		$this->logger
+			->expects($this->once())
+			->method('info')
+			->with(
+				'Starting IONOS email account creation',
+				['emailAddress' => $emailUser, 'accountName' => $accountName]
+			);
+
+		$this->logger
+			->expects($this->once())
+			->method('error')
+			->with(
+				'IONOS service error: Account creation failed',
+				[
+					'error' => 'IONOS_API_ERROR',
+					'statusCode' => 500,
+					'message' => 'Account creation failed',
+				]
+			);
+
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
+			'error' => 'IONOS_API_ERROR',
+			'statusCode' => 500,
+			'message' => 'Account creation failed',
+		]);
+		$response = $this->controller->create($accountName, $emailUser);
+
+		self::assertEquals($expectedResponse, $response);
 	}
 }

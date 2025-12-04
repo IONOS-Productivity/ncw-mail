@@ -957,4 +957,196 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->assertNull($result);
 	}
+
+	public function testGetAccountConfigForUserReturnsConfigWhenAccountExists(): void {
+		$userId = 'testuser123';
+		$emailAddress = 'testuser@example.com';
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Mock API response with existing account
+		$imapServer = $this->getMockBuilder(Imap::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
+			->getMock();
+		$imapServer->method('getHost')->willReturn('imap.example.com');
+		$imapServer->method('getPort')->willReturn(993);
+		$imapServer->method('getSslMode')->willReturn('ssl');
+
+		$smtpServer = $this->getMockBuilder(Smtp::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
+			->getMock();
+		$smtpServer->method('getHost')->willReturn('smtp.example.com');
+		$smtpServer->method('getPort')->willReturn(587);
+		$smtpServer->method('getSslMode')->willReturn('tls');
+
+		$mailServer = $this->getMockBuilder(MailServer::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getImap', 'getSmtp'])
+			->getMock();
+		$mailServer->method('getImap')->willReturn($imapServer);
+		$mailServer->method('getSmtp')->willReturn($smtpServer);
+
+		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getEmail', 'getPassword', 'getServer'])
+			->getMock();
+		$mailAccountResponse->method('getEmail')->willReturn($emailAddress);
+		$mailAccountResponse->method('getPassword')->willReturn('test-password');
+		$mailAccountResponse->method('getServer')->willReturn($mailServer);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', 'test-ext-ref', $userId)
+			->willReturn($mailAccountResponse);
+
+		// Expect logging calls
+		// 1 debug from getMailAccountResponse (getting account)
+		// 2 debug from buildSuccessResponse (normalizeSslMode for IMAP and SMTP)
+		// 1 info from getAccountConfigForUser
+		$this->logger->expects($this->exactly(3))
+			->method('debug');
+
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Retrieved existing IONOS account configuration', $this->callback(function ($context) use ($emailAddress, $userId) {
+				return $context['email'] === $emailAddress
+					&& $context['userId'] === $userId;
+			}));
+
+		$result = $this->service->getAccountConfigForUser($userId);
+
+		$this->assertInstanceOf(MailAccountConfig::class, $result);
+		$this->assertEquals($emailAddress, $result->getEmail());
+		$this->assertEquals('imap.example.com', $result->getImap()->getHost());
+		$this->assertEquals(993, $result->getImap()->getPort());
+		$this->assertEquals('ssl', $result->getImap()->getSecurity());
+		$this->assertEquals($emailAddress, $result->getImap()->getUsername());
+		$this->assertEquals('test-password', $result->getImap()->getPassword());
+		$this->assertEquals('smtp.example.com', $result->getSmtp()->getHost());
+		$this->assertEquals(587, $result->getSmtp()->getPort());
+		$this->assertEquals('tls', $result->getSmtp()->getSecurity());
+		$this->assertEquals($emailAddress, $result->getSmtp()->getUsername());
+		$this->assertEquals('test-password', $result->getSmtp()->getPassword());
+	}
+
+	public function testGetAccountConfigForUserReturnsNullWhenAccountDoesNotExist(): void {
+		$userId = 'testuser123';
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Mock API to throw 404 exception (account doesn't exist)
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Not Found',
+			404,
+			[],
+			'{"error": "Not Found"}'
+		);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', 'test-ext-ref', $userId)
+			->willThrowException($apiException);
+
+		// Expect logging calls
+		// 1 debug from getMailAccountResponse (getting account)
+		// 1 debug from getMailAccountResponse catch block (404 not found)
+		// 1 debug from getAccountConfigForUser (no existing account)
+		$this->logger->expects($this->exactly(3))
+			->method('debug')
+			->willReturnCallback(function ($message, $context) use ($userId) {
+				if ($message === 'Getting IONOS mail account for user') {
+					$this->assertEquals($userId, $context['userId']);
+					$this->assertEquals('test-ext-ref', $context['extRef']);
+				} elseif ($message === 'User does not have IONOS mail account') {
+					$this->assertEquals($userId, $context['userId']);
+					$this->assertEquals(404, $context['statusCode']);
+				} elseif ($message === 'No existing IONOS account found for user') {
+					$this->assertEquals($userId, $context['userId']);
+				}
+			});
+
+		$result = $this->service->getAccountConfigForUser($userId);
+
+		$this->assertNull($result);
+	}
+
+	public function testGetAccountConfigForUserReturnsNullOnApiError(): void {
+		$userId = 'testuser123';
+
+		// Mock config
+		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
+		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+
+		// Mock API client
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Mock API to throw 500 exception
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Internal Server Error',
+			500,
+			[],
+			'{"error": "Server error"}'
+		);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', 'test-ext-ref', $userId)
+			->willThrowException($apiException);
+
+		// Expect logging calls
+		// 1 debug from getMailAccountResponse (getting account)
+		// 1 debug from getAccountConfigForUser (no existing account)
+		$this->logger->expects($this->exactly(2))
+			->method('debug')
+			->willReturnCallback(function ($message, $context) use ($userId) {
+				if ($message === 'Getting IONOS mail account for user') {
+					$this->assertEquals($userId, $context['userId']);
+					$this->assertEquals('test-ext-ref', $context['extRef']);
+				} elseif ($message === 'No existing IONOS account found for user') {
+					$this->assertEquals($userId, $context['userId']);
+				}
+			});
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('API Exception when getting IONOS mail account', $this->callback(function ($context) use ($userId) {
+				return $context['statusCode'] === 500
+					&& $context['message'] === 'Internal Server Error'
+					&& $context['userId'] === $userId;
+			}));
+
+		$result = $this->service->getAccountConfigForUser($userId);
+
+		$this->assertNull($result);
+	}
 }

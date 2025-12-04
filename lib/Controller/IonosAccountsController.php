@@ -12,6 +12,7 @@ use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
 use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
+use OCA\Mail\Service\IONOS\IonosAccountConflictResolver;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
@@ -30,6 +31,7 @@ class IonosAccountsController extends Controller {
 		string $appName,
 		IRequest $request,
 		private IonosMailService $ionosMailService,
+		private IonosAccountConflictResolver $conflictResolver,
 		private AccountsController $accountsController,
 		private LoggerInterface $logger,
 	) {
@@ -60,9 +62,27 @@ class IonosAccountsController extends Controller {
 			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $ionosResponse->getEmail() ]);
 			return $this->createNextcloudMailAccount($accountName, $ionosResponse);
 		} catch (ServiceException $e) {
+			// Try to resolve conflict by checking for existing account
+			$resolutionResult = $this->conflictResolver->resolveConflict($emailUser);
+
+			if ($resolutionResult->canRetry()) {
+				return $this->createNextcloudMailAccount($accountName, $resolutionResult->getAccountConfig());
+			}
+
+			if ($resolutionResult->hasEmailMismatch()) {
+				$data = [
+					'error' => self::ERR_IONOS_API_ERROR,
+					'statusCode' => 409,
+					'message' => 'IONOS account exists but email mismatch. Expected: ' . $resolutionResult->getExpectedEmail() . ', Found: ' . $resolutionResult->getExistingEmail(),
+				];
+				$this->logger->error('Email mismatch during retry', $data);
+				return MailJsonResponse::fail($data);
+			}
+
 			$data = [
 				'error' => self::ERR_IONOS_API_ERROR,
 				'statusCode' => $e->getCode(),
+				'message' => $e->getMessage(),
 			];
 			$this->logger->error('IONOS service error: ' . $e->getMessage(), $data);
 
@@ -89,6 +109,8 @@ class IonosAccountsController extends Controller {
 			$smtp->getSecurity(),
 			$smtp->getUsername(),
 			$smtp->getPassword(),
+			'password',
+			true // Skip connectivity test - IONOS API already validated credentials
 		);
 	}
 }
