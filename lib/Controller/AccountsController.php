@@ -346,7 +346,8 @@ class AccountsController extends Controller {
 		?string $smtpSslMode = null,
 		?string $smtpUser = null,
 		?string $smtpPassword = null,
-		string $authMethod = 'password'): JSONResponse {
+		string $authMethod = 'password',
+		bool $skipConnectivityTest = false): JSONResponse {
 		if ($this->config->getAppValue(Application::APP_ID, 'allow_new_mail_accounts', 'yes') === 'no') {
 			$this->logger->info('Creating account disabled by admin.');
 			return MailJsonResponse::error('Could not create account');
@@ -378,7 +379,7 @@ class AccountsController extends Controller {
 			);
 		}
 		try {
-			$account = $this->setup->createNewAccount($accountName, $emailAddress, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $this->currentUserId, $authMethod);
+			$account = $this->setup->createNewAccount($accountName, $emailAddress, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $this->currentUserId, $authMethod, null, $skipConnectivityTest);
 		} catch (CouldNotConnectException $e) {
 			$data = [
 				'error' => $e->getReason(),
