@@ -83,14 +83,14 @@ class IonosMailService {
 				return false;
 			}
 
-			$this->logger->error('API Exception when checking for existing mail account', [
+			$this->logger->error('API Exception when getting IONOS mail account', [
 				'statusCode' => $e->getCode(),
 				'message' => $e->getMessage(),
 				'responseBody' => $e->getResponseBody()
 			]);
 			return false;
 		} catch (\Exception $e) {
-			$this->logger->error('Exception when checking for existing mail account', [
+			$this->logger->error('Exception when getting IONOS mail account', [
 				'exception' => $e,
 				'userId' => $userId
 			]);
