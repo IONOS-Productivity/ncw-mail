@@ -60,7 +60,8 @@ class SetupService {
 		string $uid,
 		string $authMethod,
 		?int $accountId = null,
-		?bool $classificationEnabled = null): Account {
+		?bool $classificationEnabled = null,
+		bool $skipConnectivityTest = false): Account {
 		$this->logger->info('Setting up manually configured account');
 		$newAccount = new MailAccount([
 			'accountId' => $accountId,
@@ -89,7 +90,7 @@ class SetupService {
 		$newAccount->setAuthMethod($authMethod);
 
 		$account = new Account($newAccount);
-		if ($authMethod === 'password' && $imapPassword !== null) {
+		if (!$skipConnectivityTest && $authMethod === 'password' && $imapPassword !== null) {
 			$this->logger->debug('Connecting to account {account}', ['account' => $newAccount->getEmail()]);
 			$this->testConnectivity($account);
 		}
