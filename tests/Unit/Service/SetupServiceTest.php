@@ -240,6 +240,61 @@ class SetupServiceTest extends TestCase {
 		self::assertInstanceOf(Account::class, $result);
 	}
 
+	public function testCreateNewAccountWithSkipConnectivityTest(): void {
+		$accountName = 'Skip Test Account';
+		$emailAddress = 'skip@example.com';
+		$imapHost = 'imap.example.com';
+		$imapPort = 993;
+		$imapSslMode = 'ssl';
+		$imapUser = 'skip@example.com';
+		$imapPassword = 'password';
+		$smtpHost = 'smtp.example.com';
+		$smtpPort = 465;
+		$smtpSslMode = 'ssl';
+		$smtpUser = 'skip@example.com';
+		$smtpPassword = 'password';
+		$uid = 'user789';
+		$authMethod = 'password';
+		$skipConnectivityTest = true;
+
+		$this->crypto->expects(self::exactly(2))
+			->method('encrypt')
+			->willReturnOnConsecutiveCalls('encrypted1', 'encrypted2');
+
+		$this->imapClientFactory->expects(self::never())
+			->method('getClient');
+
+		$this->smtpClientFactory->expects(self::never())
+			->method('create');
+
+		$this->accountService->expects(self::once())
+			->method('save');
+
+		$this->tagMapper->expects(self::once())
+			->method('createDefaultTags');
+
+		$result = $this->setupService->createNewAccount(
+			$accountName,
+			$emailAddress,
+			$imapHost,
+			$imapPort,
+			$imapSslMode,
+			$imapUser,
+			$imapPassword,
+			$smtpHost,
+			$smtpPort,
+			$smtpSslMode,
+			$smtpUser,
+			$smtpPassword,
+			$uid,
+			$authMethod,
+			null,
+			$skipConnectivityTest
+		);
+
+		self::assertInstanceOf(Account::class, $result);
+	}
+
 	public function testCreateNewAccountWithInvalidAuthMethod(): void {
 		$this->expectException(InvalidArgumentException::class);
 		$this->expectExceptionMessage('Invalid auth method invalid');
