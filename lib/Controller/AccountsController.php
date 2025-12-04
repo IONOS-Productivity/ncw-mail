@@ -343,7 +343,8 @@ class AccountsController extends Controller {
 		?string $imapPassword = null,
 		?string $smtpPassword = null,
 		string $authMethod = 'password',
-		?bool $classificationEnabled = null): JSONResponse {
+		?bool $classificationEnabled = null,
+		bool $skipConnectivityTest = false): JSONResponse {
 		if (!$this->appConfig->getValueBool(Application::APP_ID, ConfigLexicon::ALLOW_NEW_MAIL_ACCOUNTS, true)) {
 			$this->logger->info('Creating account disabled by admin.');
 			return MailJsonResponse::error('Could not create account');
@@ -375,7 +376,7 @@ class AccountsController extends Controller {
 			);
 		}
 		try {
-			$account = $this->setup->createNewAccount($accountName, $emailAddress, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $this->userId, $authMethod, null, $classificationEnabled);
+			$account = $this->setup->createNewAccount($accountName, $emailAddress, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $this->userId, $authMethod, null, $classificationEnabled, $skipConnectivityTest);
 			// Set initial heartbeat
 			$this->config->setUserValue(
 				$account->getUserId(),
