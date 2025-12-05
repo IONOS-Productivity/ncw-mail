@@ -54,25 +54,44 @@ class IonosMailService {
 	 * @return bool true if account exists, false otherwise
 	 */
 	public function mailAccountExistsForCurrentUserId(string $userId): bool {
+		$response = $this->getMailAccountResponse($userId);
+
+		if ($response !== null) {
+			$this->logger->debug('User has existing IONOS mail account', [
+				'email' => $response->getEmail(),
+				'userId' => $userId
+			]);
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Get the IONOS mail account response for a specific user
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return MailAccountResponse|null The account response if it exists, null otherwise
+	 */
+	private function getMailAccountResponse(string $userId): ?MailAccountResponse {
 		try {
-			$this->logger->debug('Checking if user has email account', [
+			$this->logger->debug('Getting IONOS mail account for user', [
 				'userId' => $userId,
 				'extRef' => $this->configService->getExternalReference(),
 			]);
 
 			$apiInstance = $this->createApiInstance();
-
-			$result = $apiInstance->getFunctionalAccount(self::BRAND, $this->configService->getExternalReference(), $userId);
+			$result = $apiInstance->getFunctionalAccount(
+				self::BRAND,
+				$this->configService->getExternalReference(),
+				$userId
+			);
 
 			if ($result instanceof MailAccountResponse) {
-				$this->logger->debug('User has existing IONOS mail account', [
-					'email' => $result->getEmail(),
-					'userId' => $userId
-				]);
-				return true;
+				return $result;
 			}
 
-			return false;
+			return null;
 		} catch (ApiException $e) {
 			// 404 - no account exists
 			if ($e->getCode() === self::HTTP_NOT_FOUND) {
@@ -80,40 +99,59 @@ class IonosMailService {
 					'userId' => $userId,
 					'statusCode' => $e->getCode()
 				]);
-				return false;
+				return null;
 			}
 
-			$this->logger->error('API Exception when checking for existing mail account', [
+			$this->logger->error('API Exception when getting IONOS mail account', [
 				'statusCode' => $e->getCode(),
 				'message' => $e->getMessage(),
-				'responseBody' => $e->getResponseBody()
+				'responseBody' => $e->getResponseBody(),
+				'userId' => $userId
 			]);
-			return false;
+			return null;
 		} catch (\Exception $e) {
-			$this->logger->error('Exception when checking for existing mail account', [
+			$this->logger->error('Exception when getting IONOS mail account', [
 				'exception' => $e,
 				'userId' => $userId
 			]);
-			return false;
+			return null;
 		}
 	}
 
 	/**
-	 * Create an IONOS email account via API
+	 * Create an IONOS email account via API for the current logged-in user
 	 *
+	 * @param string $userName The local part of the email address (before @domain)
 	 * @return MailAccountConfig Mail account configuration
 	 * @throws ServiceException
 	 * @throws AppConfigException
 	 */
 	public function createEmailAccount(string $userName): MailAccountConfig {
 		$userId = $this->getCurrentUserId();
+		return $this->createEmailAccountForUser($userId, $userName);
+	}
+
+	/**
+	 * Create an IONOS email account via API for a specific user
+	 *
+	 * This method allows creating email accounts without relying on the user session,
+	 * making it suitable for use in OCC commands or admin operations.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $userName The local part of the email address (before @domain)
+	 * @return MailAccountConfig Mail account configuration
+	 * @throws ServiceException
+	 * @throws AppConfigException
+	 */
+	public function createEmailAccountForUser(string $userId, string $userName): MailAccountConfig {
 		$domain = $this->configService->getMailDomain();
 
 		$this->logger->debug('Sending request to mailconfig service', [
 			'extRef' => $this->configService->getExternalReference(),
 			'userName' => $userName,
 			'domain' => $domain,
-			'apiBaseUrl' => $this->configService->getApiBaseUrl()
+			'apiBaseUrl' => $this->configService->getApiBaseUrl(),
+			'userId' => $userId
 		]);
 
 		$apiInstance = $this->createApiInstance();
@@ -177,6 +215,45 @@ class IonosMailService {
 			]);
 			throw new ServiceException('Failed to create ionos mail', self::HTTP_INTERNAL_SERVER_ERROR, $e);
 		}
+	}
+
+	/**
+	 * Get IONOS account configuration for a specific user
+	 *
+	 * This method retrieves the configuration of an existing IONOS mail account.
+	 * Useful when an account was previously created but Nextcloud account creation failed.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return MailAccountConfig|null Mail account configuration if exists, null otherwise
+	 * @throws ServiceException
+	 */
+	public function getAccountConfigForUser(string $userId): ?MailAccountConfig {
+		$response = $this->getMailAccountResponse($userId);
+
+		if ($response === null) {
+			$this->logger->debug('No existing IONOS account found for user', [
+				'userId' => $userId
+			]);
+			return null;
+		}
+
+		$this->logger->info('Retrieved existing IONOS account configuration', [
+			'email' => $response->getEmail(),
+			'userId' => $userId
+		]);
+
+		return $this->buildSuccessResponse($response);
+	}
+
+	/**
+	 * Get IONOS account configuration for the current logged-in user
+	 *
+	 * @return MailAccountConfig|null Mail account configuration if exists, null otherwise
+	 * @throws ServiceException
+	 */
+	public function getAccountConfigForCurrentUser(): ?MailAccountConfig {
+		$userId = $this->getCurrentUserId();
+		return $this->getAccountConfigForUser($userId);
 	}
 
 	/**
@@ -316,6 +393,87 @@ class IonosMailService {
 
 			throw new ServiceException('Failed to delete IONOS mail', self::HTTP_INTERNAL_SERVER_ERROR, $e);
 		}
+	}
+
+	/**
+	 * Reset app password for the IONOS mail account (generates a new password)
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $appName The application name for the password
+	 * @return string The new password
+	 * @throws ServiceException
+	 */
+	public function resetAppPassword(string $userId, string $appName): string {
+		$this->logger->debug('Resetting IONOS app password', [
+			'userId' => $userId,
+			'appName' => $appName,
+			'extRef' => $this->configService->getExternalReference(),
+		]);
+
+		try {
+			$apiInstance = $this->createApiInstance();
+			$result = $apiInstance->setAppPassword(
+				self::BRAND,
+				$this->configService->getExternalReference(),
+				$userId,
+				$appName
+			);
+
+			if (is_string($result)) {
+				$this->logger->info('Successfully reset IONOS app password', [
+					'userId' => $userId,
+					'appName' => $appName
+				]);
+				return $result;
+			}
+
+			$this->logger->error('Failed to reset IONOS app password: Unexpected response type', [
+				'userId' => $userId,
+				'appName' => $appName,
+				'result' => $result
+			]);
+			throw new ServiceException('Failed to reset IONOS app password', self::HTTP_INTERNAL_SERVER_ERROR);
+		} catch (ServiceException $e) {
+			// Re-throw ServiceException without additional logging
+			throw $e;
+		} catch (ApiException $e) {
+			$this->logger->error('API Exception when calling MailConfigurationAPIApi->setAppPassword', [
+				'statusCode' => $e->getCode(),
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody(),
+				'userId' => $userId,
+				'appName' => $appName
+			]);
+			throw new ServiceException('Failed to reset IONOS app password: ' . $e->getMessage(), $e->getCode(), $e);
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when calling MailConfigurationAPIApi->setAppPassword', [
+				'exception' => $e,
+				'userId' => $userId,
+				'appName' => $appName
+			]);
+			throw new ServiceException('Failed to reset IONOS app password', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
+	}
+
+	/**
+	 * Get the email address of the IONOS account for a specific user
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return string|null The email address if account exists, null otherwise
+	 */
+	public function getIonosEmailForUser(string $userId): ?string {
+		$response = $this->getMailAccountResponse($userId);
+
+		if ($response !== null) {
+			$email = $response->getEmail();
+			$this->logger->debug('Found IONOS mail account for user', [
+				'email' => $email,
+				'userId' => $userId
+			]);
+			return $email;
+		}
+
+		return null;
 	}
 
 	/**

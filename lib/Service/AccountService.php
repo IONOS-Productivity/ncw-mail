@@ -22,6 +22,7 @@ use OCA\Mail\Db\MailAccountMapper;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\IMAP\IMAPClientFactory;
+use OCA\Mail\Service\IONOS\IonosAccountDeletionService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJob;
@@ -56,6 +57,7 @@ class AccountService {
 		IMAPClientFactory $imapClientFactory,
 		private readonly IConfig $config,
 		private readonly ITimeFactory $timeFactory,
+		private readonly IonosAccountDeletionService $ionosAccountDeletionService,
 	) {
 		$this->mapper = $mapper;
 		$this->aliasesService = $aliasesService;
@@ -151,6 +153,7 @@ class AccountService {
 		} catch (DoesNotExistException $e) {
 			throw new ClientException("Account $accountId does not exist", 0, $e);
 		}
+		$this->ionosAccountDeletionService->handleMailAccountDeletion($mailAccount);
 		$this->aliasesService->deleteAll($accountId);
 		$this->mapper->delete($mailAccount);
 	}
@@ -166,6 +169,7 @@ class AccountService {
 		} catch (DoesNotExistException $e) {
 			throw new ClientException("Account $accountId does not exist", 0, $e);
 		}
+		$this->ionosAccountDeletionService->handleMailAccountDeletion($mailAccount);
 		$this->aliasesService->deleteAll($accountId);
 		$this->mapper->delete($mailAccount);
 	}
