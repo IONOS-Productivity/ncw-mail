@@ -18,6 +18,7 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
 #[OpenAPI(scope: OpenAPI::SCOPE_IGNORE)]
@@ -33,6 +34,7 @@ class IonosAccountsController extends Controller {
 		private IonosMailService $ionosMailService,
 		private IonosAccountConflictResolver $conflictResolver,
 		private AccountsController $accountsController,
+		private IUserSession $userSession,
 		private LoggerInterface $logger,
 	) {
 		parent::__construct($appName, $request);
@@ -62,8 +64,21 @@ class IonosAccountsController extends Controller {
 			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $ionosResponse->getEmail() ]);
 			return $this->createNextcloudMailAccount($accountName, $ionosResponse);
 		} catch (ServiceException $e) {
+			// Get current user ID for conflict resolution
+			$user = $this->userSession->getUser();
+			if ($user === null) {
+				$data = [
+					'error' => self::ERR_IONOS_API_ERROR,
+					'statusCode' => 401,
+					'message' => 'No user session found',
+				];
+				$this->logger->error('No user session found during conflict resolution', $data);
+				return MailJsonResponse::fail($data);
+			}
+			$userId = $user->getUID();
+
 			// Try to resolve conflict by checking for existing account
-			$resolutionResult = $this->conflictResolver->resolveConflict($emailUser);
+			$resolutionResult = $this->conflictResolver->resolveConflict($userId, $emailUser);
 
 			if ($resolutionResult->canRetry()) {
 				return $this->createNextcloudMailAccount($accountName, $resolutionResult->getAccountConfig());

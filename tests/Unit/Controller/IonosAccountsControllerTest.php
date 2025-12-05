@@ -20,6 +20,8 @@ use OCA\Mail\Service\IONOS\IonosAccountConflictResolver;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCP\IUser;
+use OCP\IUserSession;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -35,6 +37,8 @@ class IonosAccountsControllerTest extends TestCase {
 
 	private AccountsController&MockObject $accountsController;
 
+	private IUserSession&MockObject $userSession;
+
 	private LoggerInterface|MockObject $logger;
 
 	private IonosAccountsController $controller;
@@ -47,6 +51,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$this->ionosMailService = $this->createMock(IonosMailService::class);
 		$this->conflictResolver = $this->createMock(IonosAccountConflictResolver::class);
 		$this->accountsController = $this->createMock(AccountsController::class);
+		$this->userSession = $this->createMock(IUserSession::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->controller = new IonosAccountsController(
@@ -55,8 +60,18 @@ class IonosAccountsControllerTest extends TestCase {
 			$this->ionosMailService,
 			$this->conflictResolver,
 			$this->accountsController,
+			$this->userSession,
 			$this->logger,
 		);
+	}
+
+	/**
+	 * Helper method to setup user session mock
+	 */
+	private function setupUserSession(string $userId): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn($userId);
+		$this->userSession->method('getUser')->willReturn($user);
 	}
 
 	public function testCreateWithMissingFields(): void {
@@ -142,6 +157,10 @@ class IonosAccountsControllerTest extends TestCase {
 	public function testCreateWithServiceException(): void {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
+		$userId = 'testuser';
+
+		// Setup user session
+		$this->setupUserSession($userId);
 
 		// Mock IONOS mail service to throw ServiceException
 		$this->ionosMailService->method('createEmailAccount')
@@ -150,7 +169,7 @@ class IonosAccountsControllerTest extends TestCase {
 
 		// Mock conflict resolver to return no existing account
 		$this->conflictResolver->method('resolveConflict')
-			->with($emailUser)
+			->with($userId, $emailUser)
 			->willReturn(ConflictResolutionResult::noExistingAccount());
 
 		$this->logger
@@ -178,6 +197,10 @@ class IonosAccountsControllerTest extends TestCase {
 	public function testCreateWithServiceExceptionWithStatusCode(): void {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
+		$userId = 'testuser';
+
+		// Setup user session
+		$this->setupUserSession($userId);
 
 		// Mock IONOS mail service to throw ServiceException with HTTP 409 (Duplicate)
 		$this->ionosMailService->method('createEmailAccount')
@@ -186,7 +209,7 @@ class IonosAccountsControllerTest extends TestCase {
 
 		// Mock conflict resolver to return no existing account
 		$this->conflictResolver->method('resolveConflict')
-			->with($emailUser)
+			->with($userId, $emailUser)
 			->willReturn(ConflictResolutionResult::noExistingAccount());
 
 		$this->logger
@@ -291,6 +314,10 @@ class IonosAccountsControllerTest extends TestCase {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
 		$emailAddress = 'test@example.com';
+		$userId = 'testuser';
+
+		// Setup user session
+		$this->setupUserSession($userId);
 
 		// Mock IONOS mail service to throw ServiceException on createEmailAccount
 		$this->ionosMailService->method('createEmailAccount')
@@ -322,7 +349,7 @@ class IonosAccountsControllerTest extends TestCase {
 
 		// Mock conflict resolver to return retry result with matching email
 		$this->conflictResolver->method('resolveConflict')
-			->with($emailUser)
+			->with($userId, $emailUser)
 			->willReturn(ConflictResolutionResult::retry($mailAccountConfig));
 
 		// Mock account creation response
@@ -370,6 +397,10 @@ class IonosAccountsControllerTest extends TestCase {
 		$emailUser = 'test';
 		$expectedEmail = 'test@example.com';
 		$existingEmail = 'different@example.com';
+		$userId = 'testuser';
+
+		// Setup user session
+		$this->setupUserSession($userId);
 
 		// Mock IONOS mail service to throw ServiceException on createEmailAccount
 		$this->ionosMailService->method('createEmailAccount')
@@ -378,7 +409,7 @@ class IonosAccountsControllerTest extends TestCase {
 
 		// Mock conflict resolver to return email mismatch result
 		$this->conflictResolver->method('resolveConflict')
-			->with($emailUser)
+			->with($userId, $emailUser)
 			->willReturn(ConflictResolutionResult::emailMismatch($expectedEmail, $existingEmail));
 
 		// Should NOT call accountsController->create since emails don't match
@@ -420,6 +451,10 @@ class IonosAccountsControllerTest extends TestCase {
 	public function testCreateWithServiceExceptionRetriesWhenNoExistingAccount(): void {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
+		$userId = 'testuser';
+
+		// Setup user session
+		$this->setupUserSession($userId);
 
 		// Mock IONOS mail service to throw ServiceException on createEmailAccount
 		$this->ionosMailService->method('createEmailAccount')
@@ -428,7 +463,7 @@ class IonosAccountsControllerTest extends TestCase {
 
 		// Mock conflict resolver to return no existing account
 		$this->conflictResolver->method('resolveConflict')
-			->with($emailUser)
+			->with($userId, $emailUser)
 			->willReturn(ConflictResolutionResult::noExistingAccount());
 
 		// Should NOT call accountsController->create since no existing account

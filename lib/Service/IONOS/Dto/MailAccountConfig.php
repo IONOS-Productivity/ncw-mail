@@ -33,6 +33,20 @@ class MailAccountConfig {
 	}
 
 	/**
+	 * Create a new instance with updated passwords for both IMAP and SMTP
+	 *
+	 * @param string $newPassword The new password to use
+	 * @return self New instance with updated passwords
+	 */
+	public function withPassword(string $newPassword): self {
+		return new self(
+			email: $this->email,
+			imap: $this->imap->withPassword($newPassword),
+			smtp: $this->smtp->withPassword($newPassword),
+		);
+	}
+
+	/**
 	 * Convert to array format for backwards compatibility
 	 *
 	 * @return array{email: string, imap: array, smtp: array}

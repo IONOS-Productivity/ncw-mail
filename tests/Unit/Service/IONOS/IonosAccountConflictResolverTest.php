@@ -44,17 +44,19 @@ class IonosAccountConflictResolverTest extends TestCase {
 	}
 
 	public function testResolveConflictWithNoExistingAccount(): void {
+		$userId = 'testuser';
 		$emailUser = 'test';
 
-		$this->ionosMailService->method('getAccountConfigForCurrentUser')
+		$this->ionosMailService->method('getAccountConfigForUser')
+			->with($userId)
 			->willReturn(null);
 
 		$this->logger
 			->expects($this->once())
 			->method('debug')
-			->with('No existing IONOS account found for conflict resolution');
+			->with('No existing IONOS account found for conflict resolution', ['userId' => $userId]);
 
-		$result = $this->resolver->resolveConflict($emailUser);
+		$result = $this->resolver->resolveConflict($userId, $emailUser);
 
 		$this->assertFalse($result->canRetry());
 		$this->assertNull($result->getAccountConfig());
@@ -62,17 +64,19 @@ class IonosAccountConflictResolverTest extends TestCase {
 	}
 
 	public function testResolveConflictWithMatchingEmail(): void {
+		$userId = 'testuser';
 		$emailUser = 'test';
 		$domain = 'example.com';
 		$emailAddress = 'test@example.com';
+		$newPassword = 'new-app-password-123';
 
-		// Create MailAccountConfig DTO
+		// Create MailAccountConfig DTO without password (as API returns)
 		$imapConfig = new MailServerConfig(
 			host: 'mail.localhost',
 			port: 1143,
 			security: 'none',
 			username: $emailAddress,
-			password: 'tmp',
+			password: '', // Empty password from getAccountConfigForUser
 		);
 
 		$smtpConfig = new MailServerConfig(
@@ -80,7 +84,7 @@ class IonosAccountConflictResolverTest extends TestCase {
 			port: 1587,
 			security: 'none',
 			username: $emailAddress,
-			password: 'tmp',
+			password: '', // Empty password from getAccountConfigForUser
 		);
 
 		$mailAccountConfig = new MailAccountConfig(
@@ -89,28 +93,42 @@ class IonosAccountConflictResolverTest extends TestCase {
 			smtp: $smtpConfig,
 		);
 
-		$this->ionosMailService->method('getAccountConfigForCurrentUser')
+		$this->ionosMailService->method('getAccountConfigForUser')
+			->with($userId)
 			->willReturn($mailAccountConfig);
 
 		$this->ionosConfigService->method('getMailDomain')
 			->willReturn($domain);
 
+		// Expect resetAppPassword to be called
+		$this->ionosMailService
+			->expects($this->once())
+			->method('resetAppPassword')
+			->with($userId, 'NEXTCLOUD_WORKSPACE')
+			->willReturn($newPassword);
+
 		$this->logger
 			->expects($this->once())
 			->method('info')
 			->with(
-				'IONOS account already exists, retrieving configuration for retry',
-				['emailAddress' => $emailAddress]
+				'IONOS account already exists, retrieving new password for retry',
+				['emailAddress' => $emailAddress, 'userId' => $userId]
 			);
 
-		$result = $this->resolver->resolveConflict($emailUser);
+		$result = $this->resolver->resolveConflict($userId, $emailUser);
 
 		$this->assertTrue($result->canRetry());
-		$this->assertSame($mailAccountConfig, $result->getAccountConfig());
+		$this->assertNotNull($result->getAccountConfig());
 		$this->assertFalse($result->hasEmailMismatch());
+
+		// Verify the returned config has the new password
+		$resultConfig = $result->getAccountConfig();
+		$this->assertEquals($newPassword, $resultConfig->getImap()->getPassword());
+		$this->assertEquals($newPassword, $resultConfig->getSmtp()->getPassword());
 	}
 
 	public function testResolveConflictWithEmailMismatch(): void {
+		$userId = 'testuser';
 		$emailUser = 'test';
 		$domain = 'example.com';
 		$expectedEmail = 'test@example.com';
@@ -139,7 +157,8 @@ class IonosAccountConflictResolverTest extends TestCase {
 			smtp: $smtpConfig,
 		);
 
-		$this->ionosMailService->method('getAccountConfigForCurrentUser')
+		$this->ionosMailService->method('getAccountConfigForUser')
+			->with($userId)
 			->willReturn($mailAccountConfig);
 
 		$this->ionosConfigService->method('getMailDomain')
@@ -150,10 +169,10 @@ class IonosAccountConflictResolverTest extends TestCase {
 			->method('warning')
 			->with(
 				'IONOS account exists but email mismatch',
-				['requestedEmail' => $expectedEmail, 'existingEmail' => $existingEmail]
+				['requestedEmail' => $expectedEmail, 'existingEmail' => $existingEmail, 'userId' => $userId]
 			);
 
-		$result = $this->resolver->resolveConflict($emailUser);
+		$result = $this->resolver->resolveConflict($userId, $emailUser);
 
 		$this->assertFalse($result->canRetry());
 		$this->assertNull($result->getAccountConfig());

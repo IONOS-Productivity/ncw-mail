@@ -1149,4 +1149,110 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->assertNull($result);
 	}
+
+	public function testResetAppPasswordSuccess(): void {
+		$userId = 'testuser123';
+		$appName = 'NEXTCLOUD_WORKSPACE';
+		$expectedPassword = 'new-app-password-123';
+
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, $userId, $appName)
+			->willReturn($expectedPassword);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Resetting IONOS app password', $this->callback(function ($context) use ($userId, $appName) {
+				return $context['userId'] === $userId
+					&& $context['appName'] === $appName
+					&& $context['extRef'] === self::TEST_EXT_REF;
+			}));
+
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Successfully reset IONOS app password', $this->callback(function ($context) use ($userId, $appName) {
+				return $context['userId'] === $userId
+					&& $context['appName'] === $appName;
+			}));
+
+		$result = $this->service->resetAppPassword($userId, $appName);
+
+		$this->assertEquals($expectedPassword, $result);
+	}
+
+	public function testResetAppPasswordWithApiException(): void {
+		$userId = 'testuser123';
+		$appName = 'NEXTCLOUD_WORKSPACE';
+
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Not Found',
+			404,
+			[],
+			'{"error": "Mailbox not found"}'
+		);
+
+		$apiInstance->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, $userId, $appName)
+			->willThrowException($apiException);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Resetting IONOS app password', $this->anything());
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('API Exception when calling MailConfigurationAPIApi->setAppPassword', $this->callback(function ($context) use ($userId, $appName) {
+				return $context['statusCode'] === 404
+					&& $context['message'] === 'Not Found'
+					&& $context['userId'] === $userId
+					&& $context['appName'] === $appName;
+			}));
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset IONOS app password: Not Found');
+		$this->expectExceptionCode(404);
+
+		$this->service->resetAppPassword($userId, $appName);
+	}
+
+	public function testResetAppPasswordWithUnexpectedResponse(): void {
+		$userId = 'testuser123';
+		$appName = 'NEXTCLOUD_WORKSPACE';
+
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		// API returns unexpected response type (not a string)
+		$apiInstance->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, $userId, $appName)
+			->willReturn(['unexpected' => 'response']);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Resetting IONOS app password', $this->anything());
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Failed to reset IONOS app password: Unexpected response type', $this->callback(function ($context) use ($userId, $appName) {
+				return $context['userId'] === $userId
+					&& $context['appName'] === $appName;
+			}));
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset IONOS app password');
+		$this->expectExceptionCode(500);
+
+		$this->service->resetAppPassword($userId, $appName);
+	}
 }
