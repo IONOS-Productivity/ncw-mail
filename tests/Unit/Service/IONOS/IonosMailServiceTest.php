@@ -13,6 +13,7 @@ use ChristophWurst\Nextcloud\Testing\TestCase;
 use GuzzleHttp\ClientInterface;
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
 use IONOS\MailConfigurationAPI\Client\Model\Imap;
+use IONOS\MailConfigurationAPI\Client\Model\MailAccountCreatedResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailServer;
@@ -106,7 +107,7 @@ class IonosMailServiceTest extends TestCase {
 		$mailServer->method('getImap')->willReturn($imapServer);
 		$mailServer->method('getSmtp')->willReturn($smtpServer);
 
-		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
+		$mailAccountResponse = $this->getMockBuilder(MailAccountCreatedResponse::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getEmail', 'getPassword', 'getServer'])
 			->getMock();
@@ -369,7 +370,7 @@ class IonosMailServiceTest extends TestCase {
 		$mailServer->method('getImap')->willReturn($imapServer);
 		$mailServer->method('getSmtp')->willReturn($smtpServer);
 
-		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
+		$mailAccountResponse = $this->getMockBuilder(MailAccountCreatedResponse::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getEmail', 'getPassword', 'getServer'])
 			->getMock();

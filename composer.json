@@ -54,7 +54,7 @@
 				"source": {
 					"type": "git",
 					"url": "https://github.com/ionos-productivity/ionos-mail-configuration-api-client.git",
-					"reference": "2.0.0-20251110130214"
+					"reference": "2.0.0-20251208083401"
 				},
 				"autoload": {
 					"psr-4": {
