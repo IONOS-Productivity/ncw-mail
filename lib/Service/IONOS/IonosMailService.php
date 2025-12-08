@@ -11,6 +11,7 @@ namespace OCA\Mail\Service\IONOS;
 
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
 use IONOS\MailConfigurationAPI\Client\ApiException;
+use IONOS\MailConfigurationAPI\Client\Model\MailAccountCreatedResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailCreateData;
@@ -164,7 +165,7 @@ class IonosMailService {
 				]);
 				throw new ServiceException('Failed to create ionos mail', $result->getStatus());
 			}
-			if ($result instanceof MailAccountResponse) {
+			if ($result instanceof MailAccountCreatedResponse) {
 				$this->logger->info('Successfully created IONOS mail account', [
 					'email' => $result->getEmail(),
 					'userId' => $userId,
@@ -257,10 +258,10 @@ class IonosMailService {
 	/**
 	 * Build success response with mail configuration
 	 *
-	 * @param MailAccountResponse $response
+	 * @param MailAccountCreatedResponse $response
 	 * @return MailAccountConfig
 	 */
-	private function buildSuccessResponse(MailAccountResponse $response): MailAccountConfig {
+	private function buildSuccessResponse(MailAccountCreatedResponse $response): MailAccountConfig {
 		$smtpServer = $response->getServer()->getSmtp();
 		$imapServer = $response->getServer()->getImap();
 
