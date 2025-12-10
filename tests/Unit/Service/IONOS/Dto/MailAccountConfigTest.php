@@ -179,6 +179,23 @@ class MailAccountConfigTest extends TestCase {
 		}
 	}
 
+	public function testWithPassword(): void {
+		$newConfig = $this->accountConfig->withPassword('newUnifiedPassword');
+
+		// Verify both IMAP and SMTP have the new password
+		$this->assertEquals('newUnifiedPassword', $newConfig->getImap()->getPassword());
+		$this->assertEquals('newUnifiedPassword', $newConfig->getSmtp()->getPassword());
+
+		// Verify other properties remain unchanged
+		$this->assertEquals('user@example.com', $newConfig->getEmail());
+		$this->assertEquals('imap.example.com', $newConfig->getImap()->getHost());
+		$this->assertEquals('smtp.example.com', $newConfig->getSmtp()->getHost());
+
+		// Verify original config is unchanged (immutability)
+		$this->assertEquals('imap-password', $this->accountConfig->getImap()->getPassword());
+		$this->assertEquals('smtp-password', $this->accountConfig->getSmtp()->getPassword());
+	}
+
 	public function testSameCredentialsForImapAndSmtp(): void {
 		$email = 'user@example.com';
 		$password = 'shared-password';
