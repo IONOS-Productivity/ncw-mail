@@ -958,4 +958,386 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->assertNull($result);
 	}
+
+	/**
+	 * Create a mock MailAccountResponse (without password)
+	 */
+	private function createMockMailAccountResponseWithoutPassword(
+		string $email = self::TEST_EMAIL,
+		?string $imapSslMode = 'ssl',
+		?string $smtpSslMode = 'tls',
+	): MailAccountResponse&MockObject {
+		$imapServer = $this->createMockImapServer(self::IMAP_HOST, self::IMAP_PORT, $imapSslMode);
+		$smtpServer = $this->createMockSmtpServer(self::SMTP_HOST, self::SMTP_PORT, $smtpSslMode);
+
+		$mailServer = $this->getMockBuilder(MailServer::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getImap', 'getSmtp'])
+			->getMock();
+		$mailServer->method('getImap')->willReturn($imapServer);
+		$mailServer->method('getSmtp')->willReturn($smtpServer);
+
+		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getEmail', 'getServer'])
+			->getMock();
+		$mailAccountResponse->method('getEmail')->willReturn($email);
+		$mailAccountResponse->method('getServer')->willReturn($mailServer);
+
+		return $mailAccountResponse;
+	}
+
+	public function testGetAccountConfigForUserReturnsConfigWhenAccountExists(): void {
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$mailAccountResponse = $this->createMockMailAccountResponseWithoutPassword();
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willReturn($mailAccountResponse);
+
+		// 1 debug call for getting account + 2 debug calls for normalizeSslMode (IMAP and SMTP)
+		$this->logger->expects($this->exactly(3))->method('debug');
+
+		$result = $this->service->getAccountConfigForUser(self::TEST_USER_ID);
+
+		$this->assertInstanceOf(MailAccountConfig::class, $result);
+		$this->assertEquals(self::TEST_EMAIL, $result->getEmail());
+		$this->assertEquals(self::IMAP_HOST, $result->getImap()->getHost());
+		$this->assertEquals(self::IMAP_PORT, $result->getImap()->getPort());
+		$this->assertEquals('ssl', $result->getImap()->getSecurity());
+		$this->assertEquals(self::TEST_EMAIL, $result->getImap()->getUsername());
+		$this->assertEquals('', $result->getImap()->getPassword()); // No password for security
+		$this->assertEquals(self::SMTP_HOST, $result->getSmtp()->getHost());
+		$this->assertEquals(self::SMTP_PORT, $result->getSmtp()->getPort());
+		$this->assertEquals('tls', $result->getSmtp()->getSecurity());
+		$this->assertEquals(self::TEST_EMAIL, $result->getSmtp()->getUsername());
+		$this->assertEquals('', $result->getSmtp()->getPassword()); // No password for security
+	}
+
+	public function testGetAccountConfigForUserReturnsNullWhenAccountDoesNotExist(): void {
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Not Found',
+			404,
+			[],
+			'{"error": "Not Found"}'
+		);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willThrowException($apiException);
+
+		$this->logger->expects($this->exactly(2))->method('debug');
+
+		$result = $this->service->getAccountConfigForUser(self::TEST_USER_ID);
+
+		$this->assertNull($result);
+	}
+
+	public function testGetAccountConfigForCurrentUserReturnsConfigWhenAccountExists(): void {
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$mailAccountResponse = $this->createMockMailAccountResponseWithoutPassword();
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willReturn($mailAccountResponse);
+
+		// 1 debug call for getting account + 2 debug calls for normalizeSslMode (IMAP and SMTP)
+		$this->logger->expects($this->exactly(3))->method('debug');
+
+		$result = $this->service->getAccountConfigForCurrentUser();
+
+		$this->assertInstanceOf(MailAccountConfig::class, $result);
+		$this->assertEquals(self::TEST_EMAIL, $result->getEmail());
+		$this->assertEquals('', $result->getImap()->getPassword());
+		$this->assertEquals('', $result->getSmtp()->getPassword());
+	}
+
+	public function testGetAccountConfigForCurrentUserReturnsNullWhenAccountDoesNotExist(): void {
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Not Found',
+			404,
+			[],
+			'{"error": "Not Found"}'
+		);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willThrowException($apiException);
+
+		$this->logger->expects($this->exactly(2))->method('debug');
+
+		$result = $this->service->getAccountConfigForCurrentUser();
+
+		$this->assertNull($result);
+	}
+
+	public function testGetAccountConfigForCurrentUserThrowsExceptionWhenNoUserSession(): void {
+		$this->setupConfigMocks();
+		$this->userSession->method('getUser')->willReturn(null);
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('No user session found when attempting to create IONOS mail account');
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('No user session found');
+
+		$this->service->getAccountConfigForCurrentUser();
+	}
+
+	public function testResetAppPasswordSuccess(): void {
+		$appName = 'Nextcloud';
+		$newPassword = 'new-app-password-123';
+
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willReturn($newPassword);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Resetting app password for user', $this->callback(function ($context) use ($appName) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName;
+			}));
+
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Successfully reset app password', $this->callback(function ($context) use ($appName) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName;
+			}));
+
+		$result = $this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+
+		$this->assertEquals($newPassword, $result);
+	}
+
+	public function testResetAppPasswordThrowsExceptionOnEmptyStringResponse(): void {
+		$appName = 'Nextcloud';
+
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willReturn('');
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Resetting app password for user', $this->callback(function ($context) use ($appName) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName;
+			}));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Failed to reset app password: Invalid response format', $this->callback(function ($context) use ($appName) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName
+					&& $context['response'] === '';
+			}));
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset app password: Invalid response');
+		$this->expectExceptionCode(500);
+
+		$this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+	}
+
+	public function testResetAppPasswordThrowsExceptionOnMailAddonErrorMessage(): void {
+		$appName = 'Nextcloud';
+
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		$errorMessage = $this->getMockBuilder(MailAddonErrorMessage::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getStatus', 'getMessage'])
+			->getMock();
+		$errorMessage->method('getStatus')->willReturn(MailAddonErrorMessage::STATUS__400_BAD_REQUEST);
+		$errorMessage->method('getMessage')->willReturn('Invalid app name');
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willReturn($errorMessage);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Resetting app password for user', $this->callback(function ($context) use ($appName) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName;
+			}));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Failed to reset app password: API error', $this->callback(function ($context) use ($appName) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName
+					&& $context['status'] === MailAddonErrorMessage::STATUS__400_BAD_REQUEST
+					&& $context['message'] === 'Invalid app name';
+			}));
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset app password: Invalid app name');
+		$this->expectExceptionCode(400);
+
+		$this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+	}
+
+	public function testResetAppPasswordThrowsExceptionOnInvalidResponseFormat(): void {
+		$appName = 'Nextcloud';
+
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		$invalidResponse = ['password' => 'test']; // Array instead of string
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willReturn($invalidResponse);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Resetting app password for user', $this->callback(function ($context) use ($appName) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName;
+			}));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Failed to reset app password: Invalid response format', $this->callback(function ($context) use ($appName, $invalidResponse) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName
+					&& $context['response'] === $invalidResponse;
+			}));
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset app password: Invalid response');
+		$this->expectExceptionCode(500);
+
+		$this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+	}
+
+	public function testResetAppPasswordThrowsExceptionOnApiException(): void {
+		$appName = 'Nextcloud';
+
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Internal Server Error',
+			500,
+			[],
+			'{"error": "Server error"}'
+		);
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willThrowException($apiException);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Resetting app password for user', $this->callback(function ($context) use ($appName) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName;
+			}));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('API Exception when resetting app password', $this->callback(function ($context) use ($appName) {
+				return $context['statusCode'] === 500
+					&& $context['message'] === 'Internal Server Error'
+					&& $context['userId'] === self::TEST_USER_ID;
+			}));
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset app password: Internal Server Error');
+		$this->expectExceptionCode(500);
+
+		$this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+	}
+
+	public function testResetAppPasswordThrowsExceptionOnGeneralException(): void {
+		$appName = 'Nextcloud';
+
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$generalException = new \Exception('Unexpected error');
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willThrowException($generalException);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Resetting app password for user', $this->callback(function ($context) use ($appName) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['appName'] === $appName;
+			}));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Exception when resetting app password', $this->callback(function ($context) use ($appName) {
+				return isset($context['exception'])
+					&& $context['userId'] === self::TEST_USER_ID;
+			}));
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset app password');
+		$this->expectExceptionCode(500);
+
+		$this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+	}
 }

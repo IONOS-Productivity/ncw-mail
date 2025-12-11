@@ -379,6 +379,135 @@ class IonosMailService {
 	}
 
 	/**
+	 * Get the IONOS mail account configuration for a specific user
+	 *
+	 * This method retrieves the account configuration without the password for security reasons.
+	 * Use resetAppPassword() to obtain a fresh password when needed.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return MailAccountConfig|null The account configuration if it exists, null otherwise
+	 */
+	public function getAccountConfigForUser(string $userId): ?MailAccountConfig {
+		$response = $this->getMailAccountResponse($userId);
+
+		if ($response === null) {
+			return null;
+		}
+
+		return $this->buildConfigFromAccountResponse($response);
+	}
+
+	/**
+	 * Get the IONOS mail account configuration for the current logged-in user
+	 *
+	 * @return MailAccountConfig|null The account configuration if it exists, null otherwise
+	 * @throws ServiceException If no user session found
+	 */
+	public function getAccountConfigForCurrentUser(): ?MailAccountConfig {
+		$userId = $this->getCurrentUserId();
+		return $this->getAccountConfigForUser($userId);
+	}
+
+	/**
+	 * Reset/retrieve application password for a user
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $appName The application name for the password
+	 * @return string The new application password
+	 * @throws ServiceException If password reset fails
+	 */
+	public function resetAppPassword(string $userId, string $appName): string {
+		$this->logger->debug('Resetting app password for user', [
+			'userId' => $userId,
+			'appName' => $appName,
+		]);
+
+		try {
+			$apiInstance = $this->createApiInstance();
+			$result = $apiInstance->setAppPassword(
+				self::BRAND,
+				$this->configService->getExternalReference(),
+				$userId,
+				$appName
+			);
+
+			if (is_string($result) && !empty($result)) {
+				$this->logger->info('Successfully reset app password', [
+					'userId' => $userId,
+					'appName' => $appName,
+				]);
+				return $result;
+			}
+
+			if ($result instanceof MailAddonErrorMessage) {
+				$this->logger->error('Failed to reset app password: API error', [
+					'userId' => $userId,
+					'appName' => $appName,
+					'status' => $result->getStatus(),
+					'message' => $result->getMessage(),
+				]);
+				throw new ServiceException('Failed to reset app password: ' . $result->getMessage(), $result->getStatus());
+			}
+
+			$this->logger->error('Failed to reset app password: Invalid response format', [
+				'userId' => $userId,
+				'appName' => $appName,
+				'response' => $result,
+			]);
+			throw new ServiceException('Failed to reset app password: Invalid response', self::HTTP_INTERNAL_SERVER_ERROR);
+		} catch (ServiceException $e) {
+			throw $e;
+		} catch (ApiException $e) {
+			$this->logger->error('API Exception when resetting app password', [
+				'statusCode' => $e->getCode(),
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody(),
+				'userId' => $userId,
+			]);
+			throw new ServiceException('Failed to reset app password: ' . $e->getMessage(), $e->getCode(), $e);
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when resetting app password', [
+				'exception' => $e,
+				'userId' => $userId,
+			]);
+			throw new ServiceException('Failed to reset app password', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
+	}
+
+	/**
+	 * Build MailAccountConfig from MailAccountResponse without password
+	 *
+	 * @param MailAccountResponse $response The API response
+	 * @return MailAccountConfig The account configuration
+	 */
+	private function buildConfigFromAccountResponse(MailAccountResponse $response): MailAccountConfig {
+		$smtpServer = $response->getServer()->getSmtp();
+		$imapServer = $response->getServer()->getImap();
+
+		$imapConfig = new MailServerConfig(
+			host: $imapServer->getHost(),
+			port: $imapServer->getPort(),
+			security: $this->normalizeSslMode($imapServer->getSslMode()),
+			username: $response->getEmail(),
+			password: '', // No password for security reasons - use resetAppPassword() to get fresh password
+		);
+
+		$smtpConfig = new MailServerConfig(
+			host: $smtpServer->getHost(),
+			port: $smtpServer->getPort(),
+			security: $this->normalizeSslMode($smtpServer->getSslMode()),
+			username: $response->getEmail(),
+			password: '', // No password for security reasons - use resetAppPassword() to get fresh password
+		);
+
+		return new MailAccountConfig(
+			email: $response->getEmail(),
+			imap: $imapConfig,
+			smtp: $smtpConfig,
+		);
+	}
+
+	/**
 	 * Delete an IONOS email account without throwing exceptions (fire and forget)
 	 *
 	 * This method checks if IONOS integration is enabled and attempts to delete
