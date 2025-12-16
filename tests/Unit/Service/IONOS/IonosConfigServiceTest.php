@@ -38,6 +38,10 @@ class IonosConfigServiceTest extends TestCase {
 		);
 	}
 
+	public function testAppNameConstantExists(): void {
+		$this->assertSame('NEXTCLOUD_WORKSPACE', IonosConfigService::APP_NAME);
+	}
+
 	public function testGetExternalReferenceSuccess(): void {
 		$this->config->method('getSystemValue')
 			->with('ncw.ext_ref')
