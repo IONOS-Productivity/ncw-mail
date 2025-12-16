@@ -30,6 +30,7 @@ use Psr\Log\LoggerInterface;
 class IonosMailService {
 	private const BRAND = 'IONOS';
 	private const HTTP_NOT_FOUND = 404;
+	public const STATUS__409_CONFLICT = 409;
 	private const HTTP_INTERNAL_SERVER_ERROR = 500;
 
 	public function __construct(
