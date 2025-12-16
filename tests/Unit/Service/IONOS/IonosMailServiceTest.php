@@ -958,4 +958,146 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->assertNull($result);
 	}
+
+	public function testGetAccountConfigForUserReturnsConfigWhenAccountExists(): void {
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Create mock response for existing account
+		$imapServer = $this->createMockImapServer();
+		$smtpServer = $this->createMockSmtpServer();
+
+		$mailServer = $this->getMockBuilder(MailServer::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getImap', 'getSmtp'])
+			->getMock();
+		$mailServer->method('getImap')->willReturn($imapServer);
+		$mailServer->method('getSmtp')->willReturn($smtpServer);
+
+		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getEmail', 'getServer'])
+			->getMock();
+		$mailAccountResponse->method('getEmail')->willReturn(self::TEST_EMAIL);
+		$mailAccountResponse->method('getServer')->willReturn($mailServer);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willReturn($mailAccountResponse);
+
+		$result = $this->service->getAccountConfigForUser(self::TEST_USER_ID);
+
+		$this->assertInstanceOf(MailAccountConfig::class, $result);
+		$this->assertEquals(self::TEST_EMAIL, $result->getEmail());
+		$this->assertEquals(self::IMAP_HOST, $result->getImap()->getHost());
+		$this->assertEquals(self::IMAP_PORT, $result->getImap()->getPort());
+		$this->assertEquals('ssl', $result->getImap()->getSecurity());
+		// Password is empty when retrieving existing accounts
+		$this->assertEquals('', $result->getImap()->getPassword());
+		$this->assertEquals(self::SMTP_HOST, $result->getSmtp()->getHost());
+		$this->assertEquals(self::SMTP_PORT, $result->getSmtp()->getPort());
+		$this->assertEquals('tls', $result->getSmtp()->getSecurity());
+		$this->assertEquals('', $result->getSmtp()->getPassword());
+	}
+
+	public function testGetAccountConfigForUserReturnsNullWhenAccountDoesNotExist(): void {
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Mock API to throw 404 exception
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Not Found',
+			404,
+			[],
+			'{"error": "Not Found"}'
+		);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willThrowException($apiException);
+
+		$result = $this->service->getAccountConfigForUser(self::TEST_USER_ID);
+
+		$this->assertNull($result);
+	}
+
+	public function testResetAppPasswordSuccess(): void {
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+		$appName = 'NEXTCLOUD_WORKSPACE';
+		$expectedPassword = 'new-app-password-123';
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willReturn($expectedPassword);
+
+		$result = $this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+
+		$this->assertEquals($expectedPassword, $result);
+	}
+
+	public function testResetAppPasswordWithApiException(): void {
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$appName = 'NEXTCLOUD_WORKSPACE';
+
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Not Found',
+			404,
+			[],
+			'{"error": "Mailbox not found"}'
+		);
+
+		$apiInstance->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willThrowException($apiException);
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset IONOS app password: Not Found');
+		$this->expectExceptionCode(404);
+
+		$this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+	}
+
+	public function testResetAppPasswordWithUnexpectedResponse(): void {
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+		$appName = 'NEXTCLOUD_WORKSPACE';
+
+		// API returns unexpected response type (not a string)
+		$apiInstance->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willReturn(['unexpected' => 'response']);
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset IONOS app password');
+		$this->expectExceptionCode(500);
+
+		$this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+	}
+
+	public function testGetMailDomain(): void {
+		$this->configService->method('getMailDomain')->willReturn(self::TEST_DOMAIN);
+
+		$result = $this->service->getMailDomain();
+
+		$this->assertEquals(self::TEST_DOMAIN, $result);
+	}
 }
