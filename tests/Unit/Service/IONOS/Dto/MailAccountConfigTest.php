@@ -245,4 +245,30 @@ class MailAccountConfigTest extends TestCase {
 		$this->assertEquals('imap.example.com', $imapHost);
 		$this->assertEquals('smtp.example.com', $smtpHost);
 	}
+
+	public function testWithPassword(): void {
+		$newPassword = 'new-secure-password';
+
+		// Create a new config with updated password
+		$updatedConfig = $this->accountConfig->withPassword($newPassword);
+
+		// Original config should remain unchanged (immutable)
+		$this->assertEquals('imap-password', $this->accountConfig->getImap()->getPassword());
+		$this->assertEquals('smtp-password', $this->accountConfig->getSmtp()->getPassword());
+
+		// New config should have the new password for both IMAP and SMTP
+		$this->assertEquals($newPassword, $updatedConfig->getImap()->getPassword());
+		$this->assertEquals($newPassword, $updatedConfig->getSmtp()->getPassword());
+
+		// Other properties should remain the same
+		$this->assertEquals($this->accountConfig->getEmail(), $updatedConfig->getEmail());
+		$this->assertEquals($this->accountConfig->getImap()->getHost(), $updatedConfig->getImap()->getHost());
+		$this->assertEquals($this->accountConfig->getImap()->getPort(), $updatedConfig->getImap()->getPort());
+		$this->assertEquals($this->accountConfig->getImap()->getSecurity(), $updatedConfig->getImap()->getSecurity());
+		$this->assertEquals($this->accountConfig->getImap()->getUsername(), $updatedConfig->getImap()->getUsername());
+		$this->assertEquals($this->accountConfig->getSmtp()->getHost(), $updatedConfig->getSmtp()->getHost());
+		$this->assertEquals($this->accountConfig->getSmtp()->getPort(), $updatedConfig->getSmtp()->getPort());
+		$this->assertEquals($this->accountConfig->getSmtp()->getSecurity(), $updatedConfig->getSmtp()->getSecurity());
+		$this->assertEquals($this->accountConfig->getSmtp()->getUsername(), $updatedConfig->getSmtp()->getUsername());
+	}
 }
