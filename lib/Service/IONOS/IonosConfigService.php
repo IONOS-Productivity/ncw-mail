@@ -22,6 +22,11 @@ use Throwable;
  * Service for managing IONOS API configuration
  */
 class IonosConfigService {
+	/**
+	 * Application name used for IONOS app password management
+	 */
+	public const APP_NAME = 'NEXTCLOUD_WORKSPACE';
+
 	public function __construct(
 		private readonly IConfig $config,
 		private readonly IAppConfig $appConfig,
