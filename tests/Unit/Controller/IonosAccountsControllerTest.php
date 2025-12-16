@@ -10,28 +10,24 @@ declare(strict_types=1);
 namespace OCA\Mail\Tests\Unit\Controller;
 
 use ChristophWurst\Nextcloud\Testing\TestCase;
-use OCA\Mail\Controller\AccountsController;
+use OCA\Mail\Account;
 use OCA\Mail\Controller\IonosAccountsController;
+use OCA\Mail\Db\MailAccount;
+use OCA\Mail\Exception\IonosServiceException;
 use OCA\Mail\Exception\ServiceException;
-use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
-use OCA\Mail\Service\IONOS\Dto\MailServerConfig;
-use OCA\Mail\Service\IONOS\IonosMailService;
-use OCP\AppFramework\Http\JSONResponse;
+use OCA\Mail\Service\IONOS\IonosAccountCreationService;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserSession;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
-use ReflectionClass;
 
 class IonosAccountsControllerTest extends TestCase {
 	private string $appName;
 
 	private IRequest&MockObject $request;
 
-	private IonosMailService&MockObject $ionosMailService;
-
-	private AccountsController&MockObject $accountsController;
+	private IonosAccountCreationService&MockObject $accountCreationService;
 
 	private IUserSession&MockObject $userSession;
 
@@ -44,16 +40,14 @@ class IonosAccountsControllerTest extends TestCase {
 
 		$this->appName = 'mail';
 		$this->request = $this->createMock(IRequest::class);
-		$this->ionosMailService = $this->createMock(IonosMailService::class);
-		$this->accountsController = $this->createMock(AccountsController::class);
+		$this->accountCreationService = $this->createMock(IonosAccountCreationService::class);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->controller = new IonosAccountsController(
 			$this->appName,
 			$this->request,
-			$this->ionosMailService,
-			$this->accountsController,
+			$this->accountCreationService,
 			$this->userSession,
 			$this->logger,
 		);
@@ -95,37 +89,27 @@ class IonosAccountsControllerTest extends TestCase {
 		// Setup user session
 		$this->setupUserSession($userId);
 
-		// Create MailAccountConfig DTO
-		$imapConfig = new MailServerConfig(
-			host: 'mail.localhost',
-			port: 1143,
-			security: 'none',
-			username: $emailAddress,
-			password: 'tmp',
-		);
+		// Create a real MailAccount instance and wrap it in Account
+		$mailAccount = new MailAccount();
+		$mailAccount->setId(1);
+		$mailAccount->setUserId($userId);
+		$mailAccount->setName($accountName);
+		$mailAccount->setEmail($emailAddress);
 
-		$smtpConfig = new MailServerConfig(
-			host: 'mail.localhost',
-			port: 1587,
-			security: 'none',
-			username: $emailAddress,
-			password: 'tmp',
-		);
+		$account = new Account($mailAccount);
 
-		$mailAccountConfig = new MailAccountConfig(
-			email: $emailAddress,
-			imap: $imapConfig,
-			smtp: $smtpConfig,
-		);
+		// Verify response matches the expected MailJsonResponse::success() format
+		$accountResponse = \OCA\Mail\Http\JsonResponse::success($account, 201);
 
-		// Mock successful IONOS mail service response
-		$this->ionosMailService->method('createEmailAccount')
-			->with($emailUser)
-			->willReturn($mailAccountConfig);
+		// Mock account creation service to return a successful account
+		$this->accountCreationService->expects($this->once())
+			->method('createOrUpdateAccount')
+			->with($userId, $emailUser, $accountName)
+			->willReturn($account);
 
 		// Verify logging calls
 		$this->logger
-			->expects($this->exactly(3))
+			->expects($this->exactly(2))
 			->method('info')
 			->willReturnCallback(function ($message, $context) use ($emailUser, $accountName, $emailAddress, $userId) {
 				static $callCount = 0;
@@ -139,46 +123,19 @@ class IonosAccountsControllerTest extends TestCase {
 						'accountName' => $accountName,
 					], $context);
 				} elseif ($callCount === 2) {
-					$this->assertEquals('IONOS email account created successfully', $message);
-					$this->assertEquals([
-						'emailAddress' => $emailAddress,
-					], $context);
-				} elseif ($callCount === 3) {
 					$this->assertEquals('Account creation completed successfully', $message);
 					$this->assertEquals([
-						'emailAddress' => $emailUser,
+						'emailAddress' => $emailAddress,
 						'accountName' => $accountName,
+						'accountId' => 1,
+						'userId' => $userId,
 					], $context);
 				}
 			});
 
-		// Mock account creation response
-		$accountData = ['id' => 1, 'emailAddress' => $emailAddress];
-		$accountResponse = $this->createMock(JSONResponse::class);
-		$accountResponse->method('getData')->willReturn($accountData);
-
-		$this->accountsController
-			->method('create')
-			->with(
-				$accountName,
-				$emailAddress,
-				'mail.localhost',
-				1143,
-				'none',
-				$emailAddress,
-				'tmp',
-				'mail.localhost',
-				1587,
-				'none',
-				$emailAddress,
-				'tmp',
-			)
-			->willReturn($accountResponse);
-
 		$response = $this->controller->create($accountName, $emailUser);
 
-		// The controller now directly returns the AccountsController response
-		$this->assertSame($accountResponse, $response);
+		$this->assertEquals($accountResponse, $response);
 	}
 
 	public function testCreateWithServiceException(): void {
@@ -189,9 +146,10 @@ class IonosAccountsControllerTest extends TestCase {
 		// Setup user session
 		$this->setupUserSession($userId);
 
-		// Mock IONOS mail service to throw ServiceException
-		$this->ionosMailService->method('createEmailAccount')
-			->with($emailUser)
+		// Mock account creation service to throw ServiceException
+		$this->accountCreationService->expects($this->once())
+			->method('createOrUpdateAccount')
+			->with($userId, $emailUser, $accountName)
 			->willThrowException(new ServiceException('Failed to create email account'));
 
 		$this->logger
@@ -224,9 +182,10 @@ class IonosAccountsControllerTest extends TestCase {
 		// Setup user session
 		$this->setupUserSession($userId);
 
-		// Mock IONOS mail service to throw ServiceException with HTTP 409 (Duplicate)
-		$this->ionosMailService->method('createEmailAccount')
-			->with($emailUser)
+		// Mock account creation service to throw ServiceException with status code
+		$this->accountCreationService->expects($this->once())
+			->method('createOrUpdateAccount')
+			->with($userId, $emailUser, $accountName)
 			->willThrowException(new ServiceException('Duplicate email account', 409));
 
 		$this->logger
@@ -251,6 +210,55 @@ class IonosAccountsControllerTest extends TestCase {
 		self::assertEquals($expectedResponse, $response);
 	}
 
+	public function testCreateWithIonosServiceExceptionWithAdditionalData(): void {
+		$accountName = 'Test Account';
+		$emailUser = 'test';
+		$userId = 'test-user-123';
+
+		// Setup user session
+		$this->setupUserSession($userId);
+
+		// Create IonosServiceException with additional data
+		$additionalData = [
+			'errorCode' => 'DUPLICATE_EMAIL',
+			'existingEmail' => 'test@example.com',
+			'suggestedAlternative' => 'test2@example.com',
+		];
+
+		// Mock account creation service to throw IonosServiceException with additional data
+		$this->accountCreationService->expects($this->once())
+			->method('createOrUpdateAccount')
+			->with($userId, $emailUser, $accountName)
+			->willThrowException(new IonosServiceException('Email already exists', 409, null, $additionalData));
+
+		$this->logger
+			->expects($this->once())
+			->method('error')
+			->with(
+				'IONOS service error during account creation: Email already exists',
+				[
+					'error' => 'IONOS_API_ERROR',
+					'statusCode' => 409,
+					'message' => 'Email already exists',
+					'errorCode' => 'DUPLICATE_EMAIL',
+					'existingEmail' => 'test@example.com',
+					'suggestedAlternative' => 'test2@example.com',
+				]
+			);
+
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
+			'error' => 'IONOS_API_ERROR',
+			'statusCode' => 409,
+			'message' => 'Email already exists',
+			'errorCode' => 'DUPLICATE_EMAIL',
+			'existingEmail' => 'test@example.com',
+			'suggestedAlternative' => 'test2@example.com',
+		]);
+		$response = $this->controller->create($accountName, $emailUser);
+
+		self::assertEquals($expectedResponse, $response);
+	}
+
 	public function testCreateWithGenericException(): void {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
@@ -259,10 +267,11 @@ class IonosAccountsControllerTest extends TestCase {
 		// Setup user session
 		$this->setupUserSession($userId);
 
-		// Mock IONOS mail service to throw a generic exception
+		// Mock account creation service to throw a generic exception
 		$exception = new \Exception('Generic error');
-		$this->ionosMailService->method('createEmailAccount')
-			->with($emailUser)
+		$this->accountCreationService->expects($this->once())
+			->method('createOrUpdateAccount')
+			->with($userId, $emailUser, $accountName)
 			->willThrowException($exception);
 
 		// Verify error logging for unexpected exceptions
@@ -314,62 +323,5 @@ class IonosAccountsControllerTest extends TestCase {
 		$response = $this->controller->create($accountName, $emailUser);
 
 		self::assertEquals($expectedResponse, $response);
-	}
-
-
-	public function testCreateNextcloudMailAccount(): void {
-		$accountName = 'Test Account';
-		$emailAddress = 'test@example.com';
-
-		$imapConfig = new MailServerConfig(
-			host: 'mail.localhost',
-			port: 1143,
-			security: 'none',
-			username: $emailAddress,
-			password: 'tmp',
-		);
-
-		$smtpConfig = new MailServerConfig(
-			host: 'mail.localhost',
-			port: 1587,
-			security: 'none',
-			username: $emailAddress,
-			password: 'tmp',
-		);
-
-		$mailConfig = new MailAccountConfig(
-			email: $emailAddress,
-			imap: $imapConfig,
-			smtp: $smtpConfig,
-		);
-
-		$expectedResponse = $this->createMock(JSONResponse::class);
-
-		$this->accountsController
-			->expects($this->once())
-			->method('create')
-			->with(
-				$accountName,
-				$emailAddress,
-				'mail.localhost',
-				1143,
-				'none',
-				$emailAddress,
-				'tmp',
-				'mail.localhost',
-				1587,
-				'none',
-				$emailAddress,
-				'tmp',
-			)
-			->willReturn($expectedResponse);
-
-		$reflection = new ReflectionClass($this->controller);
-		$method = $reflection->getMethod('createNextcloudMailAccount');
-		$method->setAccessible(true);
-
-		$result = $method->invoke($this->controller, $accountName, $mailConfig);
-
-		$this->assertSame($expectedResponse, $result);
 	}
 }
