@@ -11,10 +11,12 @@ namespace OCA\Mail\Service\IONOS;
 
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
 use IONOS\MailConfigurationAPI\Client\ApiException;
+use IONOS\MailConfigurationAPI\Client\Model\Imap;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountCreatedResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailCreateData;
+use IONOS\MailConfigurationAPI\Client\Model\Smtp;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
 use OCA\Mail\Service\IONOS\Dto\MailServerConfig;
@@ -219,6 +221,45 @@ class IonosMailService {
 	}
 
 	/**
+	 * Get IONOS account configuration for a specific user
+	 *
+	 * This method retrieves the configuration of an existing IONOS mail account.
+	 * Useful when an account was previously created but Nextcloud account creation failed.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return MailAccountConfig|null Mail account configuration if exists, null otherwise
+	 * @throws ServiceException
+	 */
+	public function getAccountConfigForUser(string $userId): ?MailAccountConfig {
+		$response = $this->getMailAccountResponse($userId);
+
+		if ($response === null) {
+			$this->logger->debug('No existing IONOS account found for user', [
+				'userId' => $userId
+			]);
+			return null;
+		}
+
+		$this->logger->info('Retrieved existing IONOS account configuration', [
+			'email' => $response->getEmail(),
+			'userId' => $userId
+		]);
+
+		return $this->buildConfigFromAccountResponse($response);
+	}
+
+	/**
+	 * Get IONOS account configuration for the current logged-in user
+	 *
+	 * @return MailAccountConfig|null Mail account configuration if exists, null otherwise
+	 * @throws ServiceException
+	 */
+	public function getAccountConfigForCurrentUser(): ?MailAccountConfig {
+		$userId = $this->getCurrentUserId();
+		return $this->getAccountConfigForUser($userId);
+	}
+
+	/**
 	 * Get the current user ID
 	 *
 	 * @throws ServiceException
@@ -274,35 +315,68 @@ class IonosMailService {
 	}
 
 	/**
-	 * Build success response with mail configuration
+	 * Build success response with mail configuration from MailAccountCreatedResponse (newly created account)
 	 *
-	 * @param MailAccountCreatedResponse $response
-	 * @return MailAccountConfig
+	 * @param MailAccountCreatedResponse $response The account response from createFunctionalAccount
+	 * @return MailAccountConfig The mail account configuration with password
 	 */
 	private function buildSuccessResponse(MailAccountCreatedResponse $response): MailAccountConfig {
-		$smtpServer = $response->getServer()->getSmtp();
-		$imapServer = $response->getServer()->getImap();
+		return $this->buildMailAccountConfig(
+			$response->getServer()->getImap(),
+			$response->getServer()->getSmtp(),
+			$response->getEmail(),
+			$response->getPassword()
+		);
+	}
 
+	/**
+	 * Build mail account configuration from server details
+	 *
+	 * @param Imap $imapServer IMAP server configuration object
+	 * @param Smtp $smtpServer SMTP server configuration object
+	 * @param string $email Email address
+	 * @param string $password Account password
+	 * @return MailAccountConfig Complete mail account configuration
+	 */
+	private function buildMailAccountConfig(Imap $imapServer, Smtp $smtpServer, string $email, string $password): MailAccountConfig {
 		$imapConfig = new MailServerConfig(
 			host: $imapServer->getHost(),
 			port: $imapServer->getPort(),
 			security: $this->normalizeSslMode($imapServer->getSslMode()),
-			username: $response->getEmail(),
-			password: $response->getPassword(),
+			username: $email,
+			password: $password,
 		);
 
 		$smtpConfig = new MailServerConfig(
 			host: $smtpServer->getHost(),
 			port: $smtpServer->getPort(),
 			security: $this->normalizeSslMode($smtpServer->getSslMode()),
-			username: $response->getEmail(),
-			password: $response->getPassword(),
+			username: $email,
+			password: $password,
 		);
 
 		return new MailAccountConfig(
-			email: $response->getEmail(),
+			email: $email,
 			imap: $imapConfig,
 			smtp: $smtpConfig,
+		);
+	}
+
+	/**
+	 * Build configuration from MailAccountResponse (existing account)
+	 * Note: MailAccountResponse does not include password for security reasons
+	 *
+	 * @param MailAccountResponse $response The account response from getFunctionalAccount
+	 * @return MailAccountConfig The mail account configuration with empty password
+	 */
+	private function buildConfigFromAccountResponse(MailAccountResponse $response): MailAccountConfig {
+		// Password is not available when retrieving existing accounts
+		// It should be retrieved from Nextcloud's credential store separately
+		return $this->buildMailAccountConfig(
+			$response->getServer()->getImap(),
+			$response->getServer()->getSmtp(),
+			$response->getEmail(),
+			''
 		);
 	}
 
@@ -408,5 +482,74 @@ class IonosMailService {
 			]);
 			// Don't throw - this is a fire and forget operation
 		}
+	}
+
+	/**
+	 * Reset app password for the IONOS mail account (generates a new password)
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $appName The application name for the password
+	 * @return string The new password
+	 * @throws ServiceException
+	 */
+	public function resetAppPassword(string $userId, string $appName): string {
+		$this->logger->debug('Resetting IONOS app password', [
+			'userId' => $userId,
+			'appName' => $appName,
+			'extRef' => $this->configService->getExternalReference(),
+		]);
+
+		try {
+			$apiInstance = $this->createApiInstance();
+			$result = $apiInstance->setAppPassword(
+				self::BRAND,
+				$this->configService->getExternalReference(),
+				$userId,
+				$appName
+			);
+
+			if (is_string($result)) {
+				$this->logger->info('Successfully reset IONOS app password', [
+					'userId' => $userId,
+					'appName' => $appName
+				]);
+				return $result;
+			}
+
+			$this->logger->error('Failed to reset IONOS app password: Unexpected response type', [
+				'userId' => $userId,
+				'appName' => $appName,
+				'result' => $result
+			]);
+			throw new ServiceException('Failed to reset IONOS app password', self::HTTP_INTERNAL_SERVER_ERROR);
+		} catch (ServiceException $e) {
+			// Re-throw ServiceException without additional logging
+			throw $e;
+		} catch (ApiException $e) {
+			$this->logger->error('API Exception when calling MailConfigurationAPIApi->setAppPassword', [
+				'statusCode' => $e->getCode(),
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody(),
+				'userId' => $userId,
+				'appName' => $appName
+			]);
+			throw new ServiceException('Failed to reset IONOS app password: ' . $e->getMessage(), $e->getCode(), $e);
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when calling MailConfigurationAPIApi->setAppPassword', [
+				'exception' => $e,
+				'userId' => $userId,
+				'appName' => $appName
+			]);
+			throw new ServiceException('Failed to reset IONOS app password', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
+	}
+
+	/**
+	 * Get the configured mail domain for IONOS accounts
+	 *
+	 * @return string The mail domain (e.g., "example.com")
+	 */
+	public function getMailDomain(): string {
+		return $this->configService->getMailDomain();
 	}
 }
