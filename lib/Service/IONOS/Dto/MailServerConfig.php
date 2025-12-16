@@ -43,6 +43,22 @@ class MailServerConfig {
 	}
 
 	/**
+	 * Create a new instance with a different password
+	 *
+	 * @param string $newPassword The new password to use
+	 * @return self New instance with updated password
+	 */
+	public function withPassword(string $newPassword): self {
+		return new self(
+			host: $this->host,
+			port: $this->port,
+			security: $this->security,
+			username: $this->username,
+			password: $newPassword,
+		);
+	}
+
+	/**
 	 * Convert to array format for backwards compatibility
 	 *
 	 * @return array{host: string, port: int, security: string, username: string, password: string}
