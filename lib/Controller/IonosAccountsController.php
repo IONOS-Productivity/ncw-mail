@@ -8,12 +8,13 @@ declare(strict_types=1);
  */
 namespace OCA\Mail\Controller;
 
+use OCA\Mail\Exception\IonosServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
-use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
-use OCA\Mail\Service\IONOS\IonosMailService;
+use OCA\Mail\Service\IONOS\IonosAccountCreationService;
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
@@ -30,8 +31,7 @@ class IonosAccountsController extends Controller {
 	public function __construct(
 		string $appName,
 		IRequest $request,
-		private IonosMailService $ionosMailService,
-		private AccountsController $accountsController,
+		private IonosAccountCreationService $accountCreationService,
 		private IUserSession $userSession,
 		private LoggerInterface $logger,
 	) {
@@ -63,20 +63,17 @@ class IonosAccountsController extends Controller {
 				'emailAddress' => $emailUser,
 				'accountName' => $accountName,
 			]);
-			$ionosResponse = $this->ionosMailService->createEmailAccount($emailUser);
 
-			$this->logger->info('IONOS email account created successfully', [
-				'emailAddress' => $ionosResponse->getEmail(),
-			]);
-
-			$response = $this->createNextcloudMailAccount($accountName, $ionosResponse);
+			$account = $this->accountCreationService->createOrUpdateAccount($userId, $emailUser, $accountName);
 
 			$this->logger->info('Account creation completed successfully', [
-				'emailAddress' => $emailUser,
+				'emailAddress' => $account->getEmail(),
 				'accountName' => $accountName,
+				'accountId' => $account->getId(),
+				'userId' => $userId,
 			]);
 
-			return $response;
+			return MailJsonResponse::success($account, Http::STATUS_CREATED);
 		} catch (ServiceException $e) {
 			return $this->buildServiceErrorResponse($e, 'account creation');
 		} catch (\Exception $e) {
@@ -85,26 +82,6 @@ class IonosAccountsController extends Controller {
 			]);
 			return MailJsonResponse::error('Could not create account');
 		}
-	}
-
-	private function createNextcloudMailAccount(string $accountName, MailAccountConfig $mailConfig): JSONResponse {
-		$imap = $mailConfig->getImap();
-		$smtp = $mailConfig->getSmtp();
-
-		return $this->accountsController->create(
-			$accountName,
-			$mailConfig->getEmail(),
-			$imap->getHost(),
-			$imap->getPort(),
-			$imap->getSecurity(),
-			$imap->getUsername(),
-			$imap->getPassword(),
-			$smtp->getHost(),
-			$smtp->getPort(),
-			$smtp->getSecurity(),
-			$smtp->getUsername(),
-			$smtp->getPassword(),
-		);
 	}
 
 	/**
@@ -130,6 +107,12 @@ class IonosAccountsController extends Controller {
 			'statusCode' => $e->getCode(),
 			'message' => $e->getMessage(),
 		];
+
+		// If it's an IonosServiceException, merge in the additional data
+		if ($e instanceof IonosServiceException) {
+			$data = array_merge($data, $e->getData());
+		}
+
 		$this->logger->error('IONOS service error during ' . $context . ': ' . $e->getMessage(), $data);
 		return MailJsonResponse::fail($data);
 	}
