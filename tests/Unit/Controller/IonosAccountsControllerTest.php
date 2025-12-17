@@ -18,6 +18,8 @@ use OCA\Mail\Service\IONOS\Dto\MailServerConfig;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCP\IUser;
+use OCP\IUserSession;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -31,6 +33,8 @@ class IonosAccountsControllerTest extends TestCase {
 
 	private AccountsController&MockObject $accountsController;
 
+	private IUserSession&MockObject $userSession;
+
 	private LoggerInterface|MockObject $logger;
 
 	private IonosAccountsController $controller;
@@ -42,6 +46,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$this->request = $this->createMock(IRequest::class);
 		$this->ionosMailService = $this->createMock(IonosMailService::class);
 		$this->accountsController = $this->createMock(AccountsController::class);
+		$this->userSession = $this->createMock(IUserSession::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->controller = new IonosAccountsController(
@@ -49,8 +54,18 @@ class IonosAccountsControllerTest extends TestCase {
 			$this->request,
 			$this->ionosMailService,
 			$this->accountsController,
+			$this->userSession,
 			$this->logger,
 		);
+	}
+
+	/**
+	 * Helper method to setup user session mock
+	 */
+	private function setupUserSession(string $userId): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn($userId);
+		$this->userSession->method('getUser')->willReturn($user);
 	}
 
 	public function testCreateWithMissingFields(): void {
@@ -75,6 +90,10 @@ class IonosAccountsControllerTest extends TestCase {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
 		$emailAddress = 'test@example.com';
+		$userId = 'test-user-123';
+
+		// Setup user session
+		$this->setupUserSession($userId);
 
 		// Create MailAccountConfig DTO
 		$imapConfig = new MailServerConfig(
@@ -108,13 +127,14 @@ class IonosAccountsControllerTest extends TestCase {
 		$this->logger
 			->expects($this->exactly(3))
 			->method('info')
-			->willReturnCallback(function ($message, $context) use ($emailUser, $accountName, $emailAddress) {
+			->willReturnCallback(function ($message, $context) use ($emailUser, $accountName, $emailAddress, $userId) {
 				static $callCount = 0;
 				$callCount++;
 
 				if ($callCount === 1) {
-					$this->assertEquals('Starting IONOS email account creation', $message);
+					$this->assertEquals('Starting IONOS email account creation from web', $message);
 					$this->assertEquals([
+						'userId' => $userId,
 						'emailAddress' => $emailUser,
 						'accountName' => $accountName,
 					], $context);
@@ -164,6 +184,10 @@ class IonosAccountsControllerTest extends TestCase {
 	public function testCreateWithServiceException(): void {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
+		$userId = 'test-user-123';
+
+		// Setup user session
+		$this->setupUserSession($userId);
 
 		// Mock IONOS mail service to throw ServiceException
 		$this->ionosMailService->method('createEmailAccount')
@@ -195,6 +219,10 @@ class IonosAccountsControllerTest extends TestCase {
 	public function testCreateWithServiceExceptionWithStatusCode(): void {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
+		$userId = 'test-user-123';
+
+		// Setup user session
+		$this->setupUserSession($userId);
 
 		// Mock IONOS mail service to throw ServiceException with HTTP 409 (Duplicate)
 		$this->ionosMailService->method('createEmailAccount')
@@ -226,6 +254,10 @@ class IonosAccountsControllerTest extends TestCase {
 	public function testCreateWithGenericException(): void {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
+		$userId = 'test-user-123';
+
+		// Setup user session
+		$this->setupUserSession($userId);
 
 		// Mock IONOS mail service to throw a generic exception
 		$exception = new \Exception('Generic error');
@@ -249,6 +281,36 @@ class IonosAccountsControllerTest extends TestCase {
 			[],
 			0
 		);
+		$response = $this->controller->create($accountName, $emailUser);
+
+		self::assertEquals($expectedResponse, $response);
+	}
+
+	public function testCreateWithNoUserSession(): void {
+		$accountName = 'Test Account';
+		$emailUser = 'test';
+
+		// Mock user session to return null (no user logged in)
+		$this->userSession->method('getUser')->willReturn(null);
+
+		// Should catch the ServiceException thrown by getUserIdOrFail
+		$this->logger
+			->expects($this->once())
+			->method('error')
+			->with(
+				'IONOS service error during account creation: No user session found during account creation',
+				[
+					'error' => 'IONOS_API_ERROR',
+					'statusCode' => 401,
+					'message' => 'No user session found during account creation',
+				]
+			);
+
+		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
+			'error' => 'IONOS_API_ERROR',
+			'statusCode' => 401,
+			'message' => 'No user session found during account creation',
+		]);
 		$response = $this->controller->create($accountName, $emailUser);
 
 		self::assertEquals($expectedResponse, $response);
