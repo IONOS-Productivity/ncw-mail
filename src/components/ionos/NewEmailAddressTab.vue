@@ -128,6 +128,7 @@ export default {
 
 				if (error.data?.error === 'IONOS_API_ERROR') {
 					const statusCode = error.data?.statusCode
+					const existingEmail = error.data?.existingEmail || ''
 
 					switch (statusCode) {
 					case 400:
@@ -137,7 +138,7 @@ export default {
 						this.feedback = t('mail', 'Email service not found. Please contact support')
 						break
 					case 409:
-						this.feedback = t('mail', 'This email address already exists')
+						this.feedback = t('mail', 'You can only have one IONOS email address. Please use your existing account {email} or delete it first', { email: existingEmail })
 						break
 					case 412:
 						this.feedback = t('mail', 'Account state conflict. Please try again later')
