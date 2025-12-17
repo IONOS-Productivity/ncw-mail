@@ -54,20 +54,30 @@ class IonosAccountsController extends Controller {
 		}
 
 		try {
-			$this->logger->info('Starting IONOS email account creation', [ 'emailAddress' => $emailUser, 'accountName' => $accountName ]);
+			$this->logger->info('Starting IONOS email account creation', [
+				'emailAddress' => $emailUser,
+				'accountName' => $accountName,
+			]);
 			$ionosResponse = $this->ionosMailService->createEmailAccount($emailUser);
 
-			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $ionosResponse->getEmail() ]);
-			return $this->createNextcloudMailAccount($accountName, $ionosResponse);
-		} catch (ServiceException $e) {
-			$data = [
-				'error' => self::ERR_IONOS_API_ERROR,
-				'statusCode' => $e->getCode(),
-			];
-			$this->logger->error('IONOS service error: ' . $e->getMessage(), $data);
+			$this->logger->info('IONOS email account created successfully', [
+				'emailAddress' => $ionosResponse->getEmail(),
+			]);
 
-			return MailJsonResponse::fail($data);
+			$response = $this->createNextcloudMailAccount($accountName, $ionosResponse);
+
+			$this->logger->info('Account creation completed successfully', [
+				'emailAddress' => $emailUser,
+				'accountName' => $accountName,
+			]);
+
+			return $response;
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, 'account creation');
 		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error during account creation: ' . $e->getMessage(), [
+				'exception' => $e,
+			]);
 			return MailJsonResponse::error('Could not create account');
 		}
 	}
@@ -90,5 +100,18 @@ class IonosAccountsController extends Controller {
 			$smtp->getUsername(),
 			$smtp->getPassword(),
 		);
+	}
+
+	/**
+	 * Build service error response
+	 */
+	private function buildServiceErrorResponse(ServiceException $e, string $context): JSONResponse {
+		$data = [
+			'error' => self::ERR_IONOS_API_ERROR,
+			'statusCode' => $e->getCode(),
+			'message' => $e->getMessage(),
+		];
+		$this->logger->error('IONOS service error during ' . $context . ': ' . $e->getMessage(), $data);
+		return MailJsonResponse::fail($data);
 	}
 }
