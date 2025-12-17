@@ -17,6 +17,7 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
 #[OpenAPI(scope: OpenAPI::SCOPE_IGNORE)]
@@ -31,6 +32,7 @@ class IonosAccountsController extends Controller {
 		IRequest $request,
 		private IonosMailService $ionosMailService,
 		private AccountsController $accountsController,
+		private IUserSession $userSession,
 		private LoggerInterface $logger,
 	) {
 		parent::__construct($appName, $request);
@@ -54,7 +56,10 @@ class IonosAccountsController extends Controller {
 		}
 
 		try {
-			$this->logger->info('Starting IONOS email account creation', [
+			$userId = $this->getUserIdOrFail();
+
+			$this->logger->info('Starting IONOS email account creation from web', [
+				'userId' => $userId,
 				'emailAddress' => $emailUser,
 				'accountName' => $accountName,
 			]);
@@ -100,6 +105,20 @@ class IonosAccountsController extends Controller {
 			$smtp->getUsername(),
 			$smtp->getPassword(),
 		);
+	}
+
+	/**
+	 * Get the current user ID
+	 *
+	 * @return string User ID string
+	 * @throws ServiceException
+	 */
+	private function getUserIdOrFail(): string {
+		$user = $this->userSession->getUser();
+		if ($user === null) {
+			throw new ServiceException('No user session found during account creation', 401);
+		}
+		return $user->getUID();
 	}
 
 	/**
