@@ -10,6 +10,11 @@
 		:additional-trap-elements="trapElements"
 		:name="t('mail', 'Account settings')"
 		@update:open="updateOpen">
+		<AppSettingsSection v-if="showIonosAppPassword"
+			id="ionos-app-password"
+			:name="t('mail', 'IMAP access / password')">
+			<IonosMailAppPassword :account="account" />
+		</AppSettingsSection>
 		<AppSettingsSection id="alias-settings"
 			:name="t('mail', 'Aliases')">
 			<AliasSettings :account="account" @rename-primary-alias="scrollToAccountSettings" />
@@ -112,6 +117,7 @@ import EditorSettings from '../components/EditorSettings.vue'
 import AccountDefaultsSettings from '../components/AccountDefaultsSettings.vue'
 import SignatureSettings from '../components/SignatureSettings.vue'
 import AliasSettings from '../components/AliasSettings.vue'
+import IonosMailAppPassword from '../components/IonosMailAppPassword.vue'
 import Settings from './quickActions/Settings.vue'
 import { NcButton, NcAppSettingsDialog as AppSettingsDialog, NcAppSettingsSection as AppSettingsSection } from '@nextcloud/vue'
 import SieveAccountForm from './SieveAccountForm.vue'
@@ -132,6 +138,7 @@ export default {
 		SieveFilterForm,
 		AccountForm,
 		AliasSettings,
+		IonosMailAppPassword,
 		EditorSettings,
 		SignatureSettings,
 		AppSettingsDialog,
@@ -168,6 +175,11 @@ export default {
 		},
 		email() {
 			return this.account.emailAddress
+		},
+		showIonosAppPassword() {
+			// Use the isIonosManaged flag set by the backend
+			// This flag is set when the account email matches the IONOS provisioned email for the user
+			return this.account.isIonosManaged === true
 		},
 	},
 	watch: {
