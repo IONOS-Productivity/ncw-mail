@@ -1100,4 +1100,48 @@ class IonosMailServiceTest extends TestCase {
 
 		$this->assertEquals(self::TEST_DOMAIN, $result);
 	}
+
+	public function testGenerateAppPassword(): void {
+		$this->setupUserSession(self::TEST_USER_ID);
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		$expectedPassword = 'generated-app-password-12345';
+		$expectedAppName = IonosConfigService::APP_PASSWORD_NAME_USER;
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $expectedAppName)
+			->willReturn($expectedPassword);
+
+		$result = $this->service->generateUserAppPassword();
+
+		$this->assertEquals($expectedPassword, $result);
+	}
+
+	public function testGenerateAppPasswordThrowsServiceException(): void {
+		$this->setupUserSession(self::TEST_USER_ID);
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		$expectedAppName = IonosConfigService::APP_PASSWORD_NAME_USER;
+
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'API Error',
+			500,
+			[],
+			'{"error": "Internal Server Error"}'
+		);
+
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $expectedAppName)
+			->willThrowException($apiException);
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset IONOS app password: API Error');
+		$this->expectExceptionCode(500);
+
+		$this->service->generateUserAppPassword();
+	}
 }

@@ -546,6 +546,19 @@ class IonosMailService {
 	}
 
 	/**
+	 * Generate a user app password for the current user's IONOS mail account
+	 *
+	 * Uses the NEXTCLOUD_WORKSPACE_USER app name for the password.
+	 *
+	 * @return string The generated password
+	 * @throws ServiceException
+	 */
+	public function generateUserAppPassword(): string {
+		$userId = $this->getCurrentUserId();
+		return $this->resetAppPassword($userId, IonosConfigService::APP_PASSWORD_NAME_USER);
+	}
+
+	/**
 	 * Get the configured mail domain for IONOS accounts
 	 *
 	 * @return string The mail domain (e.g., "example.com")
