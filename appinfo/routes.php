@@ -126,6 +126,11 @@ return [
 			'verb' => 'POST'
 		],
 		[
+			'name' => 'ionosPassword#generate',
+			'url' => '/api/ionos/password',
+			'verb' => 'POST'
+		],
+		[
 			'name' => 'tags#update',
 			'url' => '/api/tags/{id}',
 			'verb' => 'PUT'
