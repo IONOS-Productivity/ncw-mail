@@ -23,6 +23,7 @@ use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\InternalAddressService;
 use OCA\Mail\Service\IONOS\IonosConfigService;
 use OCA\Mail\Service\IONOS\IonosMailConfigService;
+use OCA\Mail\Service\IONOS\IonosMailService;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
 use OCA\Mail\Service\SmimeService;
@@ -102,6 +103,7 @@ class PageController extends Controller {
 		QuickActionsService $quickActionsService,
 		private IonosConfigService $ionosConfigService,
 		private IonosMailConfigService $ionosMailConfigService,
+		private IonosMailService $ionosMailService,
 	) {
 		parent::__construct($appName, $request);
 
@@ -151,10 +153,28 @@ class PageController extends Controller {
 
 		$mailAccounts = $this->accountService->findByUserId($this->currentUserId);
 		$accountsJson = [];
+
+		// Get IONOS email for current user to determine which accounts are IONOS-managed
+		$ionosEmail = null;
+		try {
+			if ($this->ionosConfigService->isIonosIntegrationEnabled()) {
+				$ionosEmail = $this->ionosMailService->getIonosEmailForUser($this->currentUserId);
+			}
+		} catch (Throwable $ex) {
+			$this->logger->debug('Could not get IONOS email for user: ' . $ex->getMessage(), [
+				'exception' => $ex,
+			]);
+		}
+
 		foreach ($mailAccounts as $mailAccount) {
 			$json = $mailAccount->jsonSerialize();
 			$json['aliases'] = $this->aliasesService->findAll($mailAccount->getId(),
 				$this->currentUserId);
+
+			// Check if this account is managed by IONOS
+			$json['isIonosManaged'] = $ionosEmail !== null
+				&& strcasecmp($mailAccount->getEmail(), $ionosEmail) === 0;
+
 			try {
 				$mailboxes = $this->mailManager->getMailboxes($mailAccount);
 				$json['mailboxes'] = $mailboxes;

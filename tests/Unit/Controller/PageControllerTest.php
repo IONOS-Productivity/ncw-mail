@@ -23,6 +23,7 @@ use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\InternalAddressService;
 use OCA\Mail\Service\IONOS\IonosConfigService;
 use OCA\Mail\Service\IONOS\IonosMailConfigService;
+use OCA\Mail\Service\IONOS\IonosMailService;
 use OCA\Mail\Service\MailManager;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
@@ -119,6 +120,8 @@ class PageControllerTest extends TestCase {
 
 	private IonosMailConfigService&MockObject $ionosMailConfigService;
 
+	private IonosMailService&MockObject $ionosMailService;
+
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -147,6 +150,7 @@ class PageControllerTest extends TestCase {
 		$this->quickActionsService = $this->createMock(QuickActionsService::class);
 		$this->ionosConfigService = $this->createMock(IonosConfigService::class);
 		$this->ionosMailConfigService = $this->createMock(IonosMailConfigService::class);
+		$this->ionosMailService = $this->createMock(IonosMailService::class);
 
 		$this->controller = new PageController(
 			$this->appName,
@@ -174,6 +178,7 @@ class PageControllerTest extends TestCase {
 			$this->quickActionsService,
 			$this->ionosConfigService,
 			$this->ionosMailConfigService,
+			$this->ionosMailService,
 		);
 	}
 
@@ -247,6 +252,7 @@ class PageControllerTest extends TestCase {
 					'a11',
 					'a12',
 				],
+				'isIonosManaged' => false,
 				'mailboxes' => [
 					$mailbox,
 				],
@@ -257,6 +263,232 @@ class PageControllerTest extends TestCase {
 					'a21',
 					'a22',
 				],
+				'isIonosManaged' => false,
+				'mailboxes' => [],
+			],
+		];
+
+		$user = $this->createMock(IUser::class);
+		$this->userSession->expects($this->once())
+			->method('getUser')
+			->will($this->returnValue($user));
+		$this->config
+			->method('getSystemValue')
+			->willReturnMap([
+				['debug', false, true],
+				['version', '0.0.0', '26.0.0'],
+				['app.mail.attachment-size-limit', 0, 123],
+			]);
+		$this->config->expects($this->exactly(7))
+			->method('getAppValue')
+			->withConsecutive(
+				[ 'mail', 'installed_version' ],
+				['mail', 'layout_message_view' ],
+				['mail', 'google_oauth_client_id' ],
+				['mail', 'microsoft_oauth_client_id' ],
+				['mail', 'microsoft_oauth_tenant_id' ],
+				['core', 'backgroundjobs_mode', 'ajax' ],
+				['mail', 'allow_new_mail_accounts', 'yes'],
+			)->willReturnOnConsecutiveCalls(
+				$this->returnValue('1.2.3'),
+				$this->returnValue('threaded'),
+				$this->returnValue(''),
+				$this->returnValue(''),
+				$this->returnValue(''),
+				$this->returnValue('cron'),
+				$this->returnValue('yes'),
+			);
+		$this->ionosMailConfigService->expects($this->once())
+			->method('isMailConfigAvailable')
+			->willReturn(false);
+		$this->ionosConfigService->expects($this->once())
+			->method('getMailDomain')
+			->willReturn('example.tld');
+		$this->ionosConfigService->expects($this->once())
+			->method('isIonosIntegrationEnabled')
+			->willReturn(false);
+		$this->aiIntegrationsService->expects(self::exactly(4))
+			->method('isLlmProcessingEnabled')
+			->willReturn(false);
+
+		$user->method('getUID')
+			->will($this->returnValue('jane'));
+		$this->userManager->expects($this->once())
+			->method('getDisplayName')
+			->with($this->equalTo('jane'))
+			->will($this->returnValue('Jane Doe'));
+		$this->config->expects($this->once())
+			->method('getUserValue')
+			->with($this->equalTo('jane'), $this->equalTo('settings'),
+				$this->equalTo('email'), $this->equalTo(''))
+			->will($this->returnValue('jane@doe.cz'));
+
+		$loginCredentials = $this->createMock(ICredentials::class);
+		$loginCredentials->expects($this->once())
+			->method('getPassword')
+			->willReturn(null);
+		$this->credentialStore->expects($this->once())
+			->method('getLoginCredentials')
+			->willReturn($loginCredentials);
+
+		$this->availabilityCoordinator->expects(self::once())
+			->method('isEnabled')
+			->willReturn(true);
+
+		$this->quickActionsService->expects(self::once())
+			->method('findAll')
+			->with($this->userId)
+			->willReturn([]);
+		$this->initialState->expects($this->exactly(24))
+			->method('provideInitialState')
+			->withConsecutive(
+				['debug', true],
+				['ncVersion', '26.0.0'],
+				['accounts', $accountsJson],
+				['account-settings', []],
+				['tags', []],
+				['internal-addresses-list', []],
+				['internal-addresses', false],
+				['smime-sign-aliases',[]],
+				['sort-order', 'newest'],
+				['password-is-unavailable', true],
+				['preferences', [
+					'attachment-size-limit' => 123,
+					'external-avatars' => 'true',
+					'reply-mode' => 'bottom',
+					'app-version' => '1.2.3',
+					'ionos-mailconfig-enabled' => false,
+					'ionos-mailconfig-domain' => 'example.tld',
+					'collect-data' => 'true',
+					'start-mailbox-id' => '123',
+					'tag-classified-messages' => 'false',
+					'search-priority-body' => 'false',
+					'layout-mode' => 'vertical-split',
+					'layout-message-view' => 'threaded',
+					'follow-up-reminders' => 'true',
+				]],
+				['prefill_displayName', 'Jane Doe'],
+				['prefill_email', 'jane@doe.cz'],
+				['outbox-messages', []],
+				['quick-actions', []],
+				['disable-scheduled-send', false],
+				['disable-snooze', false],
+				['allow-new-accounts', true],
+				['llm_summaries_available', false],
+				['llm_translation_enabled', false],
+				['llm_freeprompt_available', false],
+				['llm_followup_available', false],
+				['smime-certificates', []],
+				['enable-system-out-of-office', true],
+			);
+
+		$expected = new TemplateResponse($this->appName, 'index');
+		$csp = new ContentSecurityPolicy();
+		$csp->addAllowedFrameDomain('\'self\'');
+		$expected->setContentSecurityPolicy($csp);
+
+		$response = $this->controller->index();
+
+		$this->assertEquals($expected, $response);
+	}
+
+	public function testIndexWithIonosManagedAccount(): void {
+		$account1 = $this->createMock(Account::class);
+		$account2 = $this->createMock(Account::class);
+		$mailbox = $this->createMock(Mailbox::class);
+		$this->preferences->expects($this->exactly(12))
+			->method('getPreference')
+			->willReturnMap([
+				[$this->userId, 'account-settings', '[]', json_encode([])],
+				[$this->userId, 'sort-order', 'newest', 'newest'],
+				[$this->userId, 'external-avatars', 'true', 'true'],
+				[$this->userId, 'reply-mode', 'top', 'bottom'],
+				[$this->userId, 'collect-data', 'true', 'true'],
+				[$this->userId, 'search-priority-body', 'false', 'false'],
+				[$this->userId, 'start-mailbox-id', null, '123'],
+				[$this->userId, 'layout-mode', 'vertical-split', 'vertical-split'],
+				[$this->userId, 'layout-message-view', 'threaded', 'threaded'],
+				[$this->userId, 'follow-up-reminders', 'true', 'true'],
+				[$this->userId, 'internal-addresses', 'false', 'false'],
+				[$this->userId, 'smime-sign-aliases', '[]', '[]'],
+			]);
+		$this->classificationSettingsService->expects(self::once())
+			->method('isClassificationEnabled')
+			->with($this->userId)
+			->willReturn(false);
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with($this->userId)
+			->will($this->returnValue([
+				$account1,
+				$account2,
+			]));
+		$this->mailManager->expects($this->exactly(2))
+			->method('getMailboxes')
+			->withConsecutive(
+				[$account1],
+				[$account2]
+			)
+			->willReturnOnConsecutiveCalls(
+				[$mailbox],
+				[]
+			);
+
+		// First account is IONOS managed
+		$account1->expects($this->once())
+			->method('jsonSerialize')
+			->will($this->returnValue([
+				'accountId' => 1,
+			]));
+		$account1->expects($this->once())
+			->method('getId')
+			->will($this->returnValue(1));
+		$account1->expects($this->once())
+			->method('getEmail')
+			->will($this->returnValue('ionos@example.com'));
+
+		// Second account is not IONOS managed
+		$account2->expects($this->once())
+			->method('jsonSerialize')
+			->will($this->returnValue([
+				'accountId' => 2,
+			]));
+		$account2->expects($this->once())
+			->method('getId')
+			->will($this->returnValue(2));
+		$account2->expects($this->once())
+			->method('getEmail')
+			->will($this->returnValue('other@example.com'));
+
+		$this->aliasesService->expects($this->exactly(2))
+			->method('findAll')
+			->will($this->returnValueMap([
+				[1, $this->userId, []],
+				[2, $this->userId, []],
+			]));
+
+		// IONOS integration is enabled and returns ionos@example.com
+		$this->ionosConfigService->expects($this->once())
+			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+		$this->ionosMailService->expects($this->once())
+			->method('getIonosEmailForUser')
+			->with($this->userId)
+			->willReturn('ionos@example.com');
+
+		$accountsJson = [
+			[
+				'accountId' => 1,
+				'aliases' => [],
+				'isIonosManaged' => true,
+				'mailboxes' => [
+					$mailbox,
+				],
+			],
+			[
+				'accountId' => 2,
+				'aliases' => [],
+				'isIonosManaged' => false,
 				'mailboxes' => [],
 			],
 		];
