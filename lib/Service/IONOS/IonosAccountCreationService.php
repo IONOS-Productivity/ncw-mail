@@ -13,8 +13,8 @@ use OCA\Mail\Account;
 use OCA\Mail\Db\MailAccount;
 use OCA\Mail\Exception\IonosServiceException;
 use OCA\Mail\Exception\ServiceException;
+use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Service\AccountService;
-use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
 use OCP\Security\ICrypto;
 use Psr\Log\LoggerInterface;
 

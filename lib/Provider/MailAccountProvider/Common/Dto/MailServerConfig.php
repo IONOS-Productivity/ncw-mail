@@ -7,7 +7,7 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-namespace OCA\Mail\Service\IONOS\Dto;
+namespace OCA\Mail\Provider\MailAccountProvider\Common\Dto;
 
 /**
  * Data transfer object for mail server configuration (IMAP/SMTP)
