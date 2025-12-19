@@ -12,7 +12,6 @@ namespace OCA\Mail\Listener;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountService;
-use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\User\Events\UserDeletedEvent;
@@ -31,7 +30,6 @@ class UserDeletedListener implements IEventListener {
 	public function __construct(
 		AccountService $accountService,
 		LoggerInterface $logger,
-		private readonly IonosMailService $ionosMailService,
 		private readonly ProviderRegistryService $providerRegistry,
 	) {
 		$this->accountService = $accountService;
@@ -93,9 +91,5 @@ class UserDeletedListener implements IEventListener {
 				]);
 			}
 		}
-
-		// Legacy IONOS cleanup (for backward compatibility with existing deployments)
-		// This ensures accounts are deleted even if provider registry lookup fails
-		$this->ionosMailService->tryDeleteEmailAccount($userId);
 	}
 }

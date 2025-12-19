@@ -10,8 +10,8 @@
 		:additional-trap-elements="trapElements"
 		:name="t('mail', 'Account settings')"
 		@update:open="updateOpen">
-		<AppSettingsSection v-if="showIonosAppPassword"
-			id="ionos-app-password"
+		<AppSettingsSection v-if="showProviderAppPassword"
+			id="provider-app-password"
 			:name="t('mail', 'IMAP access / app password')">
 			<IonosMailAppPassword :account="account" />
 		</AppSettingsSection>
@@ -176,7 +176,7 @@ export default {
 		email() {
 			return this.account.emailAddress
 		},
-		showIonosAppPassword() {
+		showProviderAppPassword() {
 			// Generic provider system: check if account is managed by a provider that supports app passwords
 			// This works with any provider (IONOS, Office365, etc.), not just IONOS
 			return this.account.providerCapabilities?.appPasswords === true

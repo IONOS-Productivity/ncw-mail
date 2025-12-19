@@ -31,7 +31,6 @@ class AccountProviderService {
 	 * Determines if the account is managed by an external provider and adds:
 	 * - managedByProvider: provider ID or null
 	 * - providerCapabilities: capabilities object or null
-	 * - isIonosManaged: backward compatibility flag (deprecated)
 	 *
 	 * @param array<string, mixed> $accountJson The account JSON to enhance
 	 * @param string $userId The user ID
@@ -51,13 +50,9 @@ class AccountProviderService {
 					'appPasswords' => $capabilities->supportsAppPasswords(),
 					'passwordReset' => $capabilities->supportsPasswordReset(),
 				];
-
-				// Backward compatibility with old IONOS-specific flag
-				$accountJson['isIonosManaged'] = $provider->getId() === 'ionos';
 			} else {
 				$accountJson['managedByProvider'] = null;
 				$accountJson['providerCapabilities'] = null;
-				$accountJson['isIonosManaged'] = false;
 			}
 		} catch (\Exception $e) {
 			$this->logger->debug('Error determining account provider', [
@@ -69,7 +64,6 @@ class AccountProviderService {
 			// Safe defaults on error
 			$accountJson['managedByProvider'] = null;
 			$accountJson['providerCapabilities'] = null;
-			$accountJson['isIonosManaged'] = false;
 		}
 
 		return $accountJson;

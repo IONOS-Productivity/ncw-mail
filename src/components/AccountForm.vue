@@ -261,7 +261,6 @@ import {
 import { CONSENT_ABORTED, getUserConsent } from '../integration/oauth.js'
 import useMainStore from '../store/mainStore.js'
 import { mapStores, mapState } from 'pinia'
-import NewEmailAddressTab from './ionos/NewEmailAddressTab.vue'
 import ExternalProviderTab from './ExternalProviderTab.vue'
 
 export default {
@@ -275,7 +274,6 @@ export default {
 		ButtonVue,
 		IconLoading,
 		IconCheck,
-		NewEmailAddressTab, // Deprecated, kept for backward compatibility
 		ExternalProviderTab,
 	},
 	props: {
@@ -334,15 +332,9 @@ export default {
 			'microsoftOauthUrl',
 		]),
 
-		useIonosMailconfig() {
-			// Deprecated: use useProviderMailconfig instead
-			return this.mainStore.getPreference('ionos-mailconfig-enabled', null)
-		},
-
 		useProviderMailconfig() {
 			// Generic provider system - shows tab if any providers are available
 			return this.mainStore.getPreference('mail-providers-available', false)
-				|| this.mainStore.getPreference('ionos-mailconfig-enabled', null) // Fallback to old preference
 		},
 
 		settingsPage() {

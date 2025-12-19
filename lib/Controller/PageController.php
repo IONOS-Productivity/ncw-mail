@@ -22,9 +22,6 @@ use OCA\Mail\Service\AiIntegrations\AiIntegrationsService;
 use OCA\Mail\Service\AliasesService;
 use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\InternalAddressService;
-use OCA\Mail\Service\IONOS\IonosConfigService;
-use OCA\Mail\Service\IONOS\IonosMailConfigService;
-use OCA\Mail\Service\IONOS\IonosMailService;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
 use OCA\Mail\Service\SmimeService;
@@ -103,9 +100,6 @@ class PageController extends Controller {
 		IAvailabilityCoordinator $availabilityCoordinator,
 		QuickActionsService $quickActionsService,
 		private AccountProviderService $accountProviderService,
-		private IonosConfigService $ionosConfigService,
-		private IonosMailConfigService $ionosMailConfigService,
-		private IonosMailService $ionosMailService,
 	) {
 		parent::__construct($appName, $request);
 
@@ -229,9 +223,6 @@ class PageController extends Controller {
 
 		$this->initialStateService->provideInitialState('preferences', [
 			'attachment-size-limit' => $this->config->getSystemValue('app.mail.attachment-size-limit', 0),
-			// Legacy IONOS-specific preferences (deprecated, kept for backward compatibility)
-			'ionos-mailconfig-enabled' => $this->ionosMailConfigService->isMailConfigAvailable(),
-			'ionos-mailconfig-domain' => $this->ionosConfigService->getMailDomain(),
 			// Generic provider system - provides info about all available providers
 			'mail-providers-available' => !empty($this->accountProviderService->getAvailableProvidersForUser($this->currentUserId)),
 			'app-version' => $this->config->getAppValue('mail', 'installed_version'),
