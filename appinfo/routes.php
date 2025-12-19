@@ -121,6 +121,16 @@ return [
 			'verb' => 'POST'
 		],
 		[
+			'name' => 'externalAccounts#getProviders',
+			'url' => '/api/providers',
+			'verb' => 'GET'
+		],
+		[
+			'name' => 'externalAccounts#create',
+			'url' => '/api/providers/{providerId}/accounts',
+			'verb' => 'POST'
+		],
+		[
 			'name' => 'ionosAccounts#create',
 			'url' => '/api/ionos/accounts',
 			'verb' => 'POST'
