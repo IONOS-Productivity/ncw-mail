@@ -9,36 +9,24 @@ declare(strict_types=1);
 
 namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations;
 
+use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Account;
 use OCA\Mail\Db\MailAccount;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\IonosProviderFacade;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\IonosProvider;
-use OCA\Mail\Service\IONOS\IonosAccountCreationService;
-use OCA\Mail\Service\IONOS\IonosConfigService;
-use OCA\Mail\Service\IONOS\IonosMailService;
 use PHPUnit\Framework\MockObject\MockObject;
-use Psr\Log\LoggerInterface;
-use Test\TestCase;
 
 class IonosProviderTest extends TestCase {
-	private IonosConfigService&MockObject $configService;
-	private IonosMailService&MockObject $mailService;
-	private IonosAccountCreationService&MockObject $creationService;
-	private LoggerInterface&MockObject $logger;
+	private IonosProviderFacade&MockObject $facade;
 	private IonosProvider $provider;
 
 	protected function setUp(): void {
 		parent::setUp();
 
-		$this->configService = $this->createMock(IonosConfigService::class);
-		$this->mailService = $this->createMock(IonosMailService::class);
-		$this->creationService = $this->createMock(IonosAccountCreationService::class);
-		$this->logger = $this->createMock(LoggerInterface::class);
+		$this->facade = $this->createMock(IonosProviderFacade::class);
 
 		$this->provider = new IonosProvider(
-			$this->configService,
-			$this->mailService,
-			$this->creationService,
-			$this->logger,
+			$this->facade,
 		);
 	}
 
@@ -51,7 +39,7 @@ class IonosProviderTest extends TestCase {
 	}
 
 	public function testGetCapabilities(): void {
-		$this->configService->method('getMailDomain')
+		$this->facade->method('getEmailDomain')
 			->willReturn('example.com');
 
 		$capabilities = $this->provider->getCapabilities();
@@ -72,12 +60,8 @@ class IonosProviderTest extends TestCase {
 	}
 
 	public function testGetCapabilitiesWithExceptionOnDomain(): void {
-		$this->configService->method('getMailDomain')
-			->willThrowException(new \Exception('Config error'));
-
-		$this->logger->expects($this->once())
-			->method('debug')
-			->with('Could not get IONOS email domain', $this->anything());
+		$this->facade->method('getEmailDomain')
+			->willReturn(null);
 
 		$capabilities = $this->provider->getCapabilities();
 
@@ -85,8 +69,8 @@ class IonosProviderTest extends TestCase {
 	}
 
 	public function testGetCapabilitiesCached(): void {
-		$this->configService->expects($this->once())
-			->method('getMailDomain')
+		$this->facade->expects($this->once())
+			->method('getEmailDomain')
 			->willReturn('example.com');
 
 		// Call twice to test caching
@@ -97,54 +81,31 @@ class IonosProviderTest extends TestCase {
 	}
 
 	public function testIsEnabledWhenEnabled(): void {
-		$this->configService->method('isIonosIntegrationEnabled')
+		$this->facade->method('isEnabled')
 			->willReturn(true);
 
 		$this->assertTrue($this->provider->isEnabled());
 	}
 
 	public function testIsEnabledWhenDisabled(): void {
-		$this->configService->method('isIonosIntegrationEnabled')
+		$this->facade->method('isEnabled')
 			->willReturn(false);
-
-		$this->assertFalse($this->provider->isEnabled());
-	}
-
-	public function testIsEnabledWithException(): void {
-		$this->configService->method('isIonosIntegrationEnabled')
-			->willThrowException(new \Exception('Config error'));
-
-		$this->logger->expects($this->once())
-			->method('debug')
-			->with('IONOS provider is not enabled', $this->anything());
 
 		$this->assertFalse($this->provider->isEnabled());
 	}
 
 	public function testIsAvailableForUserWhenNoAccount(): void {
-		$this->mailService->method('mailAccountExistsForCurrentUserId')
+		$this->facade->method('isAvailableForUser')
 			->with('testuser')
-			->willReturn(false);
+			->willReturn(true);
 
 		$this->assertTrue($this->provider->isAvailableForUser('testuser'));
 	}
 
 	public function testIsAvailableForUserWhenHasAccount(): void {
-		$this->mailService->method('mailAccountExistsForCurrentUserId')
+		$this->facade->method('isAvailableForUser')
 			->with('testuser')
-			->willReturn(true);
-
-		$this->assertFalse($this->provider->isAvailableForUser('testuser'));
-	}
-
-	public function testIsAvailableForUserWithException(): void {
-		$this->mailService->method('mailAccountExistsForCurrentUserId')
-			->with('testuser')
-			->willThrowException(new \Exception('Service error'));
-
-		$this->logger->expects($this->once())
-			->method('error')
-			->with('Error checking IONOS availability for user', $this->anything());
+			->willReturn(false);
 
 		$this->assertFalse($this->provider->isAvailableForUser('testuser'));
 	}
@@ -161,8 +122,8 @@ class IonosProviderTest extends TestCase {
 		$mailAccount->setEmail('user@example.com');
 		$account = new Account($mailAccount);
 
-		$this->creationService->expects($this->once())
-			->method('createOrUpdateAccount')
+		$this->facade->expects($this->once())
+			->method('createAccount')
 			->with($userId, 'user', 'Test Account')
 			->willReturn($account);
 
@@ -223,8 +184,8 @@ class IonosProviderTest extends TestCase {
 		$mailAccount->setEmail('user@example.com');
 		$account = new Account($mailAccount);
 
-		$this->creationService->expects($this->once())
-			->method('createOrUpdateAccount')
+		$this->facade->expects($this->once())
+			->method('createAccount')
 			->with($userId, 'user', 'Updated Account')
 			->willReturn($account);
 
@@ -234,8 +195,8 @@ class IonosProviderTest extends TestCase {
 	}
 
 	public function testDeleteAccount(): void {
-		$this->mailService->expects($this->once())
-			->method('deleteEmailAccount')
+		$this->facade->expects($this->once())
+			->method('deleteAccount')
 			->with('testuser')
 			->willReturn(true);
 
@@ -245,51 +206,39 @@ class IonosProviderTest extends TestCase {
 	}
 
 	public function testManagesEmailWhenMatches(): void {
-		$this->mailService->method('getIonosEmailForUser')
-			->with('testuser')
-			->willReturn('user@example.com');
+		$this->facade->method('managesEmail')
+			->with('testuser', 'user@example.com')
+			->willReturn(true);
 
 		$this->assertTrue($this->provider->managesEmail('testuser', 'user@example.com'));
 	}
 
 	public function testManagesEmailCaseInsensitive(): void {
-		$this->mailService->method('getIonosEmailForUser')
-			->with('testuser')
-			->willReturn('user@example.com');
+		$this->facade->method('managesEmail')
+			->with('testuser', 'USER@EXAMPLE.COM')
+			->willReturn(true);
 
 		$this->assertTrue($this->provider->managesEmail('testuser', 'USER@EXAMPLE.COM'));
 	}
 
 	public function testManagesEmailWhenDoesNotMatch(): void {
-		$this->mailService->method('getIonosEmailForUser')
-			->with('testuser')
-			->willReturn('user@example.com');
+		$this->facade->method('managesEmail')
+			->with('testuser', 'other@example.com')
+			->willReturn(false);
 
 		$this->assertFalse($this->provider->managesEmail('testuser', 'other@example.com'));
 	}
 
 	public function testManagesEmailWhenNoIonosEmail(): void {
-		$this->mailService->method('getIonosEmailForUser')
-			->with('testuser')
-			->willReturn(null);
-
-		$this->assertFalse($this->provider->managesEmail('testuser', 'user@example.com'));
-	}
-
-	public function testManagesEmailWithException(): void {
-		$this->mailService->method('getIonosEmailForUser')
-			->with('testuser')
-			->willThrowException(new \Exception('Service error'));
-
-		$this->logger->expects($this->once())
-			->method('debug')
-			->with('Error checking if IONOS manages email', $this->anything());
+		$this->facade->method('managesEmail')
+			->with('testuser', 'user@example.com')
+			->willReturn(false);
 
 		$this->assertFalse($this->provider->managesEmail('testuser', 'user@example.com'));
 	}
 
 	public function testGetProvisionedEmail(): void {
-		$this->mailService->method('getIonosEmailForUser')
+		$this->facade->method('getProvisionedEmail')
 			->with('testuser')
 			->willReturn('user@example.com');
 
@@ -299,23 +248,10 @@ class IonosProviderTest extends TestCase {
 	}
 
 	public function testGetProvisionedEmailWithNoEmail(): void {
-		$this->mailService->method('getIonosEmailForUser')
+		$this->facade->method('getProvisionedEmail')
 			->with('testuser')
 			->willReturn(null);
 
-		$result = $this->provider->getProvisionedEmail('testuser');
-
-		$this->assertNull($result);
-	}
-
-	public function testGetProvisionedEmailWithException(): void {
-		$this->mailService->method('getIonosEmailForUser')
-			->with('testuser')
-			->willThrowException(new \Exception('Service error'));
-
-		$this->logger->expects($this->once())
-			->method('debug')
-			->with('Error getting IONOS provisioned email', $this->anything());
 
 		$result = $this->provider->getProvisionedEmail('testuser');
 
