@@ -120,6 +120,23 @@ return [
 			'url' => '/api/tags',
 			'verb' => 'POST'
 		],
+		// External provider routes (generic)
+		[
+			'name' => 'externalAccounts#getProviders',
+			'url' => '/api/providers',
+			'verb' => 'GET'
+		],
+		[
+			'name' => 'externalAccounts#create',
+			'url' => '/api/providers/{providerId}/accounts',
+			'verb' => 'POST'
+		],
+		[
+			'name' => 'externalAccounts#generatePassword',
+			'url' => '/api/providers/{providerId}/password',
+			'verb' => 'POST'
+		],
+		// Legacy IONOS routes (backward compatibility)
 		[
 			'name' => 'ionosAccounts#create',
 			'url' => '/api/ionos/accounts',
