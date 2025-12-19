@@ -144,6 +144,7 @@ class ExternalAccountsController extends Controller {
 						'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
 						'appPasswords' => $capabilities->supportsAppPasswords(),
 						'passwordReset' => $capabilities->supportsPasswordReset(),
+						'emailDomain' => $capabilities->getEmailDomain(),
 					],
 					'parameterSchema' => $capabilities->getCreationParameterSchema(),
 				];

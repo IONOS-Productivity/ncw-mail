@@ -55,4 +55,14 @@ interface IProviderCapabilities {
 	 * @return array<string, array{type: string, required: bool, description: string, default?: mixed}> Parameter schema
 	 */
 	public function getCreationParameterSchema(): array;
+
+	/**
+	 * Get the email domain for this provider (if applicable)
+	 *
+	 * Returns the domain suffix used for email addresses created by this provider.
+	 * For example, "example.com" for accounts like "user@example.com"
+	 *
+	 * @return string|null The email domain or null if not applicable
+	 */
+	public function getEmailDomain(): ?string;
 }

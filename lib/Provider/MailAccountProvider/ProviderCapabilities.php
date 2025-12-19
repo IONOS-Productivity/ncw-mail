@@ -21,6 +21,7 @@ class ProviderCapabilities implements IProviderCapabilities {
 		private bool $passwordReset = false,
 		private array $configSchema = [],
 		private array $creationParameterSchema = [],
+		private ?string $emailDomain = null,
 	) {
 	}
 
@@ -42,5 +43,9 @@ class ProviderCapabilities implements IProviderCapabilities {
 
 	public function getCreationParameterSchema(): array {
 		return $this->creationParameterSchema;
+	}
+
+	public function getEmailDomain(): ?string {
+		return $this->emailDomain;
 	}
 }

@@ -32,9 +32,9 @@
 				@update:value="onFieldUpdate(paramName, $event)"
 				@change="clearAllFeedback" />
 
-			<!-- Email preview for IONOS provider -->
-			<span v-if="selectedProvider.id === 'ionos' && formData.emailUser" class="email-domain-hint">
-				@{{ emailDomain }}
+			<!-- Email domain preview (if provider has an email domain) -->
+			<span v-if="selectedProvider && selectedProvider.capabilities?.emailDomain && formData.emailUser" class="email-domain-hint">
+				@{{ selectedProvider.capabilities.emailDomain }}
 			</span>
 
 			<!-- Submit Button -->
@@ -144,11 +144,6 @@ export default {
 			return this.localLoading
 				? t('mail', 'Creating account...')
 				: t('mail', 'Create & Connect')
-		},
-
-		emailDomain() {
-			// For backward compatibility with IONOS
-			return this.mainStore.getPreference('ionos-mailconfig-domain', 'myworkspace.com')
 		},
 	},
 	async mounted() {

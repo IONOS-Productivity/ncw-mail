@@ -47,6 +47,16 @@ class IonosProvider implements IMailAccountProvider {
 
 	public function getCapabilities(): IProviderCapabilities {
 		if ($this->capabilities === null) {
+			// Get email domain from config service
+			$emailDomain = null;
+			try {
+				$emailDomain = $this->configService->getMailDomain();
+			} catch (\Exception $e) {
+				$this->logger->debug('Could not get IONOS email domain', [
+					'exception' => $e,
+				]);
+			}
+
 			$this->capabilities = new ProviderCapabilities(
 				multipleAccounts: false, // IONOS allows only one account per user
 				appPasswords: true,      // IONOS supports app password generation
@@ -95,6 +105,7 @@ class IonosProvider implements IMailAccountProvider {
 						'description' => 'Display name for the account',
 					],
 				],
+				emailDomain: $emailDomain,
 			);
 		}
 		return $this->capabilities;

@@ -49,6 +49,7 @@ class AccountProviderService {
 					'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
 					'appPasswords' => $capabilities->supportsAppPasswords(),
 					'passwordReset' => $capabilities->supportsPasswordReset(),
+					'emailDomain' => $capabilities->getEmailDomain(),
 				];
 			} else {
 				$accountJson['managedByProvider'] = null;
@@ -88,6 +89,7 @@ class AccountProviderService {
 					'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
 					'appPasswords' => $capabilities->supportsAppPasswords(),
 					'passwordReset' => $capabilities->supportsPasswordReset(),
+					'emailDomain' => $capabilities->getEmailDomain(),
 				],
 				'parameterSchema' => $capabilities->getCreationParameterSchema(),
 			];
