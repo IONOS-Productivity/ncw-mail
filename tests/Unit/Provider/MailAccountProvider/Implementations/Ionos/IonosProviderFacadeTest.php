@@ -12,18 +12,18 @@ namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations\Ionos
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Account;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\IonosProviderFacade;
+use OCA\Mail\Service\IONOS\Core\IonosAccountMutationService;
+use OCA\Mail\Service\IONOS\Core\IonosAccountQueryService;
 use OCA\Mail\Service\IONOS\IonosAccountCreationService;
-use OCA\Mail\Service\IONOS\IonosAccountDeletionService;
 use OCA\Mail\Service\IONOS\IonosConfigService;
-use OCA\Mail\Service\IONOS\IonosMailService;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
 class IonosProviderFacadeTest extends TestCase {
 	private IonosConfigService&MockObject $configService;
-	private IonosMailService&MockObject $mailService;
+	private IonosAccountQueryService&MockObject $queryService;
+	private IonosAccountMutationService&MockObject $mutationService;
 	private IonosAccountCreationService&MockObject $creationService;
-	private IonosAccountDeletionService&MockObject $deletionService;
 	private LoggerInterface&MockObject $logger;
 	private IonosProviderFacade $facade;
 
@@ -31,16 +31,16 @@ class IonosProviderFacadeTest extends TestCase {
 		parent::setUp();
 
 		$this->configService = $this->createMock(IonosConfigService::class);
-		$this->mailService = $this->createMock(IonosMailService::class);
+		$this->queryService = $this->createMock(IonosAccountQueryService::class);
+		$this->mutationService = $this->createMock(IonosAccountMutationService::class);
 		$this->creationService = $this->createMock(IonosAccountCreationService::class);
-		$this->deletionService = $this->createMock(IonosAccountDeletionService::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->facade = new IonosProviderFacade(
 			$this->configService,
-			$this->mailService,
+			$this->queryService,
+			$this->mutationService,
 			$this->creationService,
-			$this->deletionService,
 			$this->logger,
 		);
 	}
@@ -82,8 +82,8 @@ class IonosProviderFacadeTest extends TestCase {
 	public function testIsAvailableForUserReturnsTrueWhenNoAccount(): void {
 		$userId = 'user123';
 
-		$this->mailService->expects($this->once())
-			->method('mailAccountExistsForCurrentUserId')
+		$this->queryService->expects($this->once())
+			->method('mailAccountExistsForUserId')
 			->with($userId)
 			->willReturn(false);
 
@@ -95,8 +95,8 @@ class IonosProviderFacadeTest extends TestCase {
 	public function testIsAvailableForUserReturnsFalseWhenAccountExists(): void {
 		$userId = 'user123';
 
-		$this->mailService->expects($this->once())
-			->method('mailAccountExistsForCurrentUserId')
+		$this->queryService->expects($this->once())
+			->method('mailAccountExistsForUserId')
 			->with($userId)
 			->willReturn(true);
 
@@ -108,8 +108,8 @@ class IonosProviderFacadeTest extends TestCase {
 	public function testIsAvailableForUserHandlesException(): void {
 		$userId = 'user123';
 
-		$this->mailService->expects($this->once())
-			->method('mailAccountExistsForCurrentUserId')
+		$this->queryService->expects($this->once())
+			->method('mailAccountExistsForUserId')
 			->with($userId)
 			->willThrowException(new \Exception('Service error'));
 
@@ -177,7 +177,7 @@ class IonosProviderFacadeTest extends TestCase {
 				'userId' => $userId,
 			]);
 
-		$this->mailService->expects($this->once())
+		$this->mutationService->expects($this->once())
 			->method('tryDeleteEmailAccount')
 			->with($userId);
 
@@ -195,7 +195,7 @@ class IonosProviderFacadeTest extends TestCase {
 				'userId' => $userId,
 			]);
 
-		$this->mailService->expects($this->once())
+		$this->mutationService->expects($this->once())
 			->method('tryDeleteEmailAccount')
 			->with($userId)
 			->willThrowException(new \Exception('Deletion failed'));
@@ -213,7 +213,7 @@ class IonosProviderFacadeTest extends TestCase {
 		$userId = 'user123';
 		$email = 'user@ionos.com';
 
-		$this->mailService->expects($this->once())
+		$this->queryService->expects($this->once())
 			->method('getIonosEmailForUser')
 			->with($userId)
 			->willReturn($email);
@@ -226,7 +226,7 @@ class IonosProviderFacadeTest extends TestCase {
 	public function testGetProvisionedEmailHandlesException(): void {
 		$userId = 'user123';
 
-		$this->mailService->expects($this->once())
+		$this->queryService->expects($this->once())
 			->method('getIonosEmailForUser')
 			->with($userId)
 			->willThrowException(new \Exception('Service error'));
@@ -244,7 +244,7 @@ class IonosProviderFacadeTest extends TestCase {
 		$userId = 'user123';
 		$email = 'user@ionos.com';
 
-		$this->mailService->expects($this->once())
+		$this->queryService->expects($this->once())
 			->method('getIonosEmailForUser')
 			->with($userId)
 			->willReturn($email);
@@ -259,7 +259,7 @@ class IonosProviderFacadeTest extends TestCase {
 		$email = 'user@ionos.com';
 		$checkEmail = 'USER@IONOS.COM';
 
-		$this->mailService->expects($this->once())
+		$this->queryService->expects($this->once())
 			->method('getIonosEmailForUser')
 			->with($userId)
 			->willReturn($email);
@@ -273,7 +273,7 @@ class IonosProviderFacadeTest extends TestCase {
 		$userId = 'user123';
 		$email = 'user@other.com';
 
-		$this->mailService->expects($this->once())
+		$this->queryService->expects($this->once())
 			->method('getIonosEmailForUser')
 			->with($userId)
 			->willReturn(null);
@@ -288,7 +288,7 @@ class IonosProviderFacadeTest extends TestCase {
 		$ionosEmail = 'user@ionos.com';
 		$checkEmail = 'other@ionos.com';
 
-		$this->mailService->expects($this->once())
+		$this->queryService->expects($this->once())
 			->method('getIonosEmailForUser')
 			->with($userId)
 			->willReturn($ionosEmail);
@@ -302,7 +302,7 @@ class IonosProviderFacadeTest extends TestCase {
 		$userId = 'user123';
 		$email = 'user@ionos.com';
 
-		$this->mailService->expects($this->once())
+		$this->queryService->expects($this->once())
 			->method('getIonosEmailForUser')
 			->with($userId)
 			->willThrowException(new \Exception('Service error'));
