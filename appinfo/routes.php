@@ -136,12 +136,6 @@ return [
 			'url' => '/api/providers/{providerId}/password',
 			'verb' => 'POST'
 		],
-		// Legacy IONOS routes (backward compatibility)
-		[
-			'name' => 'ionosAccounts#create',
-			'url' => '/api/ionos/accounts',
-			'verb' => 'POST'
-		],
 		[
 			'name' => 'tags#update',
 			'url' => '/api/tags/{id}',

@@ -199,11 +199,11 @@
 					required
 					@change="clearFeedback" />
 			</Tab>
-			<Tab v-if="useIonosMailconfig"
+			<Tab v-if="useProviderMailconfig"
 				id="create"
 				key="create"
 				:name="t('mail', 'New Email Address')">
-				<NewEmailAddressTab :loading="loading"
+				<ExternalProviderTab :loading="loading"
 					:clear-feedback="clearFeedback"
 					:is-valid-email="isValidEmail"
 					@account-created="(account) => $emit('account-created', account)" />
@@ -261,7 +261,7 @@ import {
 import { CONSENT_ABORTED, getUserConsent } from '../integration/oauth.js'
 import useMainStore from '../store/mainStore.js'
 import { mapStores, mapState } from 'pinia'
-import NewEmailAddressTab from './ionos/NewEmailAddressTab.vue'
+import ExternalProviderTab from './ExternalProviderTab.vue'
 
 export default {
 	name: 'AccountForm',
@@ -274,7 +274,7 @@ export default {
 		ButtonVue,
 		IconLoading,
 		IconCheck,
-		NewEmailAddressTab,
+		ExternalProviderTab,
 	},
 	props: {
 		displayName: {
@@ -332,8 +332,8 @@ export default {
 			'microsoftOauthUrl',
 		]),
 
-		useIonosMailconfig() {
-			return this.mainStore.getPreference('ionos-mailconfig-enabled', null)
+		useProviderMailconfig() {
+			return this.mainStore.getPreference('mail-providers-available', false)
 		},
 
 		settingsPage() {
