@@ -16,6 +16,7 @@ use OCA\Mail\Contracts\IMailManager;
 use OCA\Mail\Contracts\IUserPreferences;
 use OCA\Mail\Db\SmimeCertificate;
 use OCA\Mail\Db\TagMapper;
+use OCA\Mail\Service\AccountProviderService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\AiIntegrations\AiIntegrationsService;
 use OCA\Mail\Service\AliasesService;
@@ -101,6 +102,7 @@ class PageController extends Controller {
 		InternalAddressService $internalAddressService,
 		IAvailabilityCoordinator $availabilityCoordinator,
 		QuickActionsService $quickActionsService,
+		private AccountProviderService $accountProviderService,
 		private IonosConfigService $ionosConfigService,
 		private IonosMailConfigService $ionosMailConfigService,
 		private IonosMailService $ionosMailService,
@@ -154,26 +156,17 @@ class PageController extends Controller {
 		$mailAccounts = $this->accountService->findByUserId($this->currentUserId);
 		$accountsJson = [];
 
-		// Get IONOS email for current user to determine which accounts are IONOS-managed
-		$ionosEmail = null;
-		try {
-			if ($this->ionosConfigService->isIonosIntegrationEnabled()) {
-				$ionosEmail = $this->ionosMailService->getIonosEmailForUser($this->currentUserId);
-			}
-		} catch (Throwable $ex) {
-			$this->logger->debug('Could not get IONOS email for user: ' . $ex->getMessage(), [
-				'exception' => $ex,
-			]);
-		}
-
 		foreach ($mailAccounts as $mailAccount) {
 			$json = $mailAccount->jsonSerialize();
 			$json['aliases'] = $this->aliasesService->findAll($mailAccount->getId(),
 				$this->currentUserId);
 
-			// Check if this account is managed by IONOS
-			$json['isIonosManaged'] = $ionosEmail !== null
-				&& strcasecmp($mailAccount->getEmail(), $ionosEmail) === 0;
+			// Add provider metadata (generic system - supports multiple providers)
+			$json = $this->accountProviderService->addProviderMetadata(
+				$json,
+				$this->currentUserId,
+				$mailAccount->getEmail()
+			);
 
 			try {
 				$mailboxes = $this->mailManager->getMailboxes($mailAccount);
