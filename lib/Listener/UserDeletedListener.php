@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\Mail\Listener;
 
 use OCA\Mail\Exception\ClientException;
+use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\EventDispatcher\Event;
@@ -31,6 +32,7 @@ class UserDeletedListener implements IEventListener {
 		AccountService $accountService,
 		LoggerInterface $logger,
 		private readonly IonosMailService $ionosMailService,
+		private readonly ProviderRegistryService $providerRegistry,
 	) {
 		$this->accountService = $accountService;
 		$this->logger = $logger;
@@ -46,11 +48,40 @@ class UserDeletedListener implements IEventListener {
 		$user = $event->getUser();
 		$userId = $user->getUID();
 
-		// Delete IONOS mailbox if IONOS integration is enabled
-		$this->ionosMailService->tryDeleteEmailAccount($userId);
-
-		// Delete all mail accounts in Nextcloud
+		// Delete provider-managed accounts (generic system)
+		// This works with any registered provider (IONOS, Office365, etc.)
 		foreach ($this->accountService->findByUserId($userId) as $account) {
+			$email = $account->getEmail();
+
+			// Check if this account is managed by a provider
+			$provider = $this->providerRegistry->findProviderForEmail($userId, $email);
+			if ($provider !== null) {
+				try {
+					$this->logger->info('Deleting provider-managed account', [
+						'provider' => $provider->getId(),
+						'userId' => $userId,
+						'email' => $email,
+					]);
+
+					$provider->deleteAccount($userId, $email);
+
+					$this->logger->info('Successfully deleted provider-managed account', [
+						'provider' => $provider->getId(),
+						'userId' => $userId,
+						'email' => $email,
+					]);
+				} catch (\Exception $e) {
+					$this->logger->error('Failed to delete provider-managed account', [
+						'provider' => $provider->getId(),
+						'userId' => $userId,
+						'email' => $email,
+						'exception' => $e,
+					]);
+					// Continue with other accounts even if one fails
+				}
+			}
+
+			// Delete the Nextcloud mail account
 			try {
 				$this->accountService->delete(
 					$userId,
@@ -62,5 +93,9 @@ class UserDeletedListener implements IEventListener {
 				]);
 			}
 		}
+
+		// Legacy IONOS cleanup (for backward compatibility with existing deployments)
+		// This ensures accounts are deleted even if provider registry lookup fails
+		$this->ionosMailService->tryDeleteEmailAccount($userId);
 	}
 }
