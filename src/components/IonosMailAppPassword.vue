@@ -103,6 +103,11 @@ export default {
 		email() {
 			return this.account.emailAddress || ''
 		},
+		providerId() {
+			// Get provider ID from account metadata (e.g., 'ionos', 'office365')
+			// Defaults to 'ionos' for backward compatibility
+			return this.account.managedByProvider || 'ionos'
+		},
 	},
 	methods: {
 		async generatePassword() {
@@ -111,10 +116,11 @@ export default {
 			this.generatedPassword = ''
 
 			try {
-				const response = await generateAppPassword(this.account.id)
+				const response = await generateAppPassword(this.account.id, this.providerId)
 
 				logger.debug('App password generated successfully', {
 					accountId: this.account.id,
+					providerId: this.providerId,
 					response,
 				})
 
@@ -172,7 +178,7 @@ export default {
 				if (statusCode === HTTP_STATUS.NOT_FOUND) {
 					return t('mail', 'Email service not found. Please contact support.')
 				}
-				return t('mail', 'IONOS API error. Please try again later.')
+				return t('mail', 'Provider API error. Please try again later.')
 			}
 
 			if (errorData?.error === ERROR_TYPES.ACCOUNT_ID_REQUIRED) {

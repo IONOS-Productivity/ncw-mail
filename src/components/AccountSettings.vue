@@ -12,7 +12,7 @@
 		@update:open="updateOpen">
 		<AppSettingsSection v-if="showIonosAppPassword"
 			id="ionos-app-password"
-			:name="t('mail', 'IMAP access / password')">
+			:name="t('mail', 'IMAP access / app password')">
 			<IonosMailAppPassword :account="account" />
 		</AppSettingsSection>
 		<AppSettingsSection id="alias-settings"
@@ -177,9 +177,9 @@ export default {
 			return this.account.emailAddress
 		},
 		showIonosAppPassword() {
-			// Use the isIonosManaged flag set by the backend
-			// This flag is set when the account email matches the IONOS provisioned email for the user
-			return this.account.isIonosManaged === true
+			// Generic provider system: check if account is managed by a provider that supports app passwords
+			// This works with any provider (IONOS, Office365, etc.), not just IONOS
+			return this.account.providerCapabilities?.appPasswords === true
 		},
 	},
 	watch: {

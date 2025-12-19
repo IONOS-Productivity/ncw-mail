@@ -229,8 +229,11 @@ class PageController extends Controller {
 
 		$this->initialStateService->provideInitialState('preferences', [
 			'attachment-size-limit' => $this->config->getSystemValue('app.mail.attachment-size-limit', 0),
+			// Legacy IONOS-specific preferences (deprecated, kept for backward compatibility)
 			'ionos-mailconfig-enabled' => $this->ionosMailConfigService->isMailConfigAvailable(),
 			'ionos-mailconfig-domain' => $this->ionosConfigService->getMailDomain(),
+			// Generic provider system - provides info about all available providers
+			'mail-providers-available' => !empty($this->accountProviderService->getAvailableProvidersForUser($this->currentUserId)),
 			'app-version' => $this->config->getAppValue('mail', 'installed_version'),
 			'external-avatars' => $this->preferences->getPreference($this->currentUserId, 'external-avatars', 'true'),
 			'layout-mode' => $this->preferences->getPreference($this->currentUserId, 'layout-mode', 'vertical-split'),
