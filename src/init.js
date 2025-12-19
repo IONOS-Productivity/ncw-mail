@@ -42,6 +42,10 @@ export default function initAfterAppCreation() {
 		value: preferences['ionos-mailconfig-enabled'],
 	})
 	mainStore.savePreferenceMutation({
+		key: 'mail-providers-available',
+		value: preferences['mail-providers-available'],
+	})
+	mainStore.savePreferenceMutation({
 		key: 'ionos-mailconfig-domain',
 		value: preferences['ionos-mailconfig-domain'],
 	})
