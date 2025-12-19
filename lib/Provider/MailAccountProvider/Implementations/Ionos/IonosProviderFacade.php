@@ -11,10 +11,10 @@ namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos;
 
 use OCA\Mail\Account;
 use OCA\Mail\Exception\ServiceException;
+use OCA\Mail\Service\IONOS\Core\IonosAccountMutationService;
+use OCA\Mail\Service\IONOS\Core\IonosAccountQueryService;
 use OCA\Mail\Service\IONOS\IonosAccountCreationService;
-use OCA\Mail\Service\IONOS\IonosAccountDeletionService;
 use OCA\Mail\Service\IONOS\IonosConfigService;
-use OCA\Mail\Service\IONOS\IonosMailService;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -27,9 +27,9 @@ use Psr\Log\LoggerInterface;
 class IonosProviderFacade {
 	public function __construct(
 		private IonosConfigService $configService,
-		private IonosMailService $mailService,
+		private IonosAccountQueryService $queryService,
+		private IonosAccountMutationService $mutationService,
 		private IonosAccountCreationService $creationService,
-		private IonosAccountDeletionService $deletionService,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -61,7 +61,7 @@ class IonosProviderFacade {
 	 */
 	public function isAvailableForUser(string $userId): bool {
 		try {
-			$hasAccount = $this->mailService->mailAccountExistsForCurrentUserId($userId);
+			$hasAccount = $this->queryService->mailAccountExistsForUserId($userId);
 			return !$hasAccount;
 		} catch (\Exception $e) {
 			$this->logger->error('Error checking IONOS availability for user', [
@@ -123,7 +123,7 @@ class IonosProviderFacade {
 		]);
 
 		try {
-			$this->mailService->tryDeleteEmailAccount($userId);
+			$this->mutationService->tryDeleteEmailAccount($userId);
 			return true;
 		} catch (\Exception $e) {
 			$this->logger->error('Error deleting IONOS account via facade', [
@@ -142,7 +142,7 @@ class IonosProviderFacade {
 	 */
 	public function getProvisionedEmail(string $userId): ?string {
 		try {
-			return $this->mailService->getIonosEmailForUser($userId);
+			return $this->queryService->getIonosEmailForUser($userId);
 		} catch (\Exception $e) {
 			$this->logger->debug('Error getting IONOS provisioned email', [
 				'userId' => $userId,
