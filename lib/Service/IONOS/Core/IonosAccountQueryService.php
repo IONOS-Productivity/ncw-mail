@@ -11,9 +11,9 @@ namespace OCA\Mail\Service\IONOS\Core;
 
 use IONOS\MailConfigurationAPI\Client\ApiException;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
+use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
+use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
 use OCA\Mail\Service\IONOS\ApiMailConfigClientService;
-use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
-use OCA\Mail\Service\IONOS\Dto\MailServerConfig;
 use OCA\Mail\Service\IONOS\IonosConfigService;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
