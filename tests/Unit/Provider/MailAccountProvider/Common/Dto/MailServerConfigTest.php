@@ -7,10 +7,10 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-namespace OCA\Mail\Tests\Unit\Service\IONOS\Dto;
+namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Common\Dto;
 
 use ChristophWurst\Nextcloud\Testing\TestCase;
-use OCA\Mail\Service\IONOS\Dto\MailServerConfig;
+use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
 
 class MailServerConfigTest extends TestCase {
 	private MailServerConfig $config;

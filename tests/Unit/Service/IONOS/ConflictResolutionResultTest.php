@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace OCA\Mail\Tests\Unit\Service\IONOS;
 
 use ChristophWurst\Nextcloud\Testing\TestCase;
+use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
+use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
 use OCA\Mail\Service\IONOS\ConflictResolutionResult;
-use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
-use OCA\Mail\Service\IONOS\Dto\MailServerConfig;
 
 class ConflictResolutionResultTest extends TestCase {
 	private MailAccountConfig $accountConfig;

@@ -8,7 +8,7 @@ declare(strict_types=1);
  */
 namespace OCA\Mail\Service\IONOS;
 
-use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
+use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 
 /**
  * Result of conflict resolution when IONOS account creation fails
