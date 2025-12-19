@@ -13,13 +13,14 @@ use ChristophWurst\Nextcloud\Testing\TestCase;
 use GuzzleHttp\ClientInterface;
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
 use IONOS\MailConfigurationAPI\Client\Model\Imap;
+use IONOS\MailConfigurationAPI\Client\Model\MailAccountCreatedResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailServer;
 use IONOS\MailConfigurationAPI\Client\Model\Smtp;
 use OCA\Mail\Exception\ServiceException;
+use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Service\IONOS\ApiMailConfigClientService;
-use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
 use OCA\Mail\Service\IONOS\IonosConfigService;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\IUser;
@@ -28,6 +29,20 @@ use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
 class IonosMailServiceTest extends TestCase {
+	private const TEST_USER_ID = 'testuser123';
+	private const TEST_USER_NAME = 'test';
+	private const TEST_DOMAIN = 'example.com';
+	private const TEST_EMAIL = self::TEST_USER_NAME . '@' . self::TEST_DOMAIN;
+	private const TEST_PASSWORD = 'test-password';
+	private const TEST_EXT_REF = 'test-ext-ref';
+	private const TEST_API_BASE_URL = 'https://api.example.com';
+	private const TEST_BASIC_AUTH_USER = 'testuser';
+	private const TEST_BASIC_AUTH_PASSWORD = 'testpass';
+	private const IMAP_HOST = 'imap.example.com';
+	private const IMAP_PORT = 993;
+	private const SMTP_HOST = 'smtp.example.com';
+	private const SMTP_PORT = 587;
+
 	private ApiMailConfigClientService&MockObject $apiClientService;
 	private IonosConfigService&MockObject $configService;
 	private IUserSession&MockObject $userSession;
@@ -50,54 +65,102 @@ class IonosMailServiceTest extends TestCase {
 		);
 	}
 
-	public function testCreateEmailAccountSuccess(): void {
-		$userName = 'test';
-		$domain = 'example.com';
-		$emailAddress = $userName . '@' . $domain;
+	/**
+	 * Setup standard config mocks with default values
+	 */
+	private function setupConfigMocks(
+		string $externalReference = self::TEST_EXT_REF,
+		string $apiBaseUrl = self::TEST_API_BASE_URL,
+		bool $allowInsecure = false,
+		string $basicAuthUser = self::TEST_BASIC_AUTH_USER,
+		string $basicAuthPassword = self::TEST_BASIC_AUTH_PASSWORD,
+		string $mailDomain = self::TEST_DOMAIN,
+	): void {
+		$this->configService->method('getExternalReference')->willReturn($externalReference);
+		$this->configService->method('getApiBaseUrl')->willReturn($apiBaseUrl);
+		$this->configService->method('getAllowInsecure')->willReturn($allowInsecure);
+		$this->configService->method('getBasicAuthUser')->willReturn($basicAuthUser);
+		$this->configService->method('getBasicAuthPassword')->willReturn($basicAuthPassword);
+		$this->configService->method('getMailDomain')->willReturn($mailDomain);
+	}
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-		$this->configService->method('getMailDomain')->willReturn($domain);
-
-		// Mock user session
+	/**
+	 * Setup user session with mock user
+	 */
+	private function setupUserSession(string $userId): IUser&MockObject {
 		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('testuser123');
+		$user->method('getUID')->willReturn($userId);
 		$this->userSession->method('getUser')->willReturn($user);
+		return $user;
+	}
 
-		// Mock API client
+	/**
+	 * Setup API client mocks and return API instance
+	 */
+	private function setupApiClient(bool $verifySSL = true): MailConfigurationAPIApi&MockObject {
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')
 			->with([
-				'auth' => ['testuser', 'testpass'],
-				'verify' => true,
+				'auth' => [self::TEST_BASIC_AUTH_USER, self::TEST_BASIC_AUTH_PASSWORD],
+				'verify' => $verifySSL,
 			])
 			->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')
-			->with($client, 'https://api.example.com')
+			->with($client, self::TEST_API_BASE_URL)
 			->willReturn($apiInstance);
 
-		// Mock API response - use getMockBuilder with onlyMethods for existing methods
+		return $apiInstance;
+	}
+
+	/**
+	 * Create a mock IMAP server
+	 */
+	private function createMockImapServer(
+		string $host = self::IMAP_HOST,
+		int $port = self::IMAP_PORT,
+		string $sslMode = 'ssl',
+	): Imap&MockObject {
 		$imapServer = $this->getMockBuilder(Imap::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
 			->getMock();
-		$imapServer->method('getHost')->willReturn('imap.example.com');
-		$imapServer->method('getPort')->willReturn(993);
-		$imapServer->method('getSslMode')->willReturn('ssl');
+		$imapServer->method('getHost')->willReturn($host);
+		$imapServer->method('getPort')->willReturn($port);
+		$imapServer->method('getSslMode')->willReturn($sslMode);
+		return $imapServer;
+	}
 
+	/**
+	 * Create a mock SMTP server
+	 */
+	private function createMockSmtpServer(
+		string $host = self::SMTP_HOST,
+		int $port = self::SMTP_PORT,
+		string $sslMode = 'tls',
+	): Smtp&MockObject {
 		$smtpServer = $this->getMockBuilder(Smtp::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
 			->getMock();
-		$smtpServer->method('getHost')->willReturn('smtp.example.com');
-		$smtpServer->method('getPort')->willReturn(587);
-		$smtpServer->method('getSslMode')->willReturn('tls');
+		$smtpServer->method('getHost')->willReturn($host);
+		$smtpServer->method('getPort')->willReturn($port);
+		$smtpServer->method('getSslMode')->willReturn($sslMode);
+		return $smtpServer;
+	}
+
+	/**
+	 * Create a mock MailAccountResponse
+	 */
+	private function createMockMailAccountResponse(
+		string $email = self::TEST_EMAIL,
+		string $password = self::TEST_PASSWORD,
+		?string $imapSslMode = 'ssl',
+		?string $smtpSslMode = 'tls',
+	): MailAccountCreatedResponse&MockObject {
+		$imapServer = $this->createMockImapServer(self::IMAP_HOST, self::IMAP_PORT, $imapSslMode);
+		$smtpServer = $this->createMockSmtpServer(self::SMTP_HOST, self::SMTP_PORT, $smtpSslMode);
 
 		$mailServer = $this->getMockBuilder(MailServer::class)
 			->disableOriginalConstructor()
@@ -106,116 +169,89 @@ class IonosMailServiceTest extends TestCase {
 		$mailServer->method('getImap')->willReturn($imapServer);
 		$mailServer->method('getSmtp')->willReturn($smtpServer);
 
-		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
+		$mailAccountResponse = $this->getMockBuilder(MailAccountCreatedResponse::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getEmail', 'getPassword', 'getServer'])
 			->getMock();
-		$mailAccountResponse->method('getEmail')->willReturn($emailAddress);
-		$mailAccountResponse->method('getPassword')->willReturn('test-password');
+		$mailAccountResponse->method('getEmail')->willReturn($email);
+		$mailAccountResponse->method('getPassword')->willReturn($password);
 		$mailAccountResponse->method('getServer')->willReturn($mailServer);
 
+		return $mailAccountResponse;
+	}
+
+	public function testCreateEmailAccountSuccess(): void {
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
+		$apiInstance = $this->setupApiClient();
+
+		$mailAccountResponse = $this->createMockMailAccountResponse();
 		$apiInstance->method('createMailbox')->willReturn($mailAccountResponse);
 
-		// Expect logging calls
-		$this->logger->expects($this->exactly(4))
-			->method('debug');
-
+		$this->logger->expects($this->exactly(4))->method('debug');
 		$this->logger->expects($this->once())
 			->method('info')
-			->with('Successfully created IONOS mail account', $this->callback(function ($context) use ($emailAddress) {
-				return $context['email'] === $emailAddress
-					&& $context['userId'] === 'testuser123'
-					&& $context['userName'] === 'test';
+			->with('Successfully created IONOS mail account', $this->callback(function ($context) {
+				return $context['email'] === self::TEST_EMAIL
+					&& $context['userId'] === self::TEST_USER_ID
+					&& $context['userName'] === self::TEST_USER_NAME;
 			}));
 
-		$result = $this->service->createEmailAccount($userName);
+		$result = $this->service->createEmailAccount(self::TEST_USER_NAME);
 
 		$this->assertInstanceOf(MailAccountConfig::class, $result);
-		$this->assertEquals($emailAddress, $result->getEmail());
-		$this->assertEquals('imap.example.com', $result->getImap()->getHost());
-		$this->assertEquals(993, $result->getImap()->getPort());
+		$this->assertEquals(self::TEST_EMAIL, $result->getEmail());
+		$this->assertEquals(self::IMAP_HOST, $result->getImap()->getHost());
+		$this->assertEquals(self::IMAP_PORT, $result->getImap()->getPort());
 		$this->assertEquals('ssl', $result->getImap()->getSecurity());
-		$this->assertEquals($emailAddress, $result->getImap()->getUsername());
-		$this->assertEquals('test-password', $result->getImap()->getPassword());
-		$this->assertEquals('smtp.example.com', $result->getSmtp()->getHost());
-		$this->assertEquals(587, $result->getSmtp()->getPort());
+		$this->assertEquals(self::TEST_EMAIL, $result->getImap()->getUsername());
+		$this->assertEquals(self::TEST_PASSWORD, $result->getImap()->getPassword());
+		$this->assertEquals(self::SMTP_HOST, $result->getSmtp()->getHost());
+		$this->assertEquals(self::SMTP_PORT, $result->getSmtp()->getPort());
 		$this->assertEquals('tls', $result->getSmtp()->getSecurity());
-		$this->assertEquals($emailAddress, $result->getSmtp()->getUsername());
-		$this->assertEquals('test-password', $result->getSmtp()->getPassword());
+		$this->assertEquals(self::TEST_EMAIL, $result->getSmtp()->getUsername());
+		$this->assertEquals(self::TEST_PASSWORD, $result->getSmtp()->getPassword());
 	}
 
 	public function testCreateEmailAccountWithApiException(): void {
-		$userName = 'test';
-		$domain = 'example.com';
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-		$this->configService->method('getMailDomain')->willReturn($domain);
-
-		// Mock user session
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('testuser123');
-		$this->userSession->method('getUser')->willReturn($user);
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API to throw exception
 		$apiInstance->method('createMailbox')
 			->willThrowException(new \Exception('API call failed'));
 
-		// Expect logging calls
-		$this->logger->expects($this->exactly(2))
-			->method('debug');
-
+		$this->logger->expects($this->exactly(2))->method('debug');
 		$this->logger->expects($this->once())
 			->method('error')
-			->with('Exception when calling MailConfigurationAPIApi->createMailbox', $this->callback(function ($context) use ($userName) {
+			->with('Exception when calling MailConfigurationAPIApi->createMailbox', $this->callback(function ($context) {
 				return isset($context['exception'])
-					&& $context['userId'] === 'testuser123'
-					&& $context['userName'] === $userName;
+					&& $context['userId'] === self::TEST_USER_ID
+					&& $context['userName'] === self::TEST_USER_NAME;
 			}));
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
 		$this->expectExceptionCode(500);
 
-		$this->service->createEmailAccount($userName);
+		$this->service->createEmailAccount(self::TEST_USER_NAME);
 	}
 
 	public function testCreateEmailAccountWithMailAddonErrorMessageResponse(): void {
-		$userName = 'test';
-		$domain = 'example.com';
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-		$this->configService->method('getMailDomain')->willReturn($domain);
-
-		// Mock user session
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('testuser123');
-		$this->userSession->method('getUser')->willReturn($user);
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock MailAddonErrorMessage response
 		$errorMessage = $this->getMockBuilder(MailAddonErrorMessage::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getStatus', 'getMessage'])
@@ -225,86 +261,55 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->method('createMailbox')->willReturn($errorMessage);
 
-		// Expect logging calls
-		$this->logger->expects($this->exactly(2))
-			->method('debug');
-
+		$this->logger->expects($this->exactly(2))->method('debug');
 		$this->logger->expects($this->once())
 			->method('error')
-			->with('Failed to create ionos mail', $this->callback(function ($context) use ($userName) {
+			->with('Failed to create ionos mail', $this->callback(function ($context) {
 				return $context['status code'] === MailAddonErrorMessage::STATUS__400_BAD_REQUEST
 					&& $context['message'] === 'Bad Request'
-					&& $context['userId'] === 'testuser123'
-					&& $context['userName'] === $userName;
+					&& $context['userId'] === self::TEST_USER_ID
+					&& $context['userName'] === self::TEST_USER_NAME;
 			}));
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
 		$this->expectExceptionCode(400);
 
-		$this->service->createEmailAccount($userName);
+		$this->service->createEmailAccount(self::TEST_USER_NAME);
 	}
 
 	public function testCreateEmailAccountWithUnknownResponseType(): void {
-		$userName = 'test';
-		$domain = 'example.com';
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-		$this->configService->method('getMailDomain')->willReturn($domain);
-
-		// Mock user session
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('testuser123');
-		$this->userSession->method('getUser')->willReturn($user);
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock unknown response type (return a stdClass instead of expected types)
 		$unknownResponse = new \stdClass();
 		$apiInstance->method('createMailbox')->willReturn($unknownResponse);
 
-		// Expect logging calls
-		$this->logger->expects($this->exactly(2))
-			->method('debug');
-
+		$this->logger->expects($this->exactly(2))->method('debug');
 		$this->logger->expects($this->once())
 			->method('error')
-			->with('Failed to create ionos mail: Unknown response type', $this->callback(function ($context) use ($userName) {
-				return $context['userId'] === 'testuser123'
-					&& $context['userName'] === $userName;
+			->with('Failed to create ionos mail: Unknown response type', $this->callback(function ($context) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['userName'] === self::TEST_USER_NAME;
 			}));
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to create ionos mail');
 		$this->expectExceptionCode(500);
 
-		$this->service->createEmailAccount($userName);
+		$this->service->createEmailAccount(self::TEST_USER_NAME);
 	}
 
 	public function testCreateEmailAccountWithNoUserSession(): void {
-		$userName = 'test';
-
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-
-		// Mock no user session
+		$this->setupConfigMocks();
 		$this->userSession->method('getUser')->willReturn(null);
 
-		// Expect logging call
 		$this->logger->expects($this->once())
 			->method('error')
 			->with('No user session found when attempting to create IONOS mail account');
@@ -312,7 +317,42 @@ class IonosMailServiceTest extends TestCase {
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('No user session found');
 
-		$this->service->createEmailAccount($userName);
+		$this->service->createEmailAccount(self::TEST_USER_NAME);
+	}
+
+	public function testCreateEmailAccountForUserSuccess(): void {
+		$userId = 'admin123';
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+
+		// No user session needed for this method
+
+		$mailAccountResponse = $this->createMockMailAccountResponse();
+		$apiInstance->method('createMailbox')->willReturn($mailAccountResponse);
+
+		$this->logger->expects($this->exactly(4))->method('debug');
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Successfully created IONOS mail account', $this->callback(function ($context) use ($userId) {
+				return $context['email'] === self::TEST_EMAIL
+					&& $context['userId'] === $userId
+					&& $context['userName'] === self::TEST_USER_NAME;
+			}));
+
+		$result = $this->service->createEmailAccountForUser($userId, self::TEST_USER_NAME);
+
+		$this->assertInstanceOf(MailAccountConfig::class, $result);
+		$this->assertEquals(self::TEST_EMAIL, $result->getEmail());
+		$this->assertEquals(self::IMAP_HOST, $result->getImap()->getHost());
+		$this->assertEquals(self::IMAP_PORT, $result->getImap()->getPort());
+		$this->assertEquals('ssl', $result->getImap()->getSecurity());
+		$this->assertEquals(self::TEST_EMAIL, $result->getImap()->getUsername());
+		$this->assertEquals(self::TEST_PASSWORD, $result->getImap()->getPassword());
+		$this->assertEquals(self::SMTP_HOST, $result->getSmtp()->getHost());
+		$this->assertEquals(self::SMTP_PORT, $result->getSmtp()->getPort());
+		$this->assertEquals('tls', $result->getSmtp()->getSecurity());
+		$this->assertEquals(self::TEST_EMAIL, $result->getSmtp()->getUsername());
+		$this->assertEquals(self::TEST_PASSWORD, $result->getSmtp()->getPassword());
 	}
 
 	/**
@@ -321,65 +361,20 @@ class IonosMailServiceTest extends TestCase {
 	 * @dataProvider sslModeNormalizationProvider
 	 */
 	public function testSslModeNormalization(string $apiSslMode, string $expectedSecurity): void {
-		$userName = 'test';
-		$domain = 'example.com';
-		$emailAddress = $userName . '@' . $domain;
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
+		$apiInstance = $this->setupApiClient();
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-		$this->configService->method('getMailDomain')->willReturn($domain);
-
-		// Mock user session
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('testuser123');
-		$this->userSession->method('getUser')->willReturn($user);
-
-		// Mock API client
-		$client = $this->createMock(ClientInterface::class);
-		$this->apiClientService->method('newClient')->willReturn($client);
-
-		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
-
-		// Mock API response with specific SSL mode
-		$imapServer = $this->getMockBuilder(Imap::class)
-			->disableOriginalConstructor()
-			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
-			->getMock();
-		$imapServer->method('getHost')->willReturn('imap.example.com');
-		$imapServer->method('getPort')->willReturn(993);
-		$imapServer->method('getSslMode')->willReturn($apiSslMode);
-
-		$smtpServer = $this->getMockBuilder(Smtp::class)
-			->disableOriginalConstructor()
-			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
-			->getMock();
-		$smtpServer->method('getHost')->willReturn('smtp.example.com');
-		$smtpServer->method('getPort')->willReturn(587);
-		$smtpServer->method('getSslMode')->willReturn($apiSslMode);
-
-		$mailServer = $this->getMockBuilder(MailServer::class)
-			->disableOriginalConstructor()
-			->onlyMethods(['getImap', 'getSmtp'])
-			->getMock();
-		$mailServer->method('getImap')->willReturn($imapServer);
-		$mailServer->method('getSmtp')->willReturn($smtpServer);
-
-		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
-			->disableOriginalConstructor()
-			->onlyMethods(['getEmail', 'getPassword', 'getServer'])
-			->getMock();
-		$mailAccountResponse->method('getEmail')->willReturn($emailAddress);
-		$mailAccountResponse->method('getPassword')->willReturn('test-password');
-		$mailAccountResponse->method('getServer')->willReturn($mailServer);
+		$mailAccountResponse = $this->createMockMailAccountResponse(
+			self::TEST_EMAIL,
+			self::TEST_PASSWORD,
+			$apiSslMode,
+			$apiSslMode
+		);
 
 		$apiInstance->method('createMailbox')->willReturn($mailAccountResponse);
 
-		$result = $this->service->createEmailAccount($userName);
+		$result = $this->service->createEmailAccount(self::TEST_USER_NAME);
 
 		$this->assertEquals($expectedSecurity, $result->getImap()->getSecurity());
 		$this->assertEquals($expectedSecurity, $result->getSmtp()->getSecurity());
@@ -432,39 +427,26 @@ class IonosMailServiceTest extends TestCase {
 	}
 
 	public function testMailAccountExistsForCurrentUserReturnsTrueWhenAccountExists(): void {
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
 
-		// Mock user session
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('testuser123');
-		$this->userSession->method('getUser')->willReturn($user);
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API response with existing account
 		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getEmail'])
 			->getMock();
-		$mailAccountResponse->method('getEmail')->willReturn('testuser@example.com');
+		$mailAccountResponse->method('getEmail')->willReturn(self::TEST_EMAIL);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', 'test-ext-ref', 'testuser123')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willReturn($mailAccountResponse);
 
-		// Expect logging calls
-		$this->logger->expects($this->exactly(2))
-			->method('debug');
+		$this->logger->expects($this->exactly(2))->method('debug');
 
 		$result = $this->service->mailAccountExistsForCurrentUser();
 
@@ -472,26 +454,15 @@ class IonosMailServiceTest extends TestCase {
 	}
 
 	public function testMailAccountExistsForCurrentUserReturnsFalseWhen404(): void {
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
 
-		// Mock user session
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('testuser123');
-		$this->userSession->method('getUser')->willReturn($user);
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API to throw 404 exception
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
 			'Not Found',
 			404,
@@ -500,12 +471,10 @@ class IonosMailServiceTest extends TestCase {
 		);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', 'test-ext-ref', 'testuser123')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
-		// Expect logging calls
-		$this->logger->expects($this->exactly(2))
-			->method('debug');
+		$this->logger->expects($this->exactly(2))->method('debug');
 
 		$result = $this->service->mailAccountExistsForCurrentUser();
 
@@ -513,26 +482,15 @@ class IonosMailServiceTest extends TestCase {
 	}
 
 	public function testMailAccountExistsForCurrentUserReturnsFalseOnApiError(): void {
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
 
-		// Mock user session
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('testuser123');
-		$this->userSession->method('getUser')->willReturn($user);
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API to throw 500 exception
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
 			'Internal Server Error',
 			500,
@@ -541,18 +499,15 @@ class IonosMailServiceTest extends TestCase {
 		);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', 'test-ext-ref', 'testuser123')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
-		// Expect logging calls
-		$this->logger->expects($this->once())
-			->method('debug');
-
+		$this->logger->expects($this->once())->method('debug');
 		$this->logger->expects($this->once())
 			->method('error')
 			->with('API Exception when getting IONOS mail account', $this->callback(function ($context) {
 				return $context['statusCode'] === 500
-				&& $context['message'] === 'Internal Server Error';
+					&& $context['message'] === 'Internal Server Error';
 			}));
 
 		$result = $this->service->mailAccountExistsForCurrentUser();
@@ -561,39 +516,25 @@ class IonosMailServiceTest extends TestCase {
 	}
 
 	public function testMailAccountExistsForCurrentUserReturnsFalseOnGeneralException(): void {
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->setupConfigMocks();
+		$this->setupUserSession(self::TEST_USER_ID);
 
-		// Mock user session
-		$user = $this->createMock(IUser::class);
-		$user->method('getUID')->willReturn('testuser123');
-		$this->userSession->method('getUser')->willReturn($user);
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API to throw general exception
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', 'test-ext-ref', 'testuser123')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException(new \Exception('Unexpected error'));
 
-		// Expect logging calls
-		$this->logger->expects($this->once())
-			->method('debug');
-
+		$this->logger->expects($this->once())->method('debug');
 		$this->logger->expects($this->once())
 			->method('error')
 			->with('Exception when getting IONOS mail account', $this->callback(function ($context) {
 				return isset($context['exception'])
-				&& $context['userId'] === 'testuser123';
+					&& $context['userId'] === self::TEST_USER_ID;
 			}));
 
 		$result = $this->service->mailAccountExistsForCurrentUser();
@@ -603,73 +544,42 @@ class IonosMailServiceTest extends TestCase {
 
 
 	public function testDeleteEmailAccountSuccess(): void {
-		$userId = 'testuser123';
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-
-		// Mock API client
-		$client = $this->createMock(ClientInterface::class);
-		$this->apiClientService->method('newClient')
-			->with([
-				'auth' => ['testuser', 'testpass'],
-				'verify' => true,
-			])
-			->willReturn($client);
-
-		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newMailConfigurationAPIApi')
-			->with($client, 'https://api.example.com')
-			->willReturn($apiInstance);
-
-		// Mock successful deletion (returns void)
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', 'test-ext-ref', $userId);
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID);
 
-		// Expect logging calls
 		$callCount = 0;
 		$this->logger->expects($this->exactly(2))
 			->method('info')
-			->willReturnCallback(function ($message, $context) use ($userId, &$callCount) {
+			->willReturnCallback(function ($message, $context) use (&$callCount) {
 				$callCount++;
 				if ($callCount === 1) {
 					$this->assertEquals('Attempting to delete IONOS email account', $message);
-					$this->assertEquals($userId, $context['userId']);
-					$this->assertEquals('test-ext-ref', $context['extRef']);
+					$this->assertEquals(self::TEST_USER_ID, $context['userId']);
+					$this->assertEquals(self::TEST_EXT_REF, $context['extRef']);
 				} elseif ($callCount === 2) {
 					$this->assertEquals('Successfully deleted IONOS email account', $message);
-					$this->assertEquals($userId, $context['userId']);
+					$this->assertEquals(self::TEST_USER_ID, $context['userId']);
 				}
 			});
 
-		$result = $this->service->deleteEmailAccount($userId);
+		$result = $this->service->deleteEmailAccount(self::TEST_USER_ID);
 
 		$this->assertTrue($result);
 	}
 
 	public function testDeleteEmailAccountReturns404AlreadyDeleted(): void {
-		$userId = 'testuser123';
+		$this->setupConfigMocks();
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API to throw 404 exception (mailbox doesn't exist)
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
 			'Not Found',
 			404,
@@ -679,48 +589,37 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', 'test-ext-ref', $userId)
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
-		// Expect logging calls
 		$this->logger->expects($this->once())
 			->method('info')
-			->with('Attempting to delete IONOS email account', $this->callback(function ($context) use ($userId) {
-				return $context['userId'] === $userId
-					&& $context['extRef'] === 'test-ext-ref';
+			->with('Attempting to delete IONOS email account', $this->callback(function ($context) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['extRef'] === self::TEST_EXT_REF;
 			}));
 
 		$this->logger->expects($this->once())
 			->method('debug')
-			->with('IONOS mailbox does not exist (already deleted or never created)', $this->callback(function ($context) use ($userId) {
-				return $context['userId'] === $userId
+			->with('IONOS mailbox does not exist (already deleted or never created)', $this->callback(function ($context) {
+				return $context['userId'] === self::TEST_USER_ID
 					&& $context['statusCode'] === 404;
 			}));
 
-		// Should return true for 404 (treat as success)
-		$result = $this->service->deleteEmailAccount($userId);
+		$result = $this->service->deleteEmailAccount(self::TEST_USER_ID);
 
 		$this->assertTrue($result);
 	}
 
 	public function testDeleteEmailAccountThrowsExceptionOnApiError(): void {
-		$userId = 'testuser123';
+		$this->setupConfigMocks();
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API to throw 500 exception
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
 			'Internal Server Error',
 			500,
@@ -730,295 +629,206 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', 'test-ext-ref', $userId)
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
-		// Expect logging calls
 		$this->logger->expects($this->once())
 			->method('info')
-			->with('Attempting to delete IONOS email account', $this->callback(function ($context) use ($userId) {
-				return $context['userId'] === $userId
-					&& $context['extRef'] === 'test-ext-ref';
+			->with('Attempting to delete IONOS email account', $this->callback(function ($context) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['extRef'] === self::TEST_EXT_REF;
 			}));
 
 		$this->logger->expects($this->once())
 			->method('error')
-			->with('API Exception when calling MailConfigurationAPIApi->deleteMailbox', $this->callback(function ($context) use ($userId) {
+			->with('API Exception when calling MailConfigurationAPIApi->deleteMailbox', $this->callback(function ($context) {
 				return $context['statusCode'] === 500
 					&& $context['message'] === 'Internal Server Error'
-					&& $context['userId'] === $userId;
+					&& $context['userId'] === self::TEST_USER_ID;
 			}));
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to delete IONOS mail: Internal Server Error');
 		$this->expectExceptionCode(500);
 
-		$this->service->deleteEmailAccount($userId);
+		$this->service->deleteEmailAccount(self::TEST_USER_ID);
 	}
 
 	public function testDeleteEmailAccountThrowsExceptionOnGeneralError(): void {
-		$userId = 'testuser123';
+		$this->setupConfigMocks();
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API to throw general exception
 		$generalException = new \Exception('Unexpected error');
 
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', 'test-ext-ref', $userId)
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($generalException);
 
-		// Expect logging calls
 		$this->logger->expects($this->once())
 			->method('info')
-			->with('Attempting to delete IONOS email account', $this->callback(function ($context) use ($userId) {
-				return $context['userId'] === $userId
-					&& $context['extRef'] === 'test-ext-ref';
+			->with('Attempting to delete IONOS email account', $this->callback(function ($context) {
+				return $context['userId'] === self::TEST_USER_ID
+					&& $context['extRef'] === self::TEST_EXT_REF;
 			}));
 
 		$this->logger->expects($this->once())
 			->method('error')
-			->with('Exception when calling MailConfigurationAPIApi->deleteMailbox', $this->callback(function ($context) use ($userId) {
+			->with('Exception when calling MailConfigurationAPIApi->deleteMailbox', $this->callback(function ($context) {
 				return isset($context['exception'])
-					&& $context['userId'] === $userId;
+					&& $context['userId'] === self::TEST_USER_ID;
 			}));
 
 		$this->expectException(ServiceException::class);
 		$this->expectExceptionMessage('Failed to delete IONOS mail');
 		$this->expectExceptionCode(500);
 
-		$this->service->deleteEmailAccount($userId);
+		$this->service->deleteEmailAccount(self::TEST_USER_ID);
 	}
 
 	public function testDeleteEmailAccountWithInsecureConnection(): void {
-		$userId = 'testuser123';
+		$this->setupConfigMocks(allowInsecure: true);
+		$apiInstance = $this->setupApiClient(verifySSL: false);
 
-		// Mock config with insecure connection allowed
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(true);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-
-		// Mock API client - verify should be false
-		$client = $this->createMock(ClientInterface::class);
-		$this->apiClientService->method('newClient')
-			->with([
-				'auth' => ['testuser', 'testpass'],
-				'verify' => false,
-			])
-			->willReturn($client);
-
-		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newMailConfigurationAPIApi')
-			->with($client, 'https://api.example.com')
-			->willReturn($apiInstance);
-
-		// Mock successful deletion
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', 'test-ext-ref', $userId);
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID);
 
-		$this->logger->expects($this->exactly(2))
-			->method('info');
+		$this->logger->expects($this->exactly(2))->method('info');
 
-		$result = $this->service->deleteEmailAccount($userId);
+		$result = $this->service->deleteEmailAccount(self::TEST_USER_ID);
 
 		$this->assertTrue($result);
 	}
 
 	public function testTryDeleteEmailAccountWhenIntegrationDisabled(): void {
-		$userId = 'testuser123';
-
-		// Mock integration as disabled
 		$this->configService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
 			->willReturn(false);
 
-		// Should log that integration is not enabled
 		$this->logger->expects($this->once())
 			->method('debug')
 			->with(
 				'IONOS integration is not enabled, skipping email account deletion',
-				['userId' => $userId]
+				['userId' => self::TEST_USER_ID]
 			);
 
-		// Should not attempt to create API client
-		$this->apiClientService->expects($this->never())
-			->method('newClient');
+		$this->apiClientService->expects($this->never())->method('newClient');
 
-		// Call tryDeleteEmailAccount - should not throw exception
-		$this->service->tryDeleteEmailAccount($userId);
+		$this->service->tryDeleteEmailAccount(self::TEST_USER_ID);
 
 		$this->addToAssertionCount(1);
 	}
 
 	public function testTryDeleteEmailAccountWhenIntegrationEnabledSuccess(): void {
-		$userId = 'testuser123';
-
-		// Mock integration as enabled
 		$this->configService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
 
-		// Mock API client
-		$client = $this->createMock(ClientInterface::class);
-		$this->apiClientService->method('newClient')
-			->with([
-				'auth' => ['testuser', 'testpass'],
-				'verify' => true,
-			])
-			->willReturn($client);
-
-		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newMailConfigurationAPIApi')
-			->with($client, 'https://api.example.com')
-			->willReturn($apiInstance);
-
-		// Mock successful deletion
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', 'test-ext-ref', $userId);
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID);
 
-		// Should log success at info level (from deleteEmailAccount only)
 		$this->logger->expects($this->exactly(2))
 			->method('info')
-			->willReturnCallback(function ($message, $context) use ($userId) {
+			->willReturnCallback(function ($message, $context) {
 				if ($message === 'Attempting to delete IONOS email account') {
-					$this->assertSame($userId, $context['userId']);
-					$this->assertSame('test-ext-ref', $context['extRef']);
+					$this->assertSame(self::TEST_USER_ID, $context['userId']);
+					$this->assertSame(self::TEST_EXT_REF, $context['extRef']);
 				} elseif ($message === 'Successfully deleted IONOS email account') {
-					$this->assertSame($userId, $context['userId']);
+					$this->assertSame(self::TEST_USER_ID, $context['userId']);
 				}
 			});
 
-		// Call tryDeleteEmailAccount - should not throw exception
-		$this->service->tryDeleteEmailAccount($userId);
+		$this->service->tryDeleteEmailAccount(self::TEST_USER_ID);
 
 		$this->addToAssertionCount(1);
 	}
 
 	public function testTryDeleteEmailAccountWhenIntegrationEnabledButDeletionFails(): void {
-		$userId = 'testuser123';
-
-		// Mock integration as enabled
 		$this->configService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->setupConfigMocks();
 
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')
 			->with([
-				'auth' => ['testuser', 'testpass'],
+				'auth' => [self::TEST_BASIC_AUTH_USER, self::TEST_BASIC_AUTH_PASSWORD],
 				'verify' => true,
 			])
 			->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')
-			->with($client, 'https://api.example.com')
+			->with($client, self::TEST_API_BASE_URL)
 			->willReturn($apiInstance);
 
-		// Mock API exception
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException('API Error', 500);
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', 'test-ext-ref', $userId)
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
-		// Should log the error from deleteEmailAccount and then from tryDeleteEmailAccount
 		$this->logger->expects($this->exactly(2))
 			->method('error')
-			->willReturnCallback(function ($message, $context) use ($userId) {
+			->willReturnCallback(function ($message, $context) {
 				if ($message === 'API Exception when calling MailConfigurationAPIApi->deleteMailbox') {
-					// This is from deleteEmailAccount
-					$this->assertSame($userId, $context['userId']);
+					$this->assertSame(self::TEST_USER_ID, $context['userId']);
 					$this->assertSame(500, $context['statusCode']);
 				} elseif ($message === 'Failed to delete IONOS mailbox for user') {
-					// This is from tryDeleteEmailAccount
-					$this->assertSame($userId, $context['userId']);
+					$this->assertSame(self::TEST_USER_ID, $context['userId']);
 					$this->assertInstanceOf(ServiceException::class, $context['exception']);
 				}
 			});
 
-		// Call tryDeleteEmailAccount - should NOT throw exception (fire and forget)
-		$this->service->tryDeleteEmailAccount($userId);
+		$this->service->tryDeleteEmailAccount(self::TEST_USER_ID);
 
 		$this->addToAssertionCount(1);
 	}
 
 	public function testTryDeleteEmailAccountWhenMailboxNotFound(): void {
-		$userId = 'testuser123';
-
-		// Mock integration as enabled
 		$this->configService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$this->setupConfigMocks();
 
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')
 			->with([
-				'auth' => ['testuser', 'testpass'],
+				'auth' => [self::TEST_BASIC_AUTH_USER, self::TEST_BASIC_AUTH_PASSWORD],
 				'verify' => true,
 			])
 			->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')
-			->with($client, 'https://api.example.com')
+			->with($client, self::TEST_API_BASE_URL)
 			->willReturn($apiInstance);
 
-		// Mock 404 API exception (mailbox already deleted or never existed)
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException('Not Found', 404);
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', 'test-ext-ref', $userId)
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
-		// Should log at info level (from deleteEmailAccount) and debug (404 is treated as success)
 		$this->logger->expects($this->once())
 			->method('info')
 			->with(
 				'Attempting to delete IONOS email account',
 				[
-					'userId' => $userId,
-					'extRef' => 'test-ext-ref',
+					'userId' => self::TEST_USER_ID,
+					'extRef' => self::TEST_EXT_REF,
 				]
 			);
 
@@ -1027,66 +837,177 @@ class IonosMailServiceTest extends TestCase {
 			->with(
 				'IONOS mailbox does not exist (already deleted or never created)',
 				[
-					'userId' => $userId,
+					'userId' => self::TEST_USER_ID,
 					'statusCode' => 404
 				]
 			);
 
-		// Call tryDeleteEmailAccount - should NOT throw exception
-		$this->service->tryDeleteEmailAccount($userId);
+		$this->service->tryDeleteEmailAccount(self::TEST_USER_ID);
 
 		$this->addToAssertionCount(1);
 	}
 
 	public function testGetIonosEmailForUserReturnsEmailWhenAccountExists(): void {
-		$userId = 'testuser123';
-		$expectedEmail = 'testuser@example.com';
+		$this->setupConfigMocks();
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
-
-		// Mock API client
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API response with existing account
 		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getEmail'])
 			->getMock();
-		$mailAccountResponse->method('getEmail')->willReturn($expectedEmail);
+		$mailAccountResponse->method('getEmail')->willReturn(self::TEST_EMAIL);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', 'test-ext-ref', $userId)
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willReturn($mailAccountResponse);
 
-		// Expect logging calls
-		$this->logger->expects($this->exactly(2))
-			->method('debug');
+		$this->logger->expects($this->exactly(2))->method('debug');
 
-		$result = $this->service->getIonosEmailForUser($userId);
+		$result = $this->service->getIonosEmailForUser(self::TEST_USER_ID);
 
-		$this->assertEquals($expectedEmail, $result);
+		$this->assertEquals(self::TEST_EMAIL, $result);
 	}
 
 	public function testGetIonosEmailForUserReturnsNullWhen404(): void {
-		$userId = 'testuser123';
+		$this->setupConfigMocks();
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
 
-		// Mock API client
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Not Found',
+			404,
+			[],
+			'{"error": "Not Found"}'
+		);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willThrowException($apiException);
+
+		$this->logger->expects($this->exactly(2))->method('debug');
+
+		$result = $this->service->getIonosEmailForUser(self::TEST_USER_ID);
+
+		$this->assertNull($result);
+	}
+
+	public function testGetIonosEmailForUserReturnsNullOnApiError(): void {
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
+			'Internal Server Error',
+			500,
+			[],
+			'{"error": "Server error"}'
+		);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willThrowException($apiException);
+
+		$this->logger->expects($this->once())->method('debug');
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('API Exception when getting IONOS mail account', $this->callback(function ($context) {
+				return $context['statusCode'] === 500
+					&& $context['message'] === 'Internal Server Error';
+			}));
+
+		$result = $this->service->getIonosEmailForUser(self::TEST_USER_ID);
+
+		$this->assertNull($result);
+	}
+
+	public function testGetIonosEmailForUserReturnsNullOnGeneralException(): void {
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willThrowException(new \Exception('Unexpected error'));
+
+		$this->logger->expects($this->once())->method('debug');
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Exception when getting IONOS mail account', $this->callback(function ($context) {
+				return isset($context['exception'])
+					&& $context['userId'] === self::TEST_USER_ID;
+			}));
+
+		$result = $this->service->getIonosEmailForUser(self::TEST_USER_ID);
+
+		$this->assertNull($result);
+	}
+
+	public function testGetAccountConfigForUserReturnsConfigWhenAccountExists(): void {
+		$this->setupConfigMocks();
+
+		$client = $this->createMock(ClientInterface::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Create mock response for existing account
+		$imapServer = $this->createMockImapServer();
+		$smtpServer = $this->createMockSmtpServer();
+
+		$mailServer = $this->getMockBuilder(MailServer::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getImap', 'getSmtp'])
+			->getMock();
+		$mailServer->method('getImap')->willReturn($imapServer);
+		$mailServer->method('getSmtp')->willReturn($smtpServer);
+
+		$mailAccountResponse = $this->getMockBuilder(MailAccountResponse::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['getEmail', 'getServer'])
+			->getMock();
+		$mailAccountResponse->method('getEmail')->willReturn(self::TEST_EMAIL);
+		$mailAccountResponse->method('getServer')->willReturn($mailServer);
+
+		$apiInstance->method('getFunctionalAccount')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->willReturn($mailAccountResponse);
+
+		$result = $this->service->getAccountConfigForUser(self::TEST_USER_ID);
+
+		$this->assertInstanceOf(MailAccountConfig::class, $result);
+		$this->assertEquals(self::TEST_EMAIL, $result->getEmail());
+		$this->assertEquals(self::IMAP_HOST, $result->getImap()->getHost());
+		$this->assertEquals(self::IMAP_PORT, $result->getImap()->getPort());
+		$this->assertEquals('ssl', $result->getImap()->getSecurity());
+		// Password is empty when retrieving existing accounts
+		$this->assertEquals('', $result->getImap()->getPassword());
+		$this->assertEquals(self::SMTP_HOST, $result->getSmtp()->getHost());
+		$this->assertEquals(self::SMTP_PORT, $result->getSmtp()->getPort());
+		$this->assertEquals('tls', $result->getSmtp()->getSecurity());
+		$this->assertEquals('', $result->getSmtp()->getPassword());
+	}
+
+	public function testGetAccountConfigForUserReturnsNullWhenAccountDoesNotExist(): void {
+		$this->setupConfigMocks();
+
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
@@ -1102,98 +1023,81 @@ class IonosMailServiceTest extends TestCase {
 		);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', 'test-ext-ref', $userId)
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
-		// Expect logging calls
-		$this->logger->expects($this->exactly(2))
-			->method('debug');
-
-		$result = $this->service->getIonosEmailForUser($userId);
+		$result = $this->service->getAccountConfigForUser(self::TEST_USER_ID);
 
 		$this->assertNull($result);
 	}
 
-	public function testGetIonosEmailForUserReturnsNullOnApiError(): void {
-		$userId = 'testuser123';
+	public function testResetAppPasswordSuccess(): void {
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+		$appName = 'NEXTCLOUD_WORKSPACE';
+		$expectedPassword = 'new-app-password-123';
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		$apiInstance->expects($this->once())
+			->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willReturn($expectedPassword);
 
-		// Mock API client
+		$result = $this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+
+		$this->assertEquals($expectedPassword, $result);
+	}
+
+	public function testResetAppPasswordWithApiException(): void {
+		$this->setupConfigMocks();
+
 		$client = $this->createMock(ClientInterface::class);
 		$this->apiClientService->method('newClient')->willReturn($client);
 
 		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		// Mock API to throw 500 exception
+		$appName = 'NEXTCLOUD_WORKSPACE';
+
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException(
-			'Internal Server Error',
-			500,
+			'Not Found',
+			404,
 			[],
-			'{"error": "Server error"}'
+			'{"error": "Mailbox not found"}'
 		);
 
-		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', 'test-ext-ref', $userId)
+		$apiInstance->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
 			->willThrowException($apiException);
 
-		// Expect logging calls
-		$this->logger->expects($this->once())
-			->method('debug');
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset IONOS app password: Not Found');
+		$this->expectExceptionCode(404);
 
-		$this->logger->expects($this->once())
-			->method('error')
-			->with('API Exception when getting IONOS mail account', $this->callback(function ($context) {
-				return $context['statusCode'] === 500
-				&& $context['message'] === 'Internal Server Error';
-			}));
-
-		$result = $this->service->getIonosEmailForUser($userId);
-
-		$this->assertNull($result);
+		$this->service->resetAppPassword(self::TEST_USER_ID, $appName);
 	}
 
-	public function testGetIonosEmailForUserReturnsNullOnGeneralException(): void {
-		$userId = 'testuser123';
+	public function testResetAppPasswordWithUnexpectedResponse(): void {
+		$this->setupConfigMocks();
+		$apiInstance = $this->setupApiClient();
+		$appName = 'NEXTCLOUD_WORKSPACE';
 
-		// Mock config
-		$this->configService->method('getExternalReference')->willReturn('test-ext-ref');
-		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
-		$this->configService->method('getAllowInsecure')->willReturn(false);
-		$this->configService->method('getBasicAuthUser')->willReturn('testuser');
-		$this->configService->method('getBasicAuthPassword')->willReturn('testpass');
+		// API returns unexpected response type (not a string)
+		$apiInstance->method('setAppPassword')
+			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->willReturn(['unexpected' => 'response']);
 
-		// Mock API client
-		$client = $this->createMock(ClientInterface::class);
-		$this->apiClientService->method('newClient')->willReturn($client);
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Failed to reset IONOS app password');
+		$this->expectExceptionCode(500);
 
-		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
-		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+		$this->service->resetAppPassword(self::TEST_USER_ID, $appName);
+	}
 
-		// Mock API to throw general exception
-		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', 'test-ext-ref', $userId)
-			->willThrowException(new \Exception('Unexpected error'));
+	public function testGetMailDomain(): void {
+		$this->configService->method('getMailDomain')->willReturn(self::TEST_DOMAIN);
 
-		// Expect logging calls
-		$this->logger->expects($this->once())
-			->method('debug');
+		$result = $this->service->getMailDomain();
 
-		$this->logger->expects($this->once())
-			->method('error')
-			->with('Exception when getting IONOS mail account', $this->callback(function ($context) {
-				return isset($context['exception'])
-				&& $context['userId'] === 'testuser123';
-			}));
-
-		$result = $this->service->getIonosEmailForUser($userId);
-
-		$this->assertNull($result);
+		$this->assertEquals(self::TEST_DOMAIN, $result);
 	}
 }

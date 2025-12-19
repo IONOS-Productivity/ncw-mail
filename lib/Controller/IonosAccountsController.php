@@ -8,15 +8,17 @@ declare(strict_types=1);
  */
 namespace OCA\Mail\Controller;
 
+use OCA\Mail\Exception\IonosServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
-use OCA\Mail\Service\IONOS\Dto\MailAccountConfig;
-use OCA\Mail\Service\IONOS\IonosMailService;
+use OCA\Mail\Service\IONOS\IonosAccountCreationService;
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
 #[OpenAPI(scope: OpenAPI::SCOPE_IGNORE)]
@@ -29,8 +31,8 @@ class IonosAccountsController extends Controller {
 	public function __construct(
 		string $appName,
 		IRequest $request,
-		private IonosMailService $ionosMailService,
-		private AccountsController $accountsController,
+		private IonosAccountCreationService $accountCreationService,
+		private IUserSession $userSession,
 		private LoggerInterface $logger,
 	) {
 		parent::__construct($appName, $request);
@@ -54,41 +56,64 @@ class IonosAccountsController extends Controller {
 		}
 
 		try {
-			$this->logger->info('Starting IONOS email account creation', [ 'emailAddress' => $emailUser, 'accountName' => $accountName ]);
-			$ionosResponse = $this->ionosMailService->createEmailAccount($emailUser);
+			$userId = $this->getUserIdOrFail();
 
-			$this->logger->info('IONOS email account created successfully', [ 'emailAddress' => $ionosResponse->getEmail() ]);
-			return $this->createNextcloudMailAccount($accountName, $ionosResponse);
+			$this->logger->info('Starting IONOS email account creation from web', [
+				'userId' => $userId,
+				'emailAddress' => $emailUser,
+				'accountName' => $accountName,
+			]);
+
+			$account = $this->accountCreationService->createOrUpdateAccount($userId, $emailUser, $accountName);
+
+			$this->logger->info('Account creation completed successfully', [
+				'emailAddress' => $account->getEmail(),
+				'accountName' => $accountName,
+				'accountId' => $account->getId(),
+				'userId' => $userId,
+			]);
+
+			return MailJsonResponse::success($account, Http::STATUS_CREATED);
 		} catch (ServiceException $e) {
-			$data = [
-				'error' => self::ERR_IONOS_API_ERROR,
-				'statusCode' => $e->getCode(),
-			];
-			$this->logger->error('IONOS service error: ' . $e->getMessage(), $data);
-
-			return MailJsonResponse::fail($data);
+			return $this->buildServiceErrorResponse($e, 'account creation');
 		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error during account creation: ' . $e->getMessage(), [
+				'exception' => $e,
+			]);
 			return MailJsonResponse::error('Could not create account');
 		}
 	}
 
-	private function createNextcloudMailAccount(string $accountName, MailAccountConfig $mailConfig): JSONResponse {
-		$imap = $mailConfig->getImap();
-		$smtp = $mailConfig->getSmtp();
+	/**
+	 * Get the current user ID
+	 *
+	 * @return string User ID string
+	 * @throws ServiceException
+	 */
+	private function getUserIdOrFail(): string {
+		$user = $this->userSession->getUser();
+		if ($user === null) {
+			throw new ServiceException('No user session found during account creation', 401);
+		}
+		return $user->getUID();
+	}
 
-		return $this->accountsController->create(
-			$accountName,
-			$mailConfig->getEmail(),
-			$imap->getHost(),
-			$imap->getPort(),
-			$imap->getSecurity(),
-			$imap->getUsername(),
-			$imap->getPassword(),
-			$smtp->getHost(),
-			$smtp->getPort(),
-			$smtp->getSecurity(),
-			$smtp->getUsername(),
-			$smtp->getPassword(),
-		);
+	/**
+	 * Build service error response
+	 */
+	private function buildServiceErrorResponse(ServiceException $e, string $context): JSONResponse {
+		$data = [
+			'error' => self::ERR_IONOS_API_ERROR,
+			'statusCode' => $e->getCode(),
+			'message' => $e->getMessage(),
+		];
+
+		// If it's an IonosServiceException, merge in the additional data
+		if ($e instanceof IonosServiceException) {
+			$data = array_merge($data, $e->getData());
+		}
+
+		$this->logger->error('IONOS service error during ' . $context . ': ' . $e->getMessage(), $data);
+		return MailJsonResponse::fail($data);
 	}
 }
