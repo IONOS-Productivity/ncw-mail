@@ -17,7 +17,6 @@ use OCA\Mail\Listener\UserDeletedListener;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\DelegationService;
-use OCA\Mail\Service\IONOS\IonosMailService;
 use OCA\Mail\Service\TextBlockService;
 use OCP\EventDispatcher\Event;
 use OCP\IUser;
@@ -31,7 +30,6 @@ class UserDeletedListenerTest extends TestCase {
 	private TextBlockService&MockObject $textBlockService;
 	private DelegationService&MockObject $delegationService;
 	private LoggerInterface&MockObject $logger;
-	private IonosMailService&MockObject $ionosMailService;
 	private ProviderRegistryService&MockObject $providerRegistry;
 	private UserDeletedListener $listener;
 
@@ -42,7 +40,6 @@ class UserDeletedListenerTest extends TestCase {
 		$this->logger = $this->createMock(LoggerInterface::class);
 		$this->textBlockService = $this->createMock(TextBlockService::class);
 		$this->delegationService = $this->createMock(DelegationService::class);
-		$this->ionosMailService = $this->createMock(IonosMailService::class);
 		$this->providerRegistry = $this->createMock(ProviderRegistryService::class);
 
 		$this->listener = new UserDeletedListener(
@@ -50,8 +47,7 @@ class UserDeletedListenerTest extends TestCase {
 			$this->textBlockService,
 			$this->delegationService,
 			$this->logger,
-			$this->ionosMailService,
-			$this->providerRegistry,
+			$this->providerRegistry
 		);
 	}
 
@@ -77,9 +73,6 @@ class UserDeletedListenerTest extends TestCase {
 		$this->providerRegistry->expects($this->never())
 			->method('deleteProviderManagedAccounts');
 
-		$this->ionosMailService->expects($this->never())
-			->method('tryDeleteEmailAccount');
-
 		$this->accountService->expects($this->never())
 			->method('findByUserId');
 
@@ -97,10 +90,6 @@ class UserDeletedListenerTest extends TestCase {
 	public function testHandleUserDeletedWithNoAccounts(): void {
 		$user = $this->createUserMock('test-user');
 		$event = new UserDeletedEvent($user);
-
-		$this->ionosMailService->expects($this->once())
-			->method('tryDeleteEmailAccount')
-			->with('test-user');
 
 		$this->accountService->expects($this->once())
 			->method('findByUserId')
@@ -132,10 +121,6 @@ class UserDeletedListenerTest extends TestCase {
 		$user = $this->createUserMock('test-user');
 		$account = $this->createAccountMock(42);
 		$event = new UserDeletedEvent($user);
-
-		$this->ionosMailService->expects($this->once())
-			->method('tryDeleteEmailAccount')
-			->with('test-user');
 
 		$this->accountService->expects($this->once())
 			->method('findByUserId')
@@ -170,10 +155,6 @@ class UserDeletedListenerTest extends TestCase {
 		$account2 = $this->createAccountMock(2);
 		$account3 = $this->createAccountMock(3);
 		$event = new UserDeletedEvent($user);
-
-		$this->ionosMailService->expects($this->once())
-			->method('tryDeleteEmailAccount')
-			->with('test-user');
 
 		$this->accountService->expects($this->once())
 			->method('findByUserId')
@@ -211,10 +192,6 @@ class UserDeletedListenerTest extends TestCase {
 		$event = new UserDeletedEvent($user);
 
 		$exception = new ClientException('Test exception');
-
-		$this->ionosMailService->expects($this->once())
-			->method('tryDeleteEmailAccount')
-			->with('test-user');
 
 		$this->accountService->expects($this->once())
 			->method('findByUserId')
@@ -256,10 +233,6 @@ class UserDeletedListenerTest extends TestCase {
 		$event = new UserDeletedEvent($user);
 
 		$exception = new ClientException('Failed to delete account 2');
-
-		$this->ionosMailService->expects($this->once())
-			->method('tryDeleteEmailAccount')
-			->with('test-user');
 
 		$this->accountService->expects($this->once())
 			->method('findByUserId')

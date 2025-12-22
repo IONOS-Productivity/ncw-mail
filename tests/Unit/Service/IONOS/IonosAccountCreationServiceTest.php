@@ -12,7 +12,7 @@ namespace OCA\Mail\Tests\Unit\Service\IONOS;
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Account;
 use OCA\Mail\Db\MailAccount;
-use OCA\Mail\Exception\IonosServiceException;
+use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
@@ -192,8 +192,8 @@ class IonosAccountCreationServiceTest extends TestCase {
 
 		try {
 			$this->service->createOrUpdateAccount($userId, $emailUser, $accountName);
-			$this->fail('Expected IonosServiceException to be thrown');
-		} catch (IonosServiceException $e) {
+			$this->fail('Expected ProviderServiceException to be thrown');
+		} catch (ProviderServiceException $e) {
 			$this->assertEquals(409, $e->getCode());
 			$this->assertStringContainsString('IONOS account exists but email mismatch', $e->getMessage());
 
@@ -486,8 +486,8 @@ class IonosAccountCreationServiceTest extends TestCase {
 
 		try {
 			$this->service->createOrUpdateAccount($userId, $emailUser, $accountName);
-			$this->fail('Expected IonosServiceException to be thrown');
-		} catch (IonosServiceException $e) {
+			$this->fail('Expected ProviderServiceException to be thrown');
+		} catch (ProviderServiceException $e) {
 			$this->assertEquals(409, $e->getCode());
 			$this->assertStringContainsString('IONOS account exists but email mismatch', $e->getMessage());
 			$this->assertStringContainsString($emailAddress, $e->getMessage());

@@ -25,8 +25,6 @@ use OCA\Mail\Service\AliasesService;
 use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\ContextChat\ContextChatSettingsService;
 use OCA\Mail\Service\InternalAddressService;
-use OCA\Mail\Service\IONOS\IonosConfigService;
-use OCA\Mail\Service\IONOS\IonosMailConfigService;
 use OCA\Mail\Service\MailManager;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
@@ -126,10 +124,6 @@ class PageControllerTest extends TestCase {
 
 	private ClassificationSettingsService|MockObject $classificationSettingsService;
 
-	private IonosConfigService&MockObject $ionosConfigService;
-
-	private IonosMailConfigService&MockObject $ionosMailConfigService;
-
 	private AccountProviderService&MockObject $accountProviderService;
 
 	protected function setUp(): void {
@@ -162,8 +156,6 @@ class PageControllerTest extends TestCase {
 		$this->appManager->method('getAppVersion')->willReturn('0.0.1-dev.0');
 		$this->contextChatSettingsService = $this->createMock(ContextChatSettingsService::class);
 		$this->contextChatSettingsService->method('isIndexingEnabled')->willReturn(true);
-		$this->ionosConfigService = $this->createMock(IonosConfigService::class);
-		$this->ionosMailConfigService = $this->createMock(IonosMailConfigService::class);
 		$this->accountProviderService = $this->createMock(AccountProviderService::class);
 
 		$this->classificationSettingsService = $this->createMock(ClassificationSettingsService::class);
@@ -194,8 +186,6 @@ class PageControllerTest extends TestCase {
 			$this->contextChatSettingsService,
 			$this->classificationSettingsService,
 			$this->appConfig,
-			$this->ionosConfigService,
-			$this->ionosMailConfigService,
 			$this->accountProviderService,
 		);
 	}
@@ -326,12 +316,6 @@ class PageControllerTest extends TestCase {
 			->method('getValueBool')
 			->with(Application::APP_ID, ConfigLexicon::ALLOW_NEW_MAIL_ACCOUNTS, true)
 			->willReturn(true);
-		$this->ionosMailConfigService->expects($this->once())
-			->method('isMailConfigAvailable')
-			->willReturn(false);
-		$this->ionosConfigService->expects($this->once())
-			->method('getMailDomain')
-			->willReturn('example.tld');
 		$this->accountProviderService->expects($this->once())
 			->method('getAvailableProvidersForUser')
 			->with($this->userId)
@@ -392,8 +376,6 @@ class PageControllerTest extends TestCase {
 					'external-avatars' => 'true',
 					'reply-mode' => 'bottom',
 					'app-version' => '1.2.3',
-					'ionos-mailconfig-enabled' => false,
-					'ionos-mailconfig-domain' => 'example.tld',
 					'collect-data' => 'true',
 					'start-mailbox-id' => '123',
 					'search-priority-body' => 'false',
