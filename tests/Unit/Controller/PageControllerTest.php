@@ -22,8 +22,6 @@ use OCA\Mail\Service\AiIntegrations\AiIntegrationsService;
 use OCA\Mail\Service\AliasesService;
 use OCA\Mail\Service\Classification\ClassificationSettingsService;
 use OCA\Mail\Service\InternalAddressService;
-use OCA\Mail\Service\IONOS\IonosConfigService;
-use OCA\Mail\Service\IONOS\IonosMailConfigService;
 use OCA\Mail\Service\MailManager;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
@@ -117,10 +115,6 @@ class PageControllerTest extends TestCase {
 
 	private IAvailabilityCoordinator&MockObject $availabilityCoordinator;
 	private IAppManager $appManager;
-
-	private IonosConfigService&MockObject $ionosConfigService;
-
-	private IonosMailConfigService&MockObject $ionosMailConfigService;
 
 	private AccountProviderService&MockObject $accountProviderService;
 
@@ -301,12 +295,6 @@ class PageControllerTest extends TestCase {
 				$this->returnValue('cron'),
 				$this->returnValue('yes'),
 			);
-		$this->ionosMailConfigService->expects($this->once())
-			->method('isMailConfigAvailable')
-			->willReturn(false);
-		$this->ionosConfigService->expects($this->once())
-			->method('getMailDomain')
-			->willReturn('example.tld');
 		$this->accountProviderService->expects($this->once())
 			->method('getAvailableProvidersForUser')
 			->with($this->userId)
@@ -362,8 +350,6 @@ class PageControllerTest extends TestCase {
 					'external-avatars' => 'true',
 					'reply-mode' => 'bottom',
 					'app-version' => '1.2.3',
-					'ionos-mailconfig-enabled' => false,
-					'ionos-mailconfig-domain' => 'example.tld',
 					'collect-data' => 'true',
 					'start-mailbox-id' => '123',
 					'tag-classified-messages' => 'false',

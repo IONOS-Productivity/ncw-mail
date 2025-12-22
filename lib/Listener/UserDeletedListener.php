@@ -33,7 +33,6 @@ class UserDeletedListener implements IEventListener {
 		AccountService $accountService,
 		private TextBlockService $textBlockService,
 		LoggerInterface $logger,
-		private readonly IonosMailService $ionosMailService,
 		private readonly ProviderRegistryService $providerRegistry,
 	) {
 		$this->accountService = $accountService;
@@ -55,9 +54,6 @@ class UserDeletedListener implements IEventListener {
 		// Delete provider-managed accounts (generic system)
 		// This works with any registered provider (IONOS, Office365, etc.)
 		$this->providerRegistry->deleteProviderManagedAccounts($userId, $accounts);
-
-		// Delete IONOS mailbox if IONOS integration is enabled
-		$this->ionosMailService->tryDeleteEmailAccount($userId);
 
 		// Delete all mail accounts in Nextcloud
 		foreach ($accounts as $account) {

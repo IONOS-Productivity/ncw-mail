@@ -11,7 +11,7 @@ namespace OCA\Mail\Service\IONOS;
 
 use OCA\Mail\Account;
 use OCA\Mail\Db\MailAccount;
-use OCA\Mail\Exception\IonosServiceException;
+use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Service\AccountService;
@@ -78,10 +78,9 @@ class IonosAccountCreationService {
 
 			if (!$resolutionResult->canRetry()) {
 				if ($resolutionResult->hasEmailMismatch()) {
-					throw new IonosServiceException(
+					throw new ProviderServiceException(
 						'IONOS account exists but email mismatch. Expected: ' . $resolutionResult->getExpectedEmail() . ', Found: ' . $resolutionResult->getExistingEmail(),
 						IonosMailService::STATUS__409_CONFLICT,
-						null,
 						[
 							'expectedEmail' => $resolutionResult->getExpectedEmail(),
 							'existingEmail' => $resolutionResult->getExistingEmail(),
@@ -93,8 +92,8 @@ class IonosAccountCreationService {
 
 			$mailConfig = $resolutionResult->getAccountConfig();
 			return $this->updateAccount($existingAccount->getMailAccount(), $accountName, $mailConfig);
-		} catch (IonosServiceException $e) {
-			// Re-throw IonosServiceException as-is
+		} catch (ProviderServiceException $e) {
+			// Re-throw ProviderServiceException as-is
 			throw $e;
 		} catch (ServiceException $e) {
 			throw new ServiceException('Failed to reset IONOS account credentials: ' . $e->getMessage(), $e->getCode(), $e);
@@ -131,14 +130,14 @@ class IonosAccountCreationService {
 
 			if (!$resolutionResult->canRetry()) {
 				if ($resolutionResult->hasEmailMismatch()) {
-					throw new IonosServiceException(
+					throw new ProviderServiceException(
 						'IONOS account exists but email mismatch. Expected: ' . $resolutionResult->getExpectedEmail() . ', Found: ' . $resolutionResult->getExistingEmail(),
 						IonosMailService::STATUS__409_CONFLICT,
-						$e,
 						[
 							'expectedEmail' => $resolutionResult->getExpectedEmail(),
 							'existingEmail' => $resolutionResult->getExistingEmail(),
-						]
+						],
+						$e
 					);
 				}
 				// No existing IONOS account found - re-throw original error
