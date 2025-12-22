@@ -11,7 +11,15 @@ namespace OCA\Mail\Exception;
 
 use Throwable;
 
-class IonosServiceException extends ServiceException {
+/**
+ * IONOS-specific service exception
+ *
+ * This exception extends ProviderServiceException to maintain backward compatibility
+ * with existing IONOS code while also supporting the generic provider error handling.
+ *
+ * @deprecated Use ProviderServiceException directly for new code
+ */
+class IonosServiceException extends ProviderServiceException {
 	/**
 	 * @param string $message [optional] The Exception message to throw.
 	 * @param mixed $code [optional] The Exception code.
@@ -22,17 +30,8 @@ class IonosServiceException extends ServiceException {
 		$message = '',
 		$code = 0,
 		?Throwable $previous = null,
-		private readonly array $data = [],
+		array $data = [],
 	) {
-		parent::__construct($message, $code, $previous);
-	}
-
-	/**
-	 * Get additional data associated with the exception
-	 *
-	 * @return array<string, mixed>
-	 */
-	public function getData(): array {
-		return $this->data;
+		parent::__construct($message, $code, $data, $previous);
 	}
 }

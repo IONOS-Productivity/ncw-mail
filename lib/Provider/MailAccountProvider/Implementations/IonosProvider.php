@@ -134,4 +134,13 @@ class IonosProvider implements IMailAccountProvider {
 	public function getProvisionedEmail(string $userId): ?string {
 		return $this->facade->getProvisionedEmail($userId);
 	}
+
+	public function generateAppPassword(string $userId): string {
+		// Check if provider supports app passwords
+		if (!$this->getCapabilities()->supportsAppPasswords()) {
+			throw new \InvalidArgumentException('IONOS provider does not support app password generation');
+		}
+
+		return $this->facade->generateAppPassword($userId);
+	}
 }
