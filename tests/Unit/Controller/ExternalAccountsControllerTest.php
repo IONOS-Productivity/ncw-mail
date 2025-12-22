@@ -12,7 +12,7 @@ namespace OCA\Mail\Tests\Unit\Controller;
 use OCA\Mail\Account;
 use OCA\Mail\Controller\ExternalAccountsController;
 use OCA\Mail\Db\MailAccount;
-use OCA\Mail\Exception\IonosServiceException;
+use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider;
 use OCA\Mail\Provider\MailAccountProvider\ProviderCapabilities;
@@ -242,7 +242,7 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
 	}
 
-	public function testCreateWithIonosServiceException(): void {
+	public function testCreateWithProviderServiceException(): void {
 		$user = $this->createMock(IUser::class);
 		$user->method('getUID')->willReturn('testuser');
 
@@ -258,7 +258,7 @@ class ExternalAccountsControllerTest extends TestCase {
 		$provider->method('isAvailableForUser')
 			->willReturn(true);
 		$provider->method('createAccount')
-			->willThrowException(new IonosServiceException('IONOS error', 503, null, ['detail' => 'API unavailable']));
+			->willThrowException(new ProviderServiceException('IONOS error', 503, ['detail' => 'API unavailable']));
 
 		$this->providerRegistry->method('getProvider')
 			->with('test-provider')

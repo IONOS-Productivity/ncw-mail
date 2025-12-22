@@ -8,11 +8,11 @@ declare(strict_types=1);
  */
 namespace OCA\Mail\Controller;
 
-use OCA\Mail\Exception\IonosServiceException;
+use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
-use OCA\Mail\Service\IONOS\IonosAccountCreationService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountCreationService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
@@ -26,7 +26,7 @@ class IonosAccountsController extends Controller {
 
 	// Error message constants
 	private const ERR_ALL_FIELDS_REQUIRED = 'All fields are required';
-	private const ERR_IONOS_API_ERROR = 'IONOS_API_ERROR';
+	private const ERR_SERVICE_ERROR = 'SERVICE_ERROR';
 
 	public function __construct(
 		string $appName,
@@ -41,7 +41,7 @@ class IonosAccountsController extends Controller {
 	// Helper: input validation
 	private function validateInput(string $accountName, string $emailUser): ?JSONResponse {
 		if ($accountName === '' || $emailUser === '') {
-			return new JSONResponse(['success' => false, 'message' => self::ERR_ALL_FIELDS_REQUIRED, 'error' => self::ERR_IONOS_API_ERROR], 400);
+			return new JSONResponse(['success' => false, 'message' => self::ERR_ALL_FIELDS_REQUIRED, 'error' => self::ERR_SERVICE_ERROR], 400);
 		}
 		return null;
 	}
@@ -103,13 +103,13 @@ class IonosAccountsController extends Controller {
 	 */
 	private function buildServiceErrorResponse(ServiceException $e, string $context): JSONResponse {
 		$data = [
-			'error' => self::ERR_IONOS_API_ERROR,
+			'error' => 'SERVICE_ERROR',
 			'statusCode' => $e->getCode(),
 			'message' => $e->getMessage(),
 		];
 
-		// If it's an IonosServiceException, merge in the additional data
-		if ($e instanceof IonosServiceException) {
+		// If it's a ProviderServiceException, merge in the additional data
+		if ($e instanceof ProviderServiceException) {
 			$data = array_merge($data, $e->getData());
 		}
 
