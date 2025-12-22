@@ -7,7 +7,7 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-namespace OCA\Mail\Service\IONOS;
+namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service;
 
 use OCA\Mail\Account;
 use OCA\Mail\Db\MailAccount;
@@ -47,7 +47,7 @@ class IonosAccountCreationService {
 	 * @param string $accountName The display name for the account
 	 * @return Account The created or updated mail account
 	 * @throws ServiceException If account creation fails
-	 * @throws IonosServiceException If IONOS account creation fails
+	 * @throws ProviderServiceException If IONOS account creation fails
 	 */
 	public function createOrUpdateAccount(string $userId, string $emailUser, string $accountName): Account {
 		$expectedEmail = $this->buildEmailAddress($emailUser);
