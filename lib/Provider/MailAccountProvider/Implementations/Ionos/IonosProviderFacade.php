@@ -11,11 +11,11 @@ namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos;
 
 use OCA\Mail\Account;
 use OCA\Mail\Exception\ServiceException;
-use OCA\Mail\Service\IONOS\Core\IonosAccountMutationService;
-use OCA\Mail\Service\IONOS\Core\IonosAccountQueryService;
-use OCA\Mail\Service\IONOS\IonosAccountCreationService;
-use OCA\Mail\Service\IONOS\IonosConfigService;
-use OCA\Mail\Service\IONOS\IonosMailConfigService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountMutationService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountQueryService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountCreationService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailConfigService;
 use Psr\Log\LoggerInterface;
 
 /**

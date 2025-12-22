@@ -7,13 +7,13 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-namespace OCA\Mail\Tests\Unit\Service\IONOS;
+namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations\Ionos\Service;
 
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
-use OCA\Mail\Service\IONOS\ApiMailConfigClientService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ApiMailConfigClientService;
 
 class ApiMailConfigClientServiceTest extends TestCase {
 	private ApiMailConfigClientService $service;

@@ -7,7 +7,7 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-namespace OCA\Mail\Service\IONOS;
+namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service;
 
 use OCA\Mail\AppInfo\Application;
 use OCP\Exceptions\AppConfigException;
@@ -201,7 +201,7 @@ class IonosConfigService {
 		}
 
 		try {
-			$publicSuffixList = Rules::fromPath(__DIR__ . '/../../../resources/public_suffix_list.dat');
+			$publicSuffixList = Rules::fromPath(__DIR__ . '/../../../../../../resources/public_suffix_list.dat');
 			$domain = Domain::fromIDNA2008($customerDomain);
 			$result = $publicSuffixList->resolve($domain);
 			return $result->registrableDomain()->toString();

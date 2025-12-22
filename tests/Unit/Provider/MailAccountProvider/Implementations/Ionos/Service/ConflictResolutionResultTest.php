@@ -7,12 +7,12 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-namespace OCA\Mail\Tests\Unit\Service\IONOS;
+namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations\Ionos\Service;
 
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
-use OCA\Mail\Service\IONOS\ConflictResolutionResult;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ConflictResolutionResult;
 
 class ConflictResolutionResultTest extends TestCase {
 	private MailAccountConfig $accountConfig;
