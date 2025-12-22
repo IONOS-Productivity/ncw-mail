@@ -7,12 +7,12 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-namespace OCA\Mail\Tests\Unit\Service\IONOS;
+namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations\Ionos\Service;
 
 use OCA\Mail\Db\MailAccount;
-use OCA\Mail\Service\IONOS\IonosAccountDeletionService;
-use OCA\Mail\Service\IONOS\IonosConfigService;
-use OCA\Mail\Service\IONOS\IonosMailService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountDeletionService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailService;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 use Test\TestCase;
