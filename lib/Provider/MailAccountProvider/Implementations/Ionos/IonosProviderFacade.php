@@ -182,4 +182,22 @@ class IonosProviderFacade {
 			return null;
 		}
 	}
+
+	/**
+	 * Generate a new app password for the user's IONOS account
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return string The generated password
+	 * @throws \OCA\Mail\Exception\ServiceException If password generation fails
+	 */
+	public function generateAppPassword(string $userId): string {
+		$this->logger->info('Generating IONOS app password via facade', [
+			'userId' => $userId,
+		]);
+
+		// Use the app name constant from config service
+		$appName = IonosConfigService::APP_NAME;
+
+		return $this->mutationService->resetAppPassword($userId, $appName);
+	}
 }

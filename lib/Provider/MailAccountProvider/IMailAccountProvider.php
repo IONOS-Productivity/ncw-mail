@@ -103,4 +103,18 @@ interface IMailAccountProvider {
 	 * @return string|null The email address or null if no account exists
 	 */
 	public function getProvisionedEmail(string $userId): ?string;
+
+	/**
+	 * Generate a new app password for the user's account
+	 *
+	 * This method generates a new application-specific password that can be used
+	 * for IMAP/SMTP authentication. Only available if the provider supports
+	 * app passwords (check getCapabilities()->supportsAppPasswords()).
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return string The generated password
+	 * @throws \OCA\Mail\Exception\ProviderServiceException If password generation fails
+	 * @throws \InvalidArgumentException If provider doesn't support app passwords
+	 */
+	public function generateAppPassword(string $userId): string;
 }

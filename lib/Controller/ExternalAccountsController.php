@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\Mail\Controller;
 
-use OCA\Mail\Exception\IonosServiceException;
+use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
@@ -203,24 +203,15 @@ class ExternalAccountsController extends Controller {
 				], Http::STATUS_BAD_REQUEST);
 			}
 
-			// For now, delegate to IONOS-specific implementation
-			// In the future, this should be a method on the provider interface
-			if ($providerId === 'ionos') {
-				$ionosMailService = \OC::$server->get(\OCA\Mail\Service\IONOS\IonosMailService::class);
-				$password = $ionosMailService->generateUserAppPassword();
+			// Generate app password using provider interface
+			$password = $provider->generateAppPassword($userId);
 
-				$this->logger->info('App password generated successfully', [
-					'accountId' => $accountId,
-					'providerId' => $providerId,
-				]);
+			$this->logger->info('App password generated successfully', [
+				'accountId' => $accountId,
+				'providerId' => $providerId,
+			]);
 
-				return MailJsonResponse::success(['password' => $password]);
-			}
-
-			return MailJsonResponse::fail([
-				'error' => 'NOT_IMPLEMENTED',
-				'message' => 'App password generation not implemented for this provider',
-			], Http::STATUS_NOT_IMPLEMENTED);
+			return MailJsonResponse::success(['password' => $password]);
 		} catch (ServiceException $e) {
 			return $this->buildServiceErrorResponse($e, $providerId);
 		} catch (\Exception $e) {
@@ -257,8 +248,8 @@ class ExternalAccountsController extends Controller {
 			'message' => $e->getMessage(),
 		];
 
-		// If it's an IonosServiceException, merge in the additional data
-		if ($e instanceof IonosServiceException) {
+		// If it's a ProviderServiceException, merge in the additional data
+		if ($e instanceof ProviderServiceException) {
 			$data = array_merge($data, $e->getData());
 		}
 
