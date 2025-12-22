@@ -22,7 +22,7 @@ use OCA\Mail\Db\MailAccountMapper;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\IMAP\IMAPClientFactory;
-use OCA\Mail\Service\IONOS\IonosAccountDeletionService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountDeletionService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJob;

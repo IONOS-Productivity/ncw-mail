@@ -12,10 +12,10 @@ namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations\Ionos
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Account;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\IonosProviderFacade;
-use OCA\Mail\Service\IONOS\Core\IonosAccountMutationService;
-use OCA\Mail\Service\IONOS\Core\IonosAccountQueryService;
-use OCA\Mail\Service\IONOS\IonosAccountCreationService;
-use OCA\Mail\Service\IONOS\IonosConfigService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountMutationService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountQueryService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountCreationService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 

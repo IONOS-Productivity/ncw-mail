@@ -13,9 +13,9 @@ use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Account;
 use OCA\Mail\Controller\IonosAccountsController;
 use OCA\Mail\Db\MailAccount;
-use OCA\Mail\Exception\IonosServiceException;
+use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
-use OCA\Mail\Service\IONOS\IonosAccountCreationService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountCreationService;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserSession;
@@ -69,7 +69,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$data = $response->getData();
 		$this->assertFalse($data['success']);
 		$this->assertEquals('All fields are required', $data['message']);
-		$this->assertEquals('IONOS_API_ERROR', $data['error']);
+		$this->assertEquals('SERVICE_ERROR', $data['error']);
 
 		// Test with empty email user
 		$response = $this->controller->create('Test Account', '');
@@ -77,7 +77,7 @@ class IonosAccountsControllerTest extends TestCase {
 		$data = $response->getData();
 		$this->assertFalse($data['success']);
 		$this->assertEquals('All fields are required', $data['message']);
-		$this->assertEquals('IONOS_API_ERROR', $data['error']);
+		$this->assertEquals('SERVICE_ERROR', $data['error']);
 	}
 
 	public function testCreateSuccess(): void {
@@ -158,14 +158,14 @@ class IonosAccountsControllerTest extends TestCase {
 			->with(
 				'IONOS service error during account creation: Failed to create email account',
 				[
-					'error' => 'IONOS_API_ERROR',
+					'error' => 'SERVICE_ERROR',
 					'statusCode' => 0,
 					'message' => 'Failed to create email account',
 				]
 			);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
-			'error' => 'IONOS_API_ERROR',
+			'error' => 'SERVICE_ERROR',
 			'statusCode' => 0,
 			'message' => 'Failed to create email account',
 		]);
@@ -194,14 +194,14 @@ class IonosAccountsControllerTest extends TestCase {
 			->with(
 				'IONOS service error during account creation: Duplicate email account',
 				[
-					'error' => 'IONOS_API_ERROR',
+					'error' => 'SERVICE_ERROR',
 					'statusCode' => 409,
 					'message' => 'Duplicate email account',
 				]
 			);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
-			'error' => 'IONOS_API_ERROR',
+			'error' => 'SERVICE_ERROR',
 			'statusCode' => 409,
 			'message' => 'Duplicate email account',
 		]);
@@ -210,7 +210,7 @@ class IonosAccountsControllerTest extends TestCase {
 		self::assertEquals($expectedResponse, $response);
 	}
 
-	public function testCreateWithIonosServiceExceptionWithAdditionalData(): void {
+	public function testCreateWithProviderServiceExceptionWithAdditionalData(): void {
 		$accountName = 'Test Account';
 		$emailUser = 'test';
 		$userId = 'test-user-123';
@@ -218,18 +218,18 @@ class IonosAccountsControllerTest extends TestCase {
 		// Setup user session
 		$this->setupUserSession($userId);
 
-		// Create IonosServiceException with additional data
+		// Create ProviderServiceException with additional data
 		$additionalData = [
 			'errorCode' => 'DUPLICATE_EMAIL',
 			'existingEmail' => 'test@example.com',
 			'suggestedAlternative' => 'test2@example.com',
 		];
 
-		// Mock account creation service to throw IonosServiceException with additional data
+		// Mock account creation service to throw ProviderServiceException with additional data
 		$this->accountCreationService->expects($this->once())
 			->method('createOrUpdateAccount')
 			->with($userId, $emailUser, $accountName)
-			->willThrowException(new IonosServiceException('Email already exists', 409, null, $additionalData));
+			->willThrowException(new ProviderServiceException('Email already exists', 409, $additionalData));
 
 		$this->logger
 			->expects($this->once())
@@ -237,7 +237,7 @@ class IonosAccountsControllerTest extends TestCase {
 			->with(
 				'IONOS service error during account creation: Email already exists',
 				[
-					'error' => 'IONOS_API_ERROR',
+					'error' => 'SERVICE_ERROR',
 					'statusCode' => 409,
 					'message' => 'Email already exists',
 					'errorCode' => 'DUPLICATE_EMAIL',
@@ -247,7 +247,7 @@ class IonosAccountsControllerTest extends TestCase {
 			);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
-			'error' => 'IONOS_API_ERROR',
+			'error' => 'SERVICE_ERROR',
 			'statusCode' => 409,
 			'message' => 'Email already exists',
 			'errorCode' => 'DUPLICATE_EMAIL',
@@ -309,14 +309,14 @@ class IonosAccountsControllerTest extends TestCase {
 			->with(
 				'IONOS service error during account creation: No user session found during account creation',
 				[
-					'error' => 'IONOS_API_ERROR',
+					'error' => 'SERVICE_ERROR',
 					'statusCode' => 401,
 					'message' => 'No user session found during account creation',
 				]
 			);
 
 		$expectedResponse = \OCA\Mail\Http\JsonResponse::fail([
-			'error' => 'IONOS_API_ERROR',
+			'error' => 'SERVICE_ERROR',
 			'statusCode' => 401,
 			'message' => 'No user session found during account creation',
 		]);

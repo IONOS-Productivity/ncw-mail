@@ -7,7 +7,7 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-namespace OCA\Mail\Service\IONOS\Core;
+namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core;
 
 use IONOS\MailConfigurationAPI\Client\ApiException;
 use IONOS\MailConfigurationAPI\Client\Model\Imap;
@@ -18,8 +18,8 @@ use IONOS\MailConfigurationAPI\Client\Model\Smtp;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
-use OCA\Mail\Service\IONOS\ApiMailConfigClientService;
-use OCA\Mail\Service\IONOS\IonosConfigService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ApiMailConfigClientService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
