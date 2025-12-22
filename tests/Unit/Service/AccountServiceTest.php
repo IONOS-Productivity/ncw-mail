@@ -21,7 +21,6 @@ use OCA\Mail\IMAP\IMAPClientFactory;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\AliasesService;
-use OCA\Mail\Service\IONOS\IonosAccountDeletionService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\IConfig;
@@ -65,7 +64,6 @@ class AccountServiceTest extends TestCase {
 	private IConfig&MockObject $config;
 	private ITimeFactory&MockObject $time;
 	private DelegationMapper&MockObject $delegationMapper;
-	private IonosAccountDeletionService&MockObject $ionosAccountDeletionService;
 	private ProviderRegistryService&MockObject $providerRegistry;
 
 	protected function setUp(): void {
@@ -79,7 +77,6 @@ class AccountServiceTest extends TestCase {
 		$this->config = $this->createMock(IConfig::class);
 		$this->time = $this->createMock(ITimeFactory::class);
 		$this->delegationMapper = $this->createMock(DelegationMapper::class);
-		$this->ionosAccountDeletionService = $this->createMock(IonosAccountDeletionService::class);
 		$this->providerRegistry = $this->createMock(ProviderRegistryService::class);
 		$this->accountService = new AccountService(
 			$this->mapper,
@@ -89,7 +86,6 @@ class AccountServiceTest extends TestCase {
 			$this->config,
 			$this->time,
 			$this->delegationMapper,
-			$this->ionosAccountDeletionService,
 			$this->providerRegistry,
 		);
 
@@ -150,10 +146,6 @@ class AccountServiceTest extends TestCase {
 	public function testDelete() {
 		$accountId = 33;
 
-		$this->ionosAccountDeletionService->expects($this->once())
-			->method('handleMailAccountDeletion')
-			->with($this->account1);
-
 		$this->providerRegistry->expects($this->once())
 			->method('deleteProviderManagedAccounts')
 			->with($this->user, [$this->account1]);
@@ -181,10 +173,6 @@ class AccountServiceTest extends TestCase {
 		$this->providerRegistry->expects($this->once())
 			->method('deleteProviderManagedAccounts')
 			->with($this->user, [$this->account1]);
-
-		$this->ionosAccountDeletionService->expects($this->once())
-			->method('handleMailAccountDeletion')
-			->with($this->account1);
 
 		$this->mapper->expects($this->once())
 			->method('delete')
