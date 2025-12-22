@@ -6,7 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2025 STRATO GmbH
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
-namespace OCA\Mail\Service\IONOS;
+namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service;
 
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 
