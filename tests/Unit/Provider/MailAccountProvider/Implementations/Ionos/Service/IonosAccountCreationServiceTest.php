@@ -7,7 +7,7 @@ declare(strict_types=1);
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-namespace OCA\Mail\Tests\Unit\Service\IONOS;
+namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations\Ionos\Service;
 
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Account;
@@ -16,11 +16,11 @@ use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ConflictResolutionResult;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountConflictResolver;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountCreationService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailService;
 use OCA\Mail\Service\AccountService;
-use OCA\Mail\Service\IONOS\ConflictResolutionResult;
-use OCA\Mail\Service\IONOS\IonosAccountConflictResolver;
-use OCA\Mail\Service\IONOS\IonosAccountCreationService;
-use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\Security\ICrypto;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
