@@ -14,6 +14,7 @@ use OCA\Mail\Account;
 use OCA\Mail\Db\MailAccount;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Listener\UserDeletedListener;
+use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\IONOS\IonosMailService;
 use OCP\EventDispatcher\Event;
@@ -26,6 +27,7 @@ class UserDeletedListenerTest extends TestCase {
 	private AccountService&MockObject $accountService;
 	private LoggerInterface&MockObject $logger;
 	private IonosMailService&MockObject $ionosMailService;
+	private ProviderRegistryService&MockObject $providerRegistry;
 	private UserDeletedListener $listener;
 
 	protected function setUp(): void {
@@ -34,11 +36,13 @@ class UserDeletedListenerTest extends TestCase {
 		$this->accountService = $this->createMock(AccountService::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 		$this->ionosMailService = $this->createMock(IonosMailService::class);
+		$this->providerRegistry = $this->createMock(ProviderRegistryService::class);
 
 		$this->listener = new UserDeletedListener(
 			$this->accountService,
 			$this->logger,
-			$this->ionosMailService
+			$this->ionosMailService,
+			$this->providerRegistry,
 		);
 	}
 
@@ -60,6 +64,9 @@ class UserDeletedListenerTest extends TestCase {
 
 	public function testHandleUnrelated(): void {
 		$event = new Event();
+
+		$this->providerRegistry->expects($this->never())
+			->method('deleteProviderManagedAccounts');
 
 		$this->ionosMailService->expects($this->never())
 			->method('tryDeleteEmailAccount');
@@ -85,6 +92,10 @@ class UserDeletedListenerTest extends TestCase {
 			->with('test-user')
 			->willReturn([]);
 
+		$this->providerRegistry->expects($this->once())
+			->method('deleteProviderManagedAccounts')
+			->with('test-user', []);
+
 		$this->accountService->expects($this->never())
 			->method('delete');
 
@@ -107,6 +118,10 @@ class UserDeletedListenerTest extends TestCase {
 			->method('findByUserId')
 			->with('test-user')
 			->willReturn([$account]);
+
+		$this->providerRegistry->expects($this->once())
+			->method('deleteProviderManagedAccounts')
+			->with('test-user', [$account]);
 
 		$this->accountService->expects($this->once())
 			->method('delete')
@@ -133,6 +148,10 @@ class UserDeletedListenerTest extends TestCase {
 			->method('findByUserId')
 			->with('test-user')
 			->willReturn([$account1, $account2, $account3]);
+
+		$this->providerRegistry->expects($this->once())
+			->method('deleteProviderManagedAccounts')
+			->with('test-user', [$account1, $account2, $account3]);
 
 		$this->accountService->expects($this->exactly(3))
 			->method('delete')
@@ -162,6 +181,10 @@ class UserDeletedListenerTest extends TestCase {
 			->method('findByUserId')
 			->with('test-user')
 			->willReturn([$account]);
+
+		$this->providerRegistry->expects($this->once())
+			->method('deleteProviderManagedAccounts')
+			->with('test-user', [$account]);
 
 		$this->accountService->expects($this->once())
 			->method('delete')
@@ -195,6 +218,10 @@ class UserDeletedListenerTest extends TestCase {
 			->method('findByUserId')
 			->with('test-user')
 			->willReturn([$account1, $account2, $account3]);
+
+		$this->providerRegistry->expects($this->once())
+			->method('deleteProviderManagedAccounts')
+			->with('test-user', [$account1, $account2, $account3]);
 
 		$this->accountService->expects($this->exactly(3))
 			->method('delete')

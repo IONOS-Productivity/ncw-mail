@@ -16,6 +16,7 @@ use OCA\Mail\Contracts\IUserPreferences;
 use OCA\Mail\Controller\PageController;
 use OCA\Mail\Db\Mailbox;
 use OCA\Mail\Db\TagMapper;
+use OCA\Mail\Service\AccountProviderService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\AiIntegrations\AiIntegrationsService;
 use OCA\Mail\Service\AliasesService;
@@ -119,6 +120,8 @@ class PageControllerTest extends TestCase {
 
 	private IonosMailConfigService&MockObject $ionosMailConfigService;
 
+	private AccountProviderService&MockObject $accountProviderService;
+
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -147,6 +150,7 @@ class PageControllerTest extends TestCase {
 		$this->quickActionsService = $this->createMock(QuickActionsService::class);
 		$this->ionosConfigService = $this->createMock(IonosConfigService::class);
 		$this->ionosMailConfigService = $this->createMock(IonosMailConfigService::class);
+		$this->accountProviderService = $this->createMock(AccountProviderService::class);
 
 		$this->controller = new PageController(
 			$this->appName,
@@ -174,6 +178,7 @@ class PageControllerTest extends TestCase {
 			$this->quickActionsService,
 			$this->ionosConfigService,
 			$this->ionosMailConfigService,
+			$this->accountProviderService,
 		);
 	}
 
@@ -297,6 +302,10 @@ class PageControllerTest extends TestCase {
 		$this->ionosConfigService->expects($this->once())
 			->method('getMailDomain')
 			->willReturn('example.tld');
+		$this->accountProviderService->expects($this->once())
+			->method('getAvailableProvidersForUser')
+			->with($this->userId)
+			->willReturn([]);
 		$this->aiIntegrationsService->expects(self::exactly(4))
 			->method('isLlmProcessingEnabled')
 			->willReturn(false);
@@ -356,6 +365,7 @@ class PageControllerTest extends TestCase {
 					'layout-mode' => 'vertical-split',
 					'layout-message-view' => 'threaded',
 					'follow-up-reminders' => 'true',
+					'mail-providers-available' => false,
 				]],
 				['prefill_displayName', 'Jane Doe'],
 				['prefill_email', 'jane@doe.cz'],
