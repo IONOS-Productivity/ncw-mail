@@ -54,6 +54,8 @@ use OCA\Mail\Listener\SpamReportListener;
 use OCA\Mail\Listener\TaskProcessingListener;
 use OCA\Mail\Listener\UserDeletedListener;
 use OCA\Mail\Notification\Notifier;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\IonosProvider;
+use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Provider\MailProvider;
 use OCA\Mail\Search\FilteringProvider;
 use OCA\Mail\Service\Attachment\AttachmentService;
@@ -172,5 +174,19 @@ final class Application extends App implements IBootstrap {
 
 	#[\Override]
 	public function boot(IBootContext $context): void {
+		$container = $context->getServerContainer();
+
+		// Register mail account providers
+		try {
+			$providerRegistry = $container->get(ProviderRegistryService::class);
+			$ionosProvider = $container->get(IonosProvider::class);
+			$providerRegistry->registerProvider($ionosProvider);
+		} catch (\Exception $e) {
+			// Log but don't fail - provider registration is optional
+			$logger = $container->get(\Psr\Log\LoggerInterface::class);
+			$logger->error('Failed to register mail account providers', [
+				'exception' => $e,
+			]);
+		}
 	}
 }
