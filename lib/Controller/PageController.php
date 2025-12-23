@@ -16,6 +16,7 @@ use OCA\Mail\Contracts\IMailManager;
 use OCA\Mail\Contracts\IUserPreferences;
 use OCA\Mail\Db\SmimeCertificate;
 use OCA\Mail\Db\TagMapper;
+use OCA\Mail\Service\AccountProviderService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\AiIntegrations\AiIntegrationsService;
 use OCA\Mail\Service\AliasesService;
@@ -104,6 +105,7 @@ class PageController extends Controller {
 		private IAppManager $appManager,
 		private IonosConfigService $ionosConfigService,
 		private IonosMailConfigService $ionosMailConfigService,
+		private AccountProviderService $accountProviderService,
 	) {
 		parent::__construct($appName, $request);
 
@@ -225,6 +227,7 @@ class PageController extends Controller {
 			'attachment-size-limit' => $this->config->getSystemValue('app.mail.attachment-size-limit', 0),
 			'ionos-mailconfig-enabled' => $this->ionosMailConfigService->isMailConfigAvailable(),
 			'ionos-mailconfig-domain' => $this->ionosConfigService->getMailDomain(),
+			'mail-providers-available' => !empty($this->accountProviderService->getAvailableProvidersForUser($this->currentUserId)),
 			'app-version' => $this->config->getAppValue('mail', 'installed_version'),
 			'external-avatars' => $this->preferences->getPreference($this->currentUserId, 'external-avatars', 'true'),
 			'layout-mode' => $this->preferences->getPreference($this->currentUserId, 'layout-mode', 'vertical-split'),
