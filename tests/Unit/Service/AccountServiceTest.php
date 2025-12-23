@@ -18,6 +18,7 @@ use OCA\Mail\Db\MailAccount;
 use OCA\Mail\Db\MailAccountMapper;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\IMAP\IMAPClientFactory;
+use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\AliasesService;
 use OCA\Mail\Service\IONOS\IonosAccountDeletionService;
@@ -65,6 +66,7 @@ class AccountServiceTest extends TestCase {
 	private ITimeFactory&MockObject $time;
 	private DelegationMapper&MockObject $delegationMapper;
 	private IonosAccountDeletionService&MockObject $ionosAccountDeletionService;
+	private ProviderRegistryService&MockObject $providerRegistry;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -78,6 +80,7 @@ class AccountServiceTest extends TestCase {
 		$this->time = $this->createMock(ITimeFactory::class);
 		$this->delegationMapper = $this->createMock(DelegationMapper::class);
 		$this->ionosAccountDeletionService = $this->createMock(IonosAccountDeletionService::class);
+		$this->providerRegistry = $this->createMock(ProviderRegistryService::class);
 		$this->accountService = new AccountService(
 			$this->mapper,
 			$this->aliasesService,
@@ -87,6 +90,7 @@ class AccountServiceTest extends TestCase {
 			$this->time,
 			$this->delegationMapper,
 			$this->ionosAccountDeletionService,
+			$this->providerRegistry,
 		);
 
 		$this->account1 = new MailAccount();
@@ -150,6 +154,10 @@ class AccountServiceTest extends TestCase {
 			->method('handleMailAccountDeletion')
 			->with($this->account1);
 
+		$this->providerRegistry->expects($this->once())
+			->method('deleteProviderManagedAccounts')
+			->with($this->user, [$this->account1]);
+
 		$this->mapper->expects($this->once())
 			->method('find')
 			->with($this->user, $accountId)
@@ -163,15 +171,21 @@ class AccountServiceTest extends TestCase {
 
 	public function testDeleteByAccountId() {
 		$accountId = 33;
-
-		$this->ionosAccountDeletionService->expects($this->once())
-			->method('handleMailAccountDeletion')
-			->with($this->account1);
+		$this->account1->setUserId($this->user);
 
 		$this->mapper->expects($this->once())
 			->method('findById')
 			->with($accountId)
 			->will($this->returnValue($this->account1));
+
+		$this->providerRegistry->expects($this->once())
+			->method('deleteProviderManagedAccounts')
+			->with($this->user, [$this->account1]);
+
+		$this->ionosAccountDeletionService->expects($this->once())
+			->method('handleMailAccountDeletion')
+			->with($this->account1);
+
 		$this->mapper->expects($this->once())
 			->method('delete')
 			->with($this->account1);
