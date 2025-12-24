@@ -266,21 +266,102 @@ export default {
 			this.localLoading = true
 
 			try {
+				// Step 1: Create account via provider API
+				this.feedback = t('mail', 'Creating account...')
 				const account = await this.callProviderAPI(this.selectedProvider.id, this.formData)
 
 				logger.debug(`Account ${account.id} created via provider ${this.selectedProvider.id}`, { account })
 
 				this.feedback = t('mail', 'Account created successfully')
 
-				this.loadingMessage = t('mail', 'Loading account')
-				await this.mainStore.finishAccountSetup({ account })
-				this.$emit('account-created', account)
+				// Step 2: Try to fetch mailboxes with retries
+				this.feedback = t('mail', 'Connecting to mail server...')
+				const mailboxesFetched = await this.tryFetchMailboxesWithRetry(account)
+
+				if (mailboxesFetched) {
+					// Success - mailboxes loaded
+					this.feedback = t('mail', 'Mail server connected successfully')
+					this.$emit('account-created', account)
+				} else {
+					// Failed after retries - redirect anyway
+					this.feedback = t('mail', 'Mail server not ready yet. Redirecting to your account - it will sync shortly.')
+					logger.warn('Mailbox sync failed during account setup, redirecting anyway', {
+						accountId: account.id,
+					})
+					// Add account to store without mailboxes
+					this.mainStore.addAccountMutation(account)
+					// Small delay to show the message
+					await this.delay(2000)
+					this.$emit('account-created', account)
+				}
 			} catch (error) {
 				logger.error('Account creation failed', { error })
 				this.handleError(error)
 			} finally {
 				this.localLoading = false
 			}
+		},
+
+		/**
+		 * Try to fetch mailboxes with exponential backoff retry logic
+		 * Returns true if successful, false if all retries failed
+		 */
+		async tryFetchMailboxesWithRetry(account, maxAttempts = 3) {
+			for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+				try {
+					// Show attempt number for clarity
+					if (attempt > 1) {
+						this.feedback = t('mail', 'Connecting to mail server (attempt {attempt}/{max})...', {
+							attempt,
+							max: maxAttempts,
+						})
+					}
+
+					logger.debug(`Attempting to fetch mailboxes (attempt ${attempt}/${maxAttempts})`, {
+						accountId: account.id,
+					})
+
+					await this.mainStore.finishAccountSetup({ account })
+					logger.debug('Mailboxes fetched successfully', { accountId: account.id })
+					return true
+				} catch (error) {
+					const isLastAttempt = attempt === maxAttempts
+
+					logger.warn(`Mailbox fetch attempt ${attempt}/${maxAttempts} failed`, {
+						accountId: account.id,
+						error: error.message || error,
+						isLastAttempt,
+					})
+
+					// If not the last attempt, show waiting message and delay before retry
+					if (!isLastAttempt) {
+						// Use exponential backoff with jitter: base * (1 + random 0-50%)
+						// Attempt 1: 2-3s, Attempt 2: 4-6s
+						const baseDelay = Math.pow(2, attempt)
+						const jitter = Math.random() * 0.5 // 0-50% jitter
+						const delaySeconds = Math.round(baseDelay * (1 + jitter))
+						const delayMs = delaySeconds * 1000
+
+						this.feedback = t('mail', 'Mail server not ready. Waiting {seconds} seconds before retry...', {
+							seconds: delaySeconds,
+						})
+
+						logger.debug(`Waiting ${delaySeconds}s (base: ${baseDelay}s + jitter) before next attempt`)
+						await this.delay(delayMs)
+					}
+				}
+			}
+
+			// All attempts failed
+			logger.error('All mailbox fetch attempts failed', { accountId: account.id })
+			return false
+		},
+
+		/**
+		 * Helper to delay execution
+		 */
+		delay(ms) {
+			return new Promise(resolve => setTimeout(resolve, ms))
 		},
 
 		async callProviderAPI(providerId, parameters) {
