@@ -209,6 +209,61 @@ class IonosMailConfigServiceTest extends TestCase {
 		$this->assertFalse($result);
 	}
 
+	public function testIsMailConfigAvailableWithExplicitUserIdReturnsTrueWhenUserHasNoRemoteAccount(): void {
+		$this->ionosConfigService->expects($this->once())
+			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		// When userId is provided, userSession should NOT be called
+		$this->userSession->expects($this->never())
+			->method('getUser');
+
+		$this->ionosMailService->expects($this->once())
+			->method('mailAccountExistsForCurrentUser')
+			->willReturn(false);
+
+		$this->accountService->expects($this->never())
+			->method('findByUserIdAndAddress');
+
+		$result = $this->service->isMailConfigAvailable('explicituser');
+
+		$this->assertTrue($result);
+	}
+
+	public function testIsMailConfigAvailableWithExplicitUserIdReturnsTrueWhenUserHasRemoteAccountButNotLocal(): void {
+		$this->ionosConfigService->expects($this->once())
+			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		// When userId is provided, userSession should NOT be called
+		$this->userSession->expects($this->never())
+			->method('getUser');
+
+		$this->ionosMailService->expects($this->once())
+			->method('mailAccountExistsForCurrentUser')
+			->willReturn(true);
+
+		$this->ionosMailService->expects($this->once())
+			->method('getIonosEmailForUser')
+			->with('explicituser')
+			->willReturn('explicituser@ionos.com');
+
+		$this->accountService->expects($this->once())
+			->method('findByUserIdAndAddress')
+			->with('explicituser', 'explicituser@ionos.com')
+			->willReturn([]);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('IONOS mail config available - remote account exists but not configured locally', [
+				'email' => 'explicituser@ionos.com',
+			]);
+
+		$result = $this->service->isMailConfigAvailable('explicituser');
+
+		$this->assertTrue($result);
+	}
+
 	public function testIsMailConfigAvailableReturnsFalseOnException(): void {
 		$this->ionosConfigService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
