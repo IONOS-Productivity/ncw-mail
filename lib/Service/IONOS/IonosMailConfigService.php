@@ -34,22 +34,25 @@ class IonosMailConfigService {
 	 * 2. The user does NOT already have an IONOS mail account configured remotely
 	 * 3. OR the user has a remote IONOS account but it's NOT configured locally in the mail app
 	 *
+	 * @param string|null $userId Optional user ID. If not provided, uses current session user
 	 * @return bool True if mail configuration should be shown, false otherwise
 	 */
-	public function isMailConfigAvailable(): bool {
+	public function isMailConfigAvailable(?string $userId = null): bool {
 		try {
 			// Check if IONOS integration is enabled and configured
 			if (!$this->ionosConfigService->isIonosIntegrationEnabled()) {
 				return false;
 			}
 
-			// Get current user
-			$user = $this->userSession->getUser();
-			if ($user === null) {
-				$this->logger->debug('IONOS mail config not available - no user session');
-				return false;
+			// Get user ID - either from parameter or from session
+			if ($userId === null) {
+				$user = $this->userSession->getUser();
+				if ($user === null) {
+					$this->logger->debug('IONOS mail config not available - no user session');
+					return false;
+				}
+				$userId = $user->getUID();
 			}
-			$userId = $user->getUID();
 
 			// Check if user already has a remote IONOS account
 			$userHasRemoteAccount = $this->ionosMailService->mailAccountExistsForCurrentUser();
