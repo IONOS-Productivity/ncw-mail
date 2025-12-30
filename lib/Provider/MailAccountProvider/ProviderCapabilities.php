@@ -17,6 +17,8 @@ namespace OCA\Mail\Provider\MailAccountProvider;
 class ProviderCapabilities implements IProviderCapabilities {
 	public function __construct(
 		private bool $multipleAccounts = false,
+		private bool $appPasswords = false,
+		private bool $passwordReset = false,
 		private array $configSchema = [],
 		private array $creationParameterSchema = [],
 		private ?string $emailDomain = null,
@@ -25,6 +27,14 @@ class ProviderCapabilities implements IProviderCapabilities {
 
 	public function allowsMultipleAccounts(): bool {
 		return $this->multipleAccounts;
+	}
+
+	public function supportsAppPasswords(): bool {
+		return $this->appPasswords;
+	}
+
+	public function supportsPasswordReset(): bool {
+		return $this->passwordReset;
 	}
 
 	public function getConfigSchema(): array {

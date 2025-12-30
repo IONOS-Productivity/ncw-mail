@@ -194,6 +194,9 @@ class ExternalAccountsControllerTest extends TestCase {
 				return null;
 			}
 
+			public function generateAppPassword(string $userId): string {
+				throw new \RuntimeException('Should not be called');
+			}
 
 			public function getExistingAccountEmail(string $userId): ?string {
 				return 'existing@example.com';
@@ -356,6 +359,8 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$capabilities = new ProviderCapabilities(
 			multipleAccounts: true,
+			appPasswords: true,
+			passwordReset: false,
 			creationParameterSchema: [
 				'param1' => ['type' => 'string', 'required' => true],
 			],
@@ -383,6 +388,8 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->assertEquals('test-provider', $providerInfo['id']);
 		$this->assertEquals('Test Provider', $providerInfo['name']);
 		$this->assertTrue($providerInfo['capabilities']['multipleAccounts']);
+		$this->assertTrue($providerInfo['capabilities']['appPasswords']);
+		$this->assertFalse($providerInfo['capabilities']['passwordReset']);
 		$this->assertEquals('example.com', $providerInfo['capabilities']['emailDomain']);
 	}
 
@@ -415,5 +422,158 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$data = $response->getData();
 		$this->assertEquals('error', $data['status']);
+	}
+
+
+	public function testGeneratePasswordWithNoAccountId(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('accountId')
+			->willReturn(null);
+
+		$response = $this->controller->generatePassword('test-provider');
+
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+	}
+
+	public function testGeneratePasswordWithNoUserSession(): void {
+		$this->userSession->method('getUser')
+			->willReturn(null);
+
+		$this->request->method('getParam')
+			->with('accountId')
+			->willReturn(123);
+
+		$response = $this->controller->generatePassword('test-provider');
+
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+	}
+
+
+	public function testGeneratePasswordWithProviderNotFound(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('accountId')
+			->willReturn(123);
+
+		$this->providerRegistry->method('getProvider')
+			->with('nonexistent')
+			->willReturn(null);
+
+		$response = $this->controller->generatePassword('nonexistent');
+
+		$this->assertEquals(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('PROVIDER_NOT_FOUND', $data['data']['error']);
+	}
+
+	public function testGeneratePasswordWithProviderNotSupporting(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('accountId')
+			->willReturn(123);
+
+		$capabilities = new ProviderCapabilities(
+			appPasswords: false,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('getCapabilities')
+			->willReturn($capabilities);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->generatePassword('test-provider');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('NOT_SUPPORTED', $data['data']['error']);
+	}
+
+	public function testGeneratePasswordSuccess(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('accountId')
+			->willReturn(123);
+
+		$capabilities = new ProviderCapabilities(
+			appPasswords: true,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('getCapabilities')
+			->willReturn($capabilities);
+		$provider->method('generateAppPassword')
+			->with('testuser')
+			->willReturn('generated-app-password-123');
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->generatePassword('test-provider');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertEquals('generated-app-password-123', $data['data']['password']);
+	}
+
+	public function testGeneratePasswordWithServiceException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('accountId')
+			->willReturn(123);
+
+		$capabilities = new ProviderCapabilities(
+			appPasswords: true,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('getCapabilities')
+			->willReturn($capabilities);
+		$provider->method('generateAppPassword')
+			->willThrowException(new ServiceException('Service error', 500));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->generatePassword('test-provider');
+
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
 	}
 }
