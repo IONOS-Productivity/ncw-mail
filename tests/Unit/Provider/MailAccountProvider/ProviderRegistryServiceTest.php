@@ -114,6 +114,8 @@ class ProviderRegistryServiceTest extends TestCase {
 	public function testGetProviderInfo(): void {
 		$capabilities = new ProviderCapabilities(
 			multipleAccounts: true,
+			appPasswords: true,
+			passwordReset: false
 		);
 
 		$provider = $this->createMock(IMailAccountProvider::class);
@@ -131,6 +133,8 @@ class ProviderRegistryServiceTest extends TestCase {
 		$this->assertEquals('Test Provider', $info['test']['name']);
 		$this->assertTrue($info['test']['enabled']);
 		$this->assertTrue($info['test']['capabilities']['multipleAccounts']);
+		$this->assertTrue($info['test']['capabilities']['appPasswords']);
+		$this->assertFalse($info['test']['capabilities']['passwordReset']);
 	}
 
 	public function testDeleteProviderManagedAccountsWithNoProviderManaged(): void {

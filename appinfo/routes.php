@@ -136,6 +136,11 @@ return [
 			'verb' => 'POST'
 		],
 		[
+			'name' => 'externalAccounts#generatePassword',
+			'url' => '/api/providers/{providerId}/password',
+			'verb' => 'POST'
+		],
+		[
 			'name' => 'tags#update',
 			'url' => '/api/tags/{id}',
 			'verb' => 'PUT'

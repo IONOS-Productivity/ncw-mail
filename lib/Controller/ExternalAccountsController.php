@@ -151,6 +151,8 @@ class ExternalAccountsController extends Controller {
 					'name' => $provider->getName(),
 					'capabilities' => [
 						'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
+						'appPasswords' => $capabilities->supportsAppPasswords(),
+						'passwordReset' => $capabilities->supportsPasswordReset(),
 						'emailDomain' => $capabilities->getEmailDomain(),
 					],
 					'parameterSchema' => $capabilities->getCreationParameterSchema(),
@@ -165,6 +167,79 @@ class ExternalAccountsController extends Controller {
 				'exception' => $e,
 			]);
 			return MailJsonResponse::error('Could not get providers');
+		}
+	}
+
+	/**
+	 * Generate an app password for a provider-managed account
+	 *
+	 * @NoAdminRequired
+	 * @NoCSRFRequired
+	 *
+	 * @param string $providerId The provider ID
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function generatePassword(string $providerId): JSONResponse {
+		// Get accountId from request body
+		$accountId = $this->request->getParam('accountId');
+
+		if ($accountId === null) {
+			return MailJsonResponse::fail(['error' => 'Account ID is required']);
+		}
+
+		try {
+			$userId = $this->getUserIdOrFail();
+
+			$this->logger->info('Generating app password', [
+				'accountId' => $accountId,
+				'providerId' => $providerId,
+			]);
+
+			$provider = $this->providerRegistry->getProvider($providerId);
+			if ($provider === null) {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_PROVIDER_NOT_FOUND,
+					'message' => 'Provider not found',
+				], Http::STATUS_NOT_FOUND);
+			}
+
+			// Check if provider supports app passwords
+			if (!$provider->getCapabilities()->supportsAppPasswords()) {
+				return MailJsonResponse::fail([
+					'error' => 'NOT_SUPPORTED',
+					'message' => 'Provider does not support app passwords',
+				], Http::STATUS_BAD_REQUEST);
+			}
+
+			// Use the provider interface method for generating app passwords
+			$password = $provider->generateAppPassword($userId);
+
+			$this->logger->info('App password generated successfully', [
+				'accountId' => $accountId,
+				'providerId' => $providerId,
+			]);
+
+			return MailJsonResponse::success(['password' => $password]);
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\InvalidArgumentException $e) {
+			$this->logger->error('Invalid arguments for app password generation', [
+				'exception' => $e,
+				'accountId' => $accountId,
+				'providerId' => $providerId,
+			]);
+			return MailJsonResponse::fail([
+				'error' => self::ERR_INVALID_PARAMETERS,
+				'message' => $e->getMessage(),
+			], Http::STATUS_BAD_REQUEST);
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error generating app password', [
+				'exception' => $e,
+				'accountId' => $accountId,
+				'providerId' => $providerId,
+			]);
+			return MailJsonResponse::error('Could not generate app password');
 		}
 	}
 
