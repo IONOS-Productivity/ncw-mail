@@ -47,6 +47,8 @@ class IonosProvider implements IMailAccountProvider {
 
 			$this->capabilities = new ProviderCapabilities(
 				multipleAccounts: false, // IONOS allows only one account per user
+				appPasswords: true,      // IONOS supports app password generation
+				passwordReset: true,     // IONOS supports password reset
 				configSchema: [
 					'ionos_mailconfig_api_base_url' => [
 						'type' => 'string',
@@ -135,5 +137,23 @@ class IonosProvider implements IMailAccountProvider {
 
 	public function getProvisionedEmail(string $userId): ?string {
 		return $this->facade->getProvisionedEmail($userId);
+	}
+
+	public function generateAppPassword(string $userId): string {
+		// Check if provider supports app passwords
+		if (!$this->getCapabilities()->supportsAppPasswords()) {
+			throw new \InvalidArgumentException('IONOS provider does not support app password generation');
+		}
+
+		try {
+			return $this->facade->generateAppPassword($userId);
+		} catch (\Exception $e) {
+			throw new \OCA\Mail\Exception\ProviderServiceException(
+				'Failed to generate app password: ' . $e->getMessage(),
+				0,
+				[],
+				$e
+			);
+		}
 	}
 }

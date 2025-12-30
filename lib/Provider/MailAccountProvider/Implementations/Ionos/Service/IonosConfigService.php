@@ -27,6 +27,11 @@ class IonosConfigService {
 	 */
 	public const APP_NAME = 'NEXTCLOUD_WORKSPACE';
 
+	/**
+	 * App password name suffix for user-level passwords
+	 */
+	public const APP_PASSWORD_NAME_USER = 'NEXTCLOUD_WORKSPACE_USER';
+
 	public function __construct(
 		private readonly IConfig $config,
 		private readonly IAppConfig $appConfig,
