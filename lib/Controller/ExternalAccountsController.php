@@ -14,6 +14,7 @@ use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
+use OCA\Mail\Service\AccountProviderService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
@@ -34,6 +35,7 @@ class ExternalAccountsController extends Controller {
 		string $appName,
 		IRequest $request,
 		private ProviderRegistryService $providerRegistry,
+		private AccountProviderService $accountProviderService,
 		private IUserSession $userSession,
 		private LoggerInterface $logger,
 	) {
@@ -109,7 +111,10 @@ class ExternalAccountsController extends Controller {
 				'providerId' => $providerId,
 			]);
 
-			return MailJsonResponse::success($account, Http::STATUS_CREATED);
+			$json = $account->jsonSerialize();
+			$json = $this->accountProviderService->addProviderMetadata($json, $userId, $account->getEmail());
+
+			return MailJsonResponse::success($json, Http::STATUS_CREATED);
 		} catch (ServiceException $e) {
 			return $this->buildServiceErrorResponse($e, $providerId);
 		} catch (\InvalidArgumentException $e) {
