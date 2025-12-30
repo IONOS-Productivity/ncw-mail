@@ -42,6 +42,10 @@ class IonosConfigServiceTest extends TestCase {
 		$this->assertSame('NEXTCLOUD_WORKSPACE', IonosConfigService::APP_NAME);
 	}
 
+	public function testAppNameUserConstantExists(): void {
+		$this->assertSame('NEXTCLOUD_WORKSPACE_USER', IonosConfigService::APP_PASSWORD_NAME_USER);
+	}
+
 	public function testGetExternalReferenceSuccess(): void {
 		$this->config->method('getSystemValue')
 			->with('ncw.ext_ref')
