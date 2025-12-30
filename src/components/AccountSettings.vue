@@ -12,6 +12,12 @@
 		:name="t('mail', 'Account settings')"
 		@update:open="onClose">
 		<NcAppSettingsSection
+			v-if="showProviderAppPassword"
+			id="provider-app-password"
+			:name="t('mail', 'IMAP access / password')">
+			<ProviderAppPassword :account="account" :provider-id="account.managedByProvider" />
+		</NcAppSettingsSection>
+		<NcAppSettingsSection
 			id="alias-settings"
 			:name="t('mail', 'Aliases')">
 			<AliasSettings :account="account" @rename-primary-alias="scrollToAccountSettings" />
@@ -144,6 +150,7 @@ import AccountDefaultsSettings from '../components/AccountDefaultsSettings.vue'
 import AccountForm from '../components/AccountForm.vue'
 import AliasSettings from '../components/AliasSettings.vue'
 import EditorSettings from '../components/EditorSettings.vue'
+import ProviderAppPassword from '../components/ProviderAppPassword.vue'
 import SignatureSettings from '../components/SignatureSettings.vue'
 import CalendarSettings from './CalendarSettings.vue'
 import CertificateSettings from './CertificateSettings.vue'
@@ -164,6 +171,7 @@ export default {
 		SieveFilterForm,
 		AccountForm,
 		AliasSettings,
+		ProviderAppPassword,
 		EditorSettings,
 		SignatureSettings,
 		NcAppSettingsDialog,
@@ -219,6 +227,13 @@ export default {
 
 		email() {
 			return this.account.emailAddress
+		},
+		showProviderAppPassword() {
+			// Show the password reset section if:
+			// 1. Account is managed by a provider (managedByProvider is set)
+			// 2. Provider supports app passwords
+			return this.account.managedByProvider
+				&& this.account.providerCapabilities?.appPasswords === true
 		},
 	},
 
