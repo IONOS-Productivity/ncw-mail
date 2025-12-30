@@ -10,6 +10,11 @@
 		:additional-trap-elements="trapElements"
 		:name="t('mail', 'Account settings')"
 		@update:open="updateOpen">
+		<AppSettingsSection v-if="showProviderAppPassword"
+			id="provider-app-password"
+			:name="t('mail', 'IMAP access / password')">
+			<ProviderAppPassword :account="account" :provider-id="account.managedByProvider" />
+		</AppSettingsSection>
 		<AppSettingsSection id="alias-settings"
 			:name="t('mail', 'Aliases')">
 			<AliasSettings :account="account" @rename-primary-alias="scrollToAccountSettings" />
@@ -112,6 +117,7 @@ import EditorSettings from '../components/EditorSettings.vue'
 import AccountDefaultsSettings from '../components/AccountDefaultsSettings.vue'
 import SignatureSettings from '../components/SignatureSettings.vue'
 import AliasSettings from '../components/AliasSettings.vue'
+import ProviderAppPassword from '../components/ProviderAppPassword.vue'
 import Settings from './quickActions/Settings.vue'
 import { NcButton, NcAppSettingsDialog as AppSettingsDialog, NcAppSettingsSection as AppSettingsSection } from '@nextcloud/vue'
 import SieveAccountForm from './SieveAccountForm.vue'
@@ -132,6 +138,7 @@ export default {
 		SieveFilterForm,
 		AccountForm,
 		AliasSettings,
+		ProviderAppPassword,
 		EditorSettings,
 		SignatureSettings,
 		AppSettingsDialog,
@@ -168,6 +175,13 @@ export default {
 		},
 		email() {
 			return this.account.emailAddress
+		},
+		showProviderAppPassword() {
+			// Show the password reset section if:
+			// 1. Account is managed by a provider (managedByProvider is set)
+			// 2. Provider supports app passwords
+			return this.account.managedByProvider
+				&& this.account.providerCapabilities?.appPasswords === true
 		},
 	},
 	watch: {
