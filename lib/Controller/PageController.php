@@ -149,6 +149,7 @@ class PageController extends Controller {
 		foreach ($mailAccounts as $mailAccount) {
 			$json = $mailAccount->jsonSerialize();
 			$json['isDelegated'] = false;
+			$json = $this->accountProviderService->addProviderMetadata($json, $this->userId, $mailAccount->getEmail());
 			$json['aliases'] = $this->aliasesService->findAll($mailAccount->getId(),
 				$this->userId);
 			try {
