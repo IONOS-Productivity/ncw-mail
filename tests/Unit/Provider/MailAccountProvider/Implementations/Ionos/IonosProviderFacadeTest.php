@@ -345,4 +345,45 @@ class IonosProviderFacadeTest extends TestCase {
 
 		$this->assertNull($result);
 	}
+
+	public function testGenerateAppPasswordSuccess(): void {
+		$userId = 'user123';
+		$appPassword = 'generated-app-password-xyz';
+
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Generating IONOS app password via facade', [
+				'userId' => $userId,
+			]);
+
+		$this->mutationService->expects($this->once())
+			->method('resetAppPassword')
+			->with($userId, IonosConfigService::APP_PASSWORD_NAME_USER)
+			->willReturn($appPassword);
+
+		$result = $this->facade->generateAppPassword($userId);
+
+		$this->assertSame($appPassword, $result);
+	}
+
+	public function testGenerateAppPasswordThrowsException(): void {
+		$userId = 'user123';
+		$exception = new \Exception('Password generation failed');
+
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Generating IONOS app password via facade', [
+				'userId' => $userId,
+			]);
+
+		$this->mutationService->expects($this->once())
+			->method('resetAppPassword')
+			->with($userId, IonosConfigService::APP_PASSWORD_NAME_USER)
+			->willThrowException($exception);
+
+		$this->expectException(\Exception::class);
+		$this->expectExceptionMessage('Password generation failed');
+
+		$this->facade->generateAppPassword($userId);
+	}
 }

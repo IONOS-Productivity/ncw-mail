@@ -220,6 +220,66 @@ class IonosAccountMutationService {
 	}
 
 	/**
+	 * Reset app password for the IONOS mail account (generates a new password)
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $appName The application name for the password
+	 * @return string The new password
+	 * @throws ServiceException
+	 */
+	public function resetAppPassword(string $userId, string $appName): string {
+		$this->logger->debug('Resetting IONOS app password', [
+			'userId' => $userId,
+			'appName' => $appName,
+			'extRef' => $this->configService->getExternalReference(),
+		]);
+
+		try {
+			$apiInstance = $this->createApiInstance();
+			$result = $apiInstance->setAppPassword(
+				self::BRAND,
+				$this->configService->getExternalReference(),
+				$userId,
+				$appName
+			);
+
+			if (is_string($result)) {
+				$this->logger->info('Successfully reset IONOS app password', [
+					'userId' => $userId,
+					'appName' => $appName
+				]);
+				return $result;
+			}
+
+			$this->logger->error('Failed to reset IONOS app password: Unexpected response type', [
+				'userId' => $userId,
+				'appName' => $appName,
+				'result' => $result
+			]);
+			throw new ServiceException('Failed to reset IONOS app password', self::HTTP_INTERNAL_SERVER_ERROR);
+		} catch (ServiceException $e) {
+			// Re-throw ServiceException without additional logging
+			throw $e;
+		} catch (ApiException $e) {
+			$this->logger->error('API Exception when calling MailConfigurationAPIApi->setAppPassword', [
+				'statusCode' => $e->getCode(),
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody(),
+				'userId' => $userId,
+				'appName' => $appName
+			]);
+			throw new ServiceException('Failed to reset IONOS app password: ' . $e->getMessage(), $e->getCode(), $e);
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when calling MailConfigurationAPIApi->setAppPassword', [
+				'exception' => $e,
+				'userId' => $userId,
+				'appName' => $appName
+			]);
+			throw new ServiceException('Failed to reset IONOS app password', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
+	}
+
+	/**
 	 * Get the current user ID from the session
 	 *
 	 * @return string The user ID
