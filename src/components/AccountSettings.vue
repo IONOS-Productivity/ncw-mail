@@ -11,6 +11,11 @@
 		:additional-trap-elements="trapElements"
 		:name="t('mail', 'Account settings')"
 		@update:open="updateOpen">
+		<AppSettingsSection v-if="showProviderAppPassword"
+			id="provider-app-password"
+			:name="t('mail', 'IMAP access / password')">
+			<ProviderAppPassword :account="account" :provider-id="account.managedByProvider" />
+		</AppSettingsSection>
 		<AppSettingsSection
 			id="alias-settings"
 			:name="t('mail', 'Aliases')">
@@ -125,6 +130,7 @@ import AccountDefaultsSettings from '../components/AccountDefaultsSettings.vue'
 import AccountForm from '../components/AccountForm.vue'
 import AliasSettings from '../components/AliasSettings.vue'
 import EditorSettings from '../components/EditorSettings.vue'
+import ProviderAppPassword from '../components/ProviderAppPassword.vue'
 import SignatureSettings from '../components/SignatureSettings.vue'
 import CertificateSettings from './CertificateSettings.vue'
 import MailFilters from './mailFilter/MailFilters.vue'
@@ -144,6 +150,7 @@ export default {
 		SieveFilterForm,
 		AccountForm,
 		AliasSettings,
+		ProviderAppPassword,
 		EditorSettings,
 		SignatureSettings,
 		AppSettingsDialog,
@@ -185,6 +192,13 @@ export default {
 
 		email() {
 			return this.account.emailAddress
+		},
+		showProviderAppPassword() {
+			// Show the password reset section if:
+			// 1. Account is managed by a provider (managedByProvider is set)
+			// 2. Provider supports app passwords
+			return this.account.managedByProvider
+				&& this.account.providerCapabilities?.appPasswords === true
 		},
 	},
 
