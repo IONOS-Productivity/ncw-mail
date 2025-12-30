@@ -17,6 +17,7 @@ use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider;
 use OCA\Mail\Provider\MailAccountProvider\ProviderCapabilities;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
+use OCA\Mail\Service\AccountProviderService;
 use OCP\AppFramework\Http;
 use OCP\IRequest;
 use OCP\IUser;
@@ -29,6 +30,7 @@ class ExternalAccountsControllerTest extends TestCase {
 	private string $appName = 'mail';
 	private IRequest&MockObject $request;
 	private ProviderRegistryService&MockObject $providerRegistry;
+	private AccountProviderService&MockObject $accountProviderService;
 	private IUserSession&MockObject $userSession;
 	private LoggerInterface&MockObject $logger;
 	private ExternalAccountsController $controller;
@@ -38,6 +40,7 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$this->request = $this->createMock(IRequest::class);
 		$this->providerRegistry = $this->createMock(ProviderRegistryService::class);
+		$this->accountProviderService = $this->createMock(AccountProviderService::class);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
@@ -45,6 +48,7 @@ class ExternalAccountsControllerTest extends TestCase {
 			$this->appName,
 			$this->request,
 			$this->providerRegistry,
+			$this->accountProviderService,
 			$this->userSession,
 			$this->logger,
 		);
@@ -254,11 +258,30 @@ class ExternalAccountsControllerTest extends TestCase {
 			->with('test-provider')
 			->willReturn($provider);
 
+		$accountJson = $account->jsonSerialize();
+		$enhancedJson = array_merge($accountJson, [
+			'managedByProvider' => 'test-provider',
+			'providerCapabilities' => [
+				'multipleAccounts' => true,
+				'appPasswords' => true,
+				'passwordReset' => false,
+				'emailDomain' => 'example.com',
+			],
+		]);
+
+		$this->accountProviderService->expects($this->once())
+			->method('addProviderMetadata')
+			->with($accountJson, 'testuser', 'user@example.com')
+			->willReturn($enhancedJson);
+
 		$response = $this->controller->create('test-provider');
 
 		$this->assertEquals(Http::STATUS_CREATED, $response->getStatus());
 		$data = $response->getData();
 		$this->assertEquals('success', $data['status']);
+		$this->assertArrayHasKey('managedByProvider', $data['data']);
+		$this->assertEquals('test-provider', $data['data']['managedByProvider']);
+		$this->assertArrayHasKey('providerCapabilities', $data['data']);
 	}
 
 	public function testCreateWithInvalidArgumentException(): void {
