@@ -45,6 +45,8 @@ class IonosProviderTest extends TestCase {
 		$capabilities = $this->provider->getCapabilities();
 
 		$this->assertFalse($capabilities->allowsMultipleAccounts());
+		$this->assertTrue($capabilities->supportsAppPasswords());
+		$this->assertTrue($capabilities->supportsPasswordReset());
 		$this->assertEquals('example.com', $capabilities->getEmailDomain());
 
 		$configSchema = $capabilities->getConfigSchema();
@@ -307,5 +309,68 @@ class IonosProviderTest extends TestCase {
 		$result = $this->provider->getProvisionedEmail('testuser');
 
 		$this->assertNull($result);
+	}
+
+	public function testGenerateAppPasswordSuccess(): void {
+		$userId = 'testuser';
+		$expectedPassword = 'generated-app-password-123';
+
+		// Mock getEmailDomain for getCapabilities() call
+		$this->facade->method('getEmailDomain')
+			->willReturn('example.com');
+
+		$this->facade->expects($this->once())
+			->method('generateAppPassword')
+			->with($userId)
+			->willReturn($expectedPassword);
+
+		$result = $this->provider->generateAppPassword($userId);
+
+		$this->assertEquals($expectedPassword, $result);
+	}
+
+	public function testGenerateAppPasswordWithException(): void {
+		$userId = 'testuser';
+		$exception = new \Exception('API error');
+
+		// Mock getEmailDomain for getCapabilities() call
+		$this->facade->method('getEmailDomain')
+			->willReturn('example.com');
+
+		$this->facade->method('generateAppPassword')
+			->with($userId)
+			->willThrowException($exception);
+
+
+		$this->expectException(\OCA\Mail\Exception\ProviderServiceException::class);
+		$this->expectExceptionMessage('Failed to generate app password: API error');
+
+		$this->provider->generateAppPassword($userId);
+	}
+
+	public function testGenerateAppPasswordWhenNotSupported(): void {
+		$userId = 'testuser';
+
+		// Create a provider with a facade that returns null domain
+		// which will cause getCapabilities to be called
+		$this->facade->method('getEmailDomain')
+			->willReturn('example.com');
+
+		// Create a mock provider that doesn't support app passwords
+		// We need to use reflection or create a test double
+		$capabilities = $this->createMock(\OCA\Mail\Provider\MailAccountProvider\IProviderCapabilities::class);
+		$capabilities->method('supportsAppPasswords')
+			->willReturn(false);
+
+		// Use reflection to inject the capabilities
+		$reflection = new \ReflectionClass($this->provider);
+		$property = $reflection->getProperty('capabilities');
+		$property->setAccessible(true);
+		$property->setValue($this->provider, $capabilities);
+
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('IONOS provider does not support app password generation');
+
+		$this->provider->generateAppPassword($userId);
 	}
 }
