@@ -60,6 +60,8 @@ class AccountProviderServiceTest extends TestCase {
 
 		$capabilities = new ProviderCapabilities(
 			multipleAccounts: true,
+			appPasswords: true,
+			passwordReset: false,
 			emailDomain: 'example.com',
 		);
 
@@ -78,6 +80,8 @@ class AccountProviderServiceTest extends TestCase {
 		$this->assertEquals('test-provider', $result['managedByProvider']);
 		$this->assertIsArray($result['providerCapabilities']);
 		$this->assertTrue($result['providerCapabilities']['multipleAccounts']);
+		$this->assertTrue($result['providerCapabilities']['appPasswords']);
+		$this->assertFalse($result['providerCapabilities']['passwordReset']);
 		$this->assertEquals('example.com', $result['providerCapabilities']['emailDomain']);
 	}
 
@@ -105,6 +109,8 @@ class AccountProviderServiceTest extends TestCase {
 	public function testGetAvailableProvidersForUser(): void {
 		$capabilities1 = new ProviderCapabilities(
 			multipleAccounts: true,
+			appPasswords: true,
+			passwordReset: false,
 			creationParameterSchema: [
 				'param1' => ['type' => 'string', 'required' => true],
 			],
@@ -113,6 +119,8 @@ class AccountProviderServiceTest extends TestCase {
 
 		$capabilities2 = new ProviderCapabilities(
 			multipleAccounts: false,
+			appPasswords: false,
+			passwordReset: true,
 			creationParameterSchema: [
 				'param2' => ['type' => 'string', 'required' => false],
 			],
@@ -146,6 +154,8 @@ class AccountProviderServiceTest extends TestCase {
 		$this->assertEquals('provider1', $result['provider1']['id']);
 		$this->assertEquals('Provider 1', $result['provider1']['name']);
 		$this->assertTrue($result['provider1']['capabilities']['multipleAccounts']);
+		$this->assertTrue($result['provider1']['capabilities']['appPasswords']);
+		$this->assertFalse($result['provider1']['capabilities']['passwordReset']);
 		$this->assertEquals('example.com', $result['provider1']['capabilities']['emailDomain']);
 		$this->assertArrayHasKey('param1', $result['provider1']['parameterSchema']);
 
@@ -153,6 +163,8 @@ class AccountProviderServiceTest extends TestCase {
 		$this->assertEquals('provider2', $result['provider2']['id']);
 		$this->assertEquals('Provider 2', $result['provider2']['name']);
 		$this->assertFalse($result['provider2']['capabilities']['multipleAccounts']);
+		$this->assertFalse($result['provider2']['capabilities']['appPasswords']);
+		$this->assertTrue($result['provider2']['capabilities']['passwordReset']);
 		$this->assertEquals('test.com', $result['provider2']['capabilities']['emailDomain']);
 		$this->assertArrayHasKey('param2', $result['provider2']['parameterSchema']);
 	}

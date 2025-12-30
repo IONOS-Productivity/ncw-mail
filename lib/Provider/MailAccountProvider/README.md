@@ -41,6 +41,8 @@ Main interface that all providers must implement:
 Declares what features a provider supports:
 
 - `allowsMultipleAccounts()`: Can a user have multiple accounts?
+- `supportsAppPasswords()`: Can generate app-specific passwords?
+- `supportsPasswordReset()`: Can reset account passwords?
 - `getConfigSchema()`: What configuration fields are needed?
 - `getCreationParameterSchema()`: What parameters are needed to create an account?
 
@@ -68,6 +70,8 @@ class MyProvider implements IMailAccountProvider {
     public function getCapabilities(): IProviderCapabilities {
         return new ProviderCapabilities(
             multipleAccounts: true,
+            appPasswords: false,
+            passwordReset: true,
             configSchema: [
                 'myprovider_api_url' => [
                     'type' => 'string',
@@ -191,6 +195,18 @@ Content-Type: application/json
 ```
 
 Creates a mail account using the specified provider with given parameters.
+
+### Generate App Password
+```http
+POST /apps/mail/api/providers/{providerId}/password
+Content-Type: application/json
+
+{
+    "accountId": 123
+}
+```
+
+Generates an app-specific password (if provider supports it).
 
 ## Configuration Storage
 

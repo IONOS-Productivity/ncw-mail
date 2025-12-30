@@ -23,6 +23,20 @@ interface IProviderCapabilities {
 	public function allowsMultipleAccounts(): bool;
 
 	/**
+	 * Check if the provider supports app password generation
+	 *
+	 * @return bool True if app passwords can be generated
+	 */
+	public function supportsAppPasswords(): bool;
+
+	/**
+	 * Check if the provider supports password reset
+	 *
+	 * @return bool True if passwords can be reset
+	 */
+	public function supportsPasswordReset(): bool;
+
+	/**
 	 * Get the configuration schema for this provider
 	 *
 	 * Returns an array describing the configuration fields needed
