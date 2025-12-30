@@ -221,6 +221,9 @@ class PageControllerTest extends TestCase {
 		$account1->expects($this->once())
 			->method('getId')
 			->will($this->returnValue(1));
+		$account1->expects($this->once())
+			->method('getEmail')
+			->will($this->returnValue('user1@example.com'));
 		$account2->expects($this->once())
 			->method('jsonSerialize')
 			->will($this->returnValue([
@@ -229,6 +232,17 @@ class PageControllerTest extends TestCase {
 		$account2->expects($this->once())
 			->method('getId')
 			->will($this->returnValue(2));
+		$account2->expects($this->once())
+			->method('getEmail')
+			->will($this->returnValue('user2@example.com'));
+		$this->accountProviderService->expects($this->exactly(2))
+			->method('addProviderMetadata')
+			->willReturnCallback(function ($json, $userId, $email) {
+				// Add provider metadata to the account JSON
+				$json['managedByProvider'] = null;
+				$json['providerCapabilities'] = null;
+				return $json;
+			});
 		$this->aliasesService->expects($this->exactly(2))
 			->method('findAll')
 			->will($this->returnValueMap([
@@ -238,6 +252,8 @@ class PageControllerTest extends TestCase {
 		$accountsJson = [
 			[
 				'accountId' => 1,
+				'managedByProvider' => null,
+				'providerCapabilities' => null,
 				'aliases' => [
 					'a11',
 					'a12',
@@ -248,6 +264,8 @@ class PageControllerTest extends TestCase {
 			],
 			[
 				'accountId' => 2,
+				'managedByProvider' => null,
+				'providerCapabilities' => null,
 				'aliases' => [
 					'a21',
 					'a22',
