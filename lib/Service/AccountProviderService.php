@@ -47,6 +47,8 @@ class AccountProviderService {
 				$accountJson['managedByProvider'] = $provider->getId();
 				$accountJson['providerCapabilities'] = [
 					'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
+					'appPasswords' => $capabilities->supportsAppPasswords(),
+					'passwordReset' => $capabilities->supportsPasswordReset(),
 					'emailDomain' => $capabilities->getEmailDomain(),
 				];
 			} else {
@@ -85,6 +87,8 @@ class AccountProviderService {
 				'name' => $provider->getName(),
 				'capabilities' => [
 					'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
+					'appPasswords' => $capabilities->supportsAppPasswords(),
+					'passwordReset' => $capabilities->supportsPasswordReset(),
 					'emailDomain' => $capabilities->getEmailDomain(),
 				],
 				'parameterSchema' => $capabilities->getCreationParameterSchema(),

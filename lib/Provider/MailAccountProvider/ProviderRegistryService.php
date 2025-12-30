@@ -118,6 +118,8 @@ class ProviderRegistryService {
 				'enabled' => $provider->isEnabled(),
 				'capabilities' => [
 					'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
+					'appPasswords' => $capabilities->supportsAppPasswords(),
+					'passwordReset' => $capabilities->supportsPasswordReset(),
 				],
 			];
 		}
