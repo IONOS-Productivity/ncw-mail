@@ -439,6 +439,7 @@ export default {
 <style scoped>
 .provider-selector {
 	margin-bottom: 16px;
+	width: 100%;
 }
 
 .field-wrapper {
