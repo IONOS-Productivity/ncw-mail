@@ -10,7 +10,7 @@
 		</p>
 
 		<div class="provider-email-display">
-			<strong>{{ t('mail', 'Email:') }}</strong>
+			<strong>{{ t('mail', 'email') }}:</strong>
 			<span class="provider-email-address">{{ email }}</span>
 		</div>
 
@@ -30,7 +30,7 @@
 
 		<div v-if="generatedPassword" class="provider-password-display">
 			<div class="provider-password-field">
-				<strong>{{ t('mail', 'Password:') }}</strong>
+				<strong>{{ t('mail', 'Password') }}:</strong>
 				<code class="provider-password-value">{{ generatedPassword }}</code>
 				<ButtonVue type="tertiary"
 					:aria-label="t('mail', 'Copy password')"

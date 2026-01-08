@@ -391,6 +391,11 @@ OC.L10N.register(
     "Use Gravatar and favicon avatars" : "Använd Gravatar och favicon som profilbild",
     "Register as application for mail links" : "Registrera som app för e-postlänkar",
     "Allow the app to collect data about your interactions. Based on this data, the app will adapt to your preferences. The data will only be stored locally." : "Låt appen samla in data om dina interaktioner. Baserat på denna information kommer appen att anpassas till dina preferenser. Uppgifterna lagras endast lokalt.",
-    "Trusted senders" : "Betrodda avsändare"
+    "Trusted senders" : "Betrodda avsändare",
+    "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account." : "För att komma åt din e-post via IMAP kan du skapa ett appspecifikt lösenord. Med detta lösenord kan IMAP-klienter ansluta till ditt konto.",
+    "IMAP access / password" : "IMAP-åtkomst / lösenord",
+    "Generate password" : "generera lösenord",
+    "Copy password" : "kopiera lösenord",
+    "Please save this password now. For security reasons, it will not be shown again." : "Spara detta lösenord nu. Av säkerhetsskäl kommer det inte att visas igen.",
 },
 "nplurals=2; plural=(n != 1);");

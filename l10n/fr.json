@@ -883,6 +883,11 @@
     "Manage S/MIME certificates" : "Gérer les certificats S/MIME",
     "Mailvelope is a browser extension that enables easy OpenPGP encryption and decryption for emails." : "Mailvelope est une extension de navigateur qui permet de chiffrer et déchiffrer facilement les e-mails à l'aide du protocole OpenPGP.",
     "Step 1: Install Mailvelope browser extension" : "Étape 1 : Installer l'extension de navigateur Mailvelope",
-    "Step 2: Enable Mailvelope for the current domain" : "Étape 2 : Activer Mailvelope pour le domaine actuel"
+    "Step 2: Enable Mailvelope for the current domain" : "Étape 2 : Activer Mailvelope pour le domaine actuel",
+    "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account." : "Pour accéder à votre boîte mail via IMAP, vous pouvez générer un mot de passe spécifique à l'application. Ce mot de passe permet aux clients IMAP de se connecter à votre compte.",
+    "IMAP access / password" : "Accès IMAP / mot de passe",
+    "Generate password" : "générer un mot de passe",
+    "Copy password" : "copier le mot de passe",
+    "Please save this password now. For security reasons, it will not be shown again." : "Veuillez enregistrer ce mot de passe dès maintenant. Pour des raisons de sécurité, il ne sera plus affiché.",
 },"pluralForm" :"nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;"
 }

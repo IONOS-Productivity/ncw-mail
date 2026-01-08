@@ -879,6 +879,11 @@
     "Manage S/MIME certificates" : "Administrar certificados S/MIME",
     "Mailvelope is a browser extension that enables easy OpenPGP encryption and decryption for emails." : "Mailvelope es una extensión para el navegador que permite habilitar fácilmente cifrado y descifrado OpenPGP para los correos electrónicos.",
     "Step 1: Install Mailvelope browser extension" : "Paso 1: Instale la extensión del navegador Mailvelope",
-    "Step 2: Enable Mailvelope for the current domain" : "Paso 2: Habilite Mailvelope para el dominio actual"
-},"pluralForm" :"nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;"
+    "Step 2: Enable Mailvelope for the current domain" : "Paso 2: Habilite Mailvelope para el dominio actual",
+    "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account." : "Para acceder a tu buzón de correo a través de IMAP, puedes generar una contraseña específica para la aplicación. Esta contraseña permite a los clientes IMAP conectarse a tu cuenta.",
+    "IMAP access / password" : "Acceso IMAP / contraseña",
+    "Generate password" : "Generar contraseña",
+    "Copy password" : "Copiar contraseña",
+    "Please save this password now. For security reasons, it will not be shown again." : "Guarde esta contraseña ahora. Por motivos de seguridad, no se volverá a mostrar.",
+,"pluralForm" :"nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;"
 }
