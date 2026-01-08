@@ -573,6 +573,11 @@ OC.L10N.register(
     "Register as application for mail links" : "Registra come applicazione per i collegamenti di posta",
     "Allow the app to collect data about your interactions. Based on this data, the app will adapt to your preferences. The data will only be stored locally." : "Consenti all'applicazione di raccogliere dati sulle tue interazioni. Sulla base di questi dati, l'applicazione si adatterà alle tue preferenze. I dati saranno archiviati solo localmente.",
     "Trusted senders" : "Mittenti affidabili",
-    "Manage S/MIME certificates" : "Gestisci i certificati S/MIME"
+    "Manage S/MIME certificates" : "Gestisci i certificati S/MIME",
+    "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account." : "Per accedere alla tua casella di posta tramite IMAP, puoi generare una password specifica per l'app. Questa password consente ai client IMAP di connettersi al tuo account.",
+    "IMAP access / password" : "Accesso IMAP / password",
+    "Generate password" : "generare password",
+    "Copy password" : "copia password",
+    "Please save this password now. For security reasons, it will not be shown again." : "Salva questa password adesso. Per motivi di sicurezza, non verrà più visualizzata.",
 },
 "nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;");

@@ -459,6 +459,11 @@
     "Use Gravatar and favicon avatars" : "Gebruik Gravatar en favicon avatars",
     "Register as application for mail links" : "Registreer als applicatie voor e-maillinks",
     "Allow the app to collect data about your interactions. Based on this data, the app will adapt to your preferences. The data will only be stored locally." : "Laat de app gegevens verzamelen over jouw interacties. Op basis van deze gegevens zal de app zich aanpassen aan je voorkeuren. De gegevens worden alleen lokaal opgeslagen.",
-    "Trusted senders" : "Vertrouwde afzenders"
+    "Trusted senders" : "Vertrouwde afzenders",
+    "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account." : "Om via IMAP toegang te krijgen tot uw mailbox, kunt u een app-specifiek wachtwoord genereren. Met dit wachtwoord kunnen IMAP-clients verbinding maken met uw account.",
+    "IMAP access / password" : "IMAP-toegang / wachtwoord",
+    "Generate password" : "wachtwoord genereren",
+    "Copy password" : "wachtwoord kopiëren",
+    "Please save this password now. For security reasons, it will not be shown again." : "Sla dit wachtwoord nu op. Om veiligheidsredenen wordt het niet opnieuw weergegeven.",
 },"pluralForm" :"nplurals=2; plural=(n != 1);"
 }
