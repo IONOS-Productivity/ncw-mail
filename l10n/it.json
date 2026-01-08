@@ -575,6 +575,21 @@
     "Continue to %s" : "Continua su %s",
     "Messages will automatically be marked as important based on which messages you interacted with or marked as important. In the beginning you might have to manually change the importance to teach the system, but it will improve over time." : "I messaggi saranno automaticamente contrassegnati come importanti in base ai messaggi con cui hai interagito o contrassegnati come importanti. All'inizio potresti dover cambiare manualmente l'importanza per addestrare il sistema, ma migliorerà nel tempo.",
     "Mark all messages of this folder as read" : "Marca tutti i messaggi di questa cartella come letti",
-    "Last 7 days" : "Ultimi 7 giorni"
+    "Last 7 days" : "Ultimi 7 giorni",
+    "Put my text to the bottom of a reply instead of on top of it." : "Inserisci il mio testo in fondo alla risposta invece che sopra.",
+    "Accounts" : "Account",
+    "Newest" : "Più recente",
+    "Oldest" : "Il più datato",
+    "Use Gravatar and favicon avatars" : "Utilizza Gravatar e avatar favicon",
+    "Register as application for mail links" : "Registra come applicazione per i collegamenti di posta",
+    "Allow the app to collect data about your interactions. Based on this data, the app will adapt to your preferences. The data will only be stored locally." : "Consenti all'applicazione di raccogliere dati sulle tue interazioni. Sulla base di questi dati, l'applicazione si adatterà alle tue preferenze. I dati saranno archiviati solo localmente.",
+    "Trusted senders" : "Mittenti affidabili",
+
+    "Manage S/MIME certificates" : "Gestisci i certificati S/MIME",
+    "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account." : "Per accedere alla tua casella di posta tramite IMAP, puoi generare una password specifica per l'app. Questa password consente ai client IMAP di connettersi al tuo account.",
+    "IMAP access / password" : "Accesso IMAP / password",
+    "Generate password" : "generare password",
+    "Copy password" : "copia password",
+    "Please save this password now. For security reasons, it will not be shown again." : "Salva questa password adesso. Per motivi di sicurezza, non verrà più visualizzata.",
 },"pluralForm" :"nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;"
 }

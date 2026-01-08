@@ -895,6 +895,29 @@
     "Messages sent by you that require a reply but did not receive one after a couple of days will be shown here." : "Messages sent by you that require a reply but did not receive one after a couple of days will be shown here.",
     "Mark all messages of this folder as read" : "Mark all messages of this folder as read",
     "Last 7 days" : "Last 7 days",
-    "From me" : "From me"
+    "From me" : "From me",
+    "Search in the body of messages in priority Inbox" : "Search in the body of messages in priority Inbox",
+    "Put my text to the bottom of a reply instead of on top of it." : "Put my text to the bottom of a reply instead of on top of it.",
+    "Use internal addresses" : "Use internal addresses",
+    "Accounts" : "Accounts",
+    "Newest" : "Newest",
+    "Oldest" : "Oldest",
+    "Reply text position" : "Reply text position",
+    "Use Gravatar and favicon avatars" : "Use Gravatar and favicon avatars",
+    "Register as application for mail links" : "Register as application for mail links",
+    "Create a new text block" : "Create a new text block",
+    "Data collection consent" : "Data collection consent",
+    "Allow the app to collect data about your interactions. Based on this data, the app will adapt to your preferences. The data will only be stored locally." : "Allow the app to collect data about your interactions. Based on this data, the app will adapt to your preferences. The data will only be stored locally.",
+    "Trusted senders" : "Trusted senders",
+    "Internal addresses" : "Internal addresses",
+    "Manage S/MIME certificates" : "Manage S/MIME certificates",
+    "Mailvelope is a browser extension that enables easy OpenPGP encryption and decryption for emails." : "Mailvelope is a browser extension that enables easy OpenPGP encryption and decryption for emails.",
+    "Step 1: Install Mailvelope browser extension" : "Step 1: Install Mailvelope browser extension",
+    "Step 2: Enable Mailvelope for the current domain" : "Step 2: Enable Mailvelope for the current domain",
+    "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account." : "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account."
+    "IMAP access / password" : "IMAP access / password",
+    "Generate password" : "Generate password",
+    "Copy password" : "Copy password",
+    "Please save this password now. For security reasons, it will not be shown again." : "Please save this password now. For security reasons, it will not be shown again."
 },"pluralForm" :"nplurals=2; plural=(n != 1);"
 }
