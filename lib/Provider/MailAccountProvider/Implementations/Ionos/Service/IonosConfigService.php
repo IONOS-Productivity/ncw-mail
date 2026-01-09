@@ -206,7 +206,8 @@ class IonosConfigService {
 		}
 
 		try {
-			$publicSuffixList = Rules::fromPath(__DIR__ . '/../../../../../../resources/public_suffix_list.dat');
+			$publicSuffixListPath = dirname(__DIR__, 6) . '/resources/public_suffix_list.dat';
+			$publicSuffixList = Rules::fromPath($publicSuffixListPath);
 			$domain = Domain::fromIDNA2008($customerDomain);
 			$result = $publicSuffixList->resolve($domain);
 			return $result->registrableDomain()->toString();
