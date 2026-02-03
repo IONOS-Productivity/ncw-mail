@@ -179,7 +179,7 @@ export default {
 
 #mail-message-has-blocked-content {
 	margin-inline-start: 10px;
-	color: var(--color-text-maxcontrast) !important;
+	color: var(--color-text-maxcontrast);
 }
 
 #message-container {
