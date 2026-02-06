@@ -10,6 +10,7 @@ namespace OCA\Mail\Send;
 use OCA\Mail\Account;
 use OCA\Mail\Db\LocalMessage;
 use OCA\Mail\Db\LocalMessageMapper;
+use OCA\Mail\Exception\SentMailboxNotSetException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\IMAP\IMAPClientFactory;
 use OCA\Mail\Service\Attachment\AttachmentService;
@@ -52,7 +53,7 @@ class Chain {
 		$client = $this->clientFactory->getClient($account);
 		try {
 			$result = $handlers->process($account, $localMessage, $client);
-		} catch (\OCA\Mail\Exception\SentMailboxNotSetException $e) {
+		} catch (SentMailboxNotSetException $e) {
 			// Set status to indicate the specific error
 			$localMessage->setStatus(LocalMessage::STATUS_NO_SENT_MAILBOX);
 			return $this->localMessageMapper->update($localMessage);
