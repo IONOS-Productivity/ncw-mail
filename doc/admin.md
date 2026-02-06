@@ -286,3 +286,41 @@ If you can not access your Outlook.com account try to enable the 'Two-Factor Ver
 If autoconfiguration for your domain fails, you can create an autoconfig file and place it as https://autoconfig.yourdomain.tld/mail/config-v1.1.xml
 For more information please refer to Mozilla's documentation:
 https://developer.mozilla.org/en-US/docs/Mozilla/Thunderbird/Autoconfiguration/FileFormat/HowTo
+
+## IONOS Mailbox Management
+
+If you have IONOS mail integration enabled, administrators can manage IONOS mailboxes from the admin settings page.
+
+### Features
+
+- **View all mailboxes**: Lists all IONOS mailboxes linked to Nextcloud users
+- **Edit email addresses**: Change the local part (before @) of a user's email address
+- **Delete mailboxes**: Remove IONOS mailboxes with confirmation
+
+### Access
+
+1. Navigate to Administration Settings > Mail
+2. Scroll down to the "E-Mail Verwaltung" (Email Administration) section
+
+### Edit a Mailbox
+
+To change a user's email address:
+
+1. Click the three-dot menu next to the mailbox
+2. Select "Edit"
+3. Enter the new local part (username before @)
+4. Click "Save"
+
+The system will validate that:
+- The new email address is not already in use
+- The local part is valid (alphanumeric, dots, hyphens, underscores)
+
+### Delete a Mailbox
+
+To delete a user's IONOS mailbox:
+
+1. Click the three-dot menu next to the mailbox
+2. Select "Delete"
+3. Confirm the deletion in the dialog
+
+**Warning**: This action cannot be undone and will remove all email data for that user.
