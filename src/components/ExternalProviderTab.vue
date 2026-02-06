@@ -305,6 +305,8 @@ export default {
 		/**
 		 * Try to fetch mailboxes with exponential backoff retry logic
 		 * Returns true if successful, false if all retries failed
+		 * @param account
+		 * @param maxAttempts
 		 */
 		async tryFetchMailboxesWithRetry(account, maxAttempts = 3) {
 			for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -359,6 +361,7 @@ export default {
 
 		/**
 		 * Helper to delay execution
+		 * @param ms
 		 */
 		delay(ms) {
 			return new Promise(resolve => setTimeout(resolve, ms))
