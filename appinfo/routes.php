@@ -530,6 +530,21 @@ return [
 			'url' => '/api/action-step/{actionId}/steps',
 			'verb' => 'GET'
 		],
+		[
+			'name' => 'mailboxAdmin#listMailboxes',
+			'url' => '/api/admin/mailboxes',
+			'verb' => 'GET',
+		],
+		[
+			'name' => 'mailboxAdmin#updateMailbox',
+			'url' => '/api/admin/mailboxes/{userId}',
+			'verb' => 'PATCH',
+		],
+		[
+			'name' => 'mailboxAdmin#deleteMailbox',
+			'url' => '/api/admin/mailboxes/{userId}',
+			'verb' => 'DELETE',
+		],
 	],
 	'resources' => [
 		'accounts' => ['url' => '/api/accounts'],
