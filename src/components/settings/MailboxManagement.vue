@@ -6,7 +6,7 @@
 <template>
 	<div class="mailbox-management">
 		<h3>{{ t('mail', 'E-Mails verwalten') }}</h3>
-		
+
 		<div v-if="loading" class="loading">
 			<NcLoadingIcon :size="32" />
 			<p>{{ t('mail', 'Loading mailboxes...') }}</p>
@@ -22,13 +22,18 @@
 
 		<div v-else class="mailbox-list">
 			<div class="mailbox-list-header">
-				<div class="column-email">{{ t('mail', 'E-Mail-Postfach') }}</div>
-				<div class="column-user">{{ t('mail', 'Verknüpfter Benutzer') }}</div>
-				<div class="column-actions">{{ t('mail', 'Actions') }}</div>
+				<div class="column-email">
+					{{ t('mail', 'E-Mail-Postfach') }}
+				</div>
+				<div class="column-user">
+					{{ t('mail', 'Verknüpfter Benutzer') }}
+				</div>
+				<div class="column-actions">
+					{{ t('mail', 'Actions') }}
+				</div>
 			</div>
 
-			<MailboxListItem
-				v-for="mailbox in mailboxes"
+			<MailboxListItem v-for="mailbox in mailboxes"
 				:key="mailbox.userId"
 				:mailbox="mailbox"
 				@edit="onEdit"
@@ -37,24 +42,25 @@
 
 		<!-- Edit Modal -->
 		<NcModal v-if="showEditModal"
-			@close="closeEditModal"
-			:name="t('mail', 'Edit Mailbox')">
+			:name="t('mail', 'Edit Mailbox')"
+			@close="closeEditModal">
 			<div class="modal-content">
 				<h2>{{ t('mail', 'Edit Email Address') }}</h2>
 				<p>{{ t('mail', 'Change the local part of the email address (before @)') }}</p>
-				
+
 				<div class="form-group">
 					<label for="localpart">{{ t('mail', 'Email User') }}</label>
 					<div class="email-input-container">
-						<input
-							id="localpart"
+						<input id="localpart"
 							v-model="editLocalpart"
 							type="text"
 							:placeholder="t('mail', 'username')"
 							@keyup.enter="saveEdit">
 						<span class="email-domain">@{{ emailDomain }}</span>
 					</div>
-					<p v-if="editError" class="error-message">{{ editError }}</p>
+					<p v-if="editError" class="error-message">
+						{{ editError }}
+					</p>
 				</div>
 
 				<div class="modal-actions">
@@ -75,8 +81,8 @@
 
 		<!-- Delete Confirmation Dialog -->
 		<NcModal v-if="showDeleteModal"
-			@close="closeDeleteModal"
-			:name="t('mail', 'Account deletion')">
+			:name="t('mail', 'Account deletion')"
+			@close="closeDeleteModal">
 			<div class="modal-content">
 				<h2>{{ t('mail', 'Account deletion') }}</h2>
 				<p>
@@ -128,14 +134,14 @@ export default {
 			error: null,
 			mailboxes: [],
 			emailDomain: '',
-			
+
 			// Edit state
 			showEditModal: false,
 			editMailbox: null,
 			editLocalpart: '',
 			editError: null,
 			editSaving: false,
-			
+
 			// Delete state
 			showDeleteModal: false,
 			deleteMailbox: null,
@@ -153,9 +159,9 @@ export default {
 			try {
 				const url = generateUrl('/apps/mail/api/admin/mailboxes')
 				const response = await axios.get(url)
-				
+
 				this.mailboxes = response.data.mailboxes || []
-				
+
 				// Extract domain from first mailbox if available
 				if (this.mailboxes.length > 0) {
 					const firstEmail = this.mailboxes[0].email
@@ -164,7 +170,7 @@ export default {
 						this.emailDomain = firstEmail.substring(atIndex + 1)
 					}
 				}
-				
+
 				logger.info('Loaded mailboxes', { count: this.mailboxes.length })
 			} catch (error) {
 				logger.error('Failed to load mailboxes', { error })
@@ -204,7 +210,7 @@ export default {
 				const url = generateUrl('/apps/mail/api/admin/mailboxes/{userId}', {
 					userId: this.editMailbox.userId,
 				})
-				
+
 				const response = await axios.patch(url, {
 					newLocalpart: this.editLocalpart,
 				})
@@ -219,7 +225,7 @@ export default {
 				}
 			} catch (error) {
 				logger.error('Failed to update mailbox', { error })
-				
+
 				if (error.response?.data?.error) {
 					this.editError = error.response.data.error
 				} else {
@@ -253,7 +259,7 @@ export default {
 				const url = generateUrl('/apps/mail/api/admin/mailboxes/{userId}', {
 					userId: this.deleteMailbox.userId,
 				})
-				
+
 				await axios.delete(url)
 
 				showSuccess(this.t('mail', 'Mailbox deleted successfully'))
