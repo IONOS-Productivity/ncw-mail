@@ -14,6 +14,7 @@ export const UNDO_DELAY = TOAST_UNDO_TIMEOUT
 export const EDITOR_MODE_HTML = 'richtext'
 export const EDITOR_MODE_TEXT = 'plaintext'
 export const STATUS_RAW = 0
+export const STATUS_NO_SENT_MAILBOX = 1
 export const STATUS_IMAP_SENT_MAILBOX_FAIL = 11
 export const STATUS_SMTP_ERROR = 13
 
