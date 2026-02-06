@@ -266,6 +266,15 @@
 				</p>
 			</article>
 		</div>
+		<div class="app-description">
+			<h3>{{ t('mail', 'E-Mail Verwaltung') }}</h3>
+			<article>
+				<p>
+					{{ t('mail', 'Manage IONOS mailboxes linked to Nextcloud users. You can edit email addresses and delete mailboxes from this section.') }}
+				</p>
+			</article>
+			<MailboxManagement />
+		</div>
 	</SettingsSection>
 </template>
 
@@ -273,6 +282,7 @@
 import ButtonVue from '@nextcloud/vue/components/NcButton'
 import GmailAdminOauthSettings from './GmailAdminOauthSettings.vue'
 import logger from '../../logger.js'
+import MailboxManagement from './MailboxManagement.vue'
 import MicrosoftAdminOauthSettings from './MicrosoftAdminOauthSettings.vue'
 import { showError, showSuccess } from '@nextcloud/dialogs'
 import { loadState } from '@nextcloud/initial-state'
@@ -305,6 +315,7 @@ export default {
 	components: {
 		GmailAdminOauthSettings,
 		AntiSpamSettings,
+		MailboxManagement,
 		MicrosoftAdminOauthSettings,
 		ProvisioningSettings,
 		SettingsSection,
