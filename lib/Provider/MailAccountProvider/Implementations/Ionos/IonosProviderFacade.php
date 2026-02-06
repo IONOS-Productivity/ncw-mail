@@ -222,4 +222,64 @@ class IonosProviderFacade {
 
 		return $this->mutationService->resetAppPassword($userId, IonosConfigService::APP_PASSWORD_NAME_USER);
 	}
+
+	/**
+	 * Get all mailboxes managed by this provider
+	 *
+	 * Note: The IONOS API doesn't provide a direct "list all mailboxes" endpoint.
+	 * This implementation returns an empty array as mailbox listing requires
+	 * admin-level functionality that would need to be implemented separately.
+	 *
+	 * @return array<int, array{userId: string, email: string, name: string}> List of mailbox information
+	 */
+	public function getMailboxes(): array {
+		$this->logger->debug('Getting all IONOS mailboxes');
+		
+		// TODO: Implement when IONOS API provides admin-level mailbox listing
+		// For now, return empty array as this requires iterating over all users
+		// which is not practical without dedicated API support
+		return [];
+	}
+
+	/**
+	 * Update a mailbox (e.g., change localpart)
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param array<string, mixed> $data Update data
+	 * @return array{userId: string, email: string, name: string} Updated mailbox information
+	 * @throws \OCA\Mail\Exception\ServiceException If update fails
+	 */
+	public function updateMailbox(string $userId, array $data): array {
+		$this->logger->info('Updating IONOS mailbox via facade', [
+			'userId' => $userId,
+			'data' => array_keys($data),
+		]);
+
+		$localpart = $data['localpart'] ?? null;
+		$name = $data['name'] ?? '';
+
+		if ($localpart === null || $localpart === '') {
+			throw new \InvalidArgumentException('localpart is required for mailbox update');
+		}
+
+		// Update the account using the creation service (which handles updates)
+		$account = $this->creationService->createOrUpdateAccount($userId, $localpart, $name);
+
+		return [
+			'userId' => $userId,
+			'email' => $account->getEmail(),
+			'name' => $account->getName(),
+		];
+	}
+
+	/**
+	 * Delete a mailbox
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return bool True if deletion was successful
+	 * @throws \OCA\Mail\Exception\ServiceException If deletion fails
+	 */
+	public function deleteMailbox(string $userId): bool {
+		return $this->deleteAccount($userId);
+	}
 }
