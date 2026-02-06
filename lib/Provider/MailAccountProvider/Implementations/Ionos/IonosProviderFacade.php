@@ -226,19 +226,46 @@ class IonosProviderFacade {
 	/**
 	 * Get all mailboxes managed by this provider
 	 *
-	 * Note: The IONOS API doesn't provide a direct "list all mailboxes" endpoint.
-	 * This implementation returns an empty array as mailbox listing requires
-	 * admin-level functionality that would need to be implemented separately.
+	 * Returns a list of all mailboxes (email accounts) managed by this provider
+	 * across all users. Used for administration/overview purposes.
 	 *
 	 * @return array<int, array{userId: string, email: string, name: string}> List of mailbox information
 	 */
 	public function getMailboxes(): array {
 		$this->logger->debug('Getting all IONOS mailboxes');
 		
-		// TODO: Implement when IONOS API provides admin-level mailbox listing
-		// For now, return empty array as this requires iterating over all users
-		// which is not practical without dedicated API support
-		return [];
+		try {
+			$accountResponses = $this->queryService->getAllMailAccountResponses();
+			
+			$mailboxes = [];
+			foreach ($accountResponses as $response) {
+				// Extract user ID from the email or use a placeholder
+				// The API response contains the email but we need to derive the userId
+				$email = $response->getEmail();
+				
+				// For IONOS, the email format is typically userId@domain
+				// Extract userId from the email localpart
+				$emailParts = explode('@', $email);
+				$userId = $emailParts[0] ?? '';
+				
+				$mailboxes[] = [
+					'userId' => $userId,
+					'email' => $email,
+					'name' => $response->getName() ?? $userId,
+				];
+			}
+			
+			$this->logger->debug('Retrieved IONOS mailboxes', [
+				'count' => count($mailboxes),
+			]);
+			
+			return $mailboxes;
+		} catch (\Exception $e) {
+			$this->logger->error('Error getting IONOS mailboxes', [
+				'exception' => $e,
+			]);
+			return [];
+		}
 	}
 
 	/**
