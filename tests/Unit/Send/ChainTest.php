@@ -15,6 +15,7 @@ use OCA\Mail\Db\LocalMessage;
 use OCA\Mail\Db\LocalMessageMapper;
 use OCA\Mail\Db\MailAccount;
 use OCA\Mail\Db\MessageMapper;
+use OCA\Mail\Exception\SentMailboxNotSetException;
 use OCA\Mail\IMAP\IMAPClientFactory;
 use OCA\Mail\Send\AntiAbuseHandler;
 use OCA\Mail\Send\Chain;
@@ -127,5 +128,40 @@ class ChainTest extends TestCase {
 			->willReturn($expected);
 
 		$this->chain->process($account, $localMessage);
+	}
+
+	public function testProcessNoSentMailbox() {
+		$mailAccount = new MailAccount();
+		$mailAccount->setUserId('bob');
+		$account = new Account($mailAccount);
+		$localMessage = new LocalMessage();
+		$localMessage->setId(100);
+		$localMessage->setStatus(LocalMessage::STATUS_RAW);
+		$client = $this->createMock(Horde_Imap_Client_Socket::class);
+		$client->expects(self::once())
+			->method('logout');
+
+		$this->sentMailboxHandler->expects(self::once())
+			->method('setNext');
+		$this->clientFactory->expects(self::once())
+			->method('getClient')
+			->willReturn($client);
+		$this->sentMailboxHandler->expects(self::once())
+			->method('process')
+			->with($account, $localMessage)
+			->willThrowException(new SentMailboxNotSetException());
+		$this->attachmentService->expects(self::never())
+			->method('deleteLocalMessageAttachments');
+		$this->localMessageMapper->expects(self::never())
+			->method('deleteWithRecipients');
+		$this->localMessageMapper->expects(self::once())
+			->method('update')
+			->with($this->callback(function ($message) {
+				return $message->getStatus() === LocalMessage::STATUS_NO_SENT_MAILBOX;
+			}))
+			->willReturnArgument(0);
+
+		$result = $this->chain->process($account, $localMessage);
+		$this->assertEquals(LocalMessage::STATUS_NO_SENT_MAILBOX, $result->getStatus());
 	}
 }

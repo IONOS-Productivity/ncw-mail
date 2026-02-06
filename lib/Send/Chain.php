@@ -52,6 +52,10 @@ class Chain {
 		$client = $this->clientFactory->getClient($account);
 		try {
 			$result = $handlers->process($account, $localMessage, $client);
+		} catch (\OCA\Mail\Exception\SentMailboxNotSetException $e) {
+			// Set status to indicate the specific error
+			$localMessage->setStatus(LocalMessage::STATUS_NO_SENT_MAILBOX);
+			return $this->localMessageMapper->update($localMessage);
 		} finally {
 			$client->logout();
 		}

@@ -244,6 +244,14 @@ class OutboxController extends Controller {
 
 		$message = $this->service->sendMessage($message, $account);
 
+		if ($message->getStatus() === LocalMessage::STATUS_NO_SENT_MAILBOX) {
+			return JsonResponse::error(
+				'Configuration error: Cannot send message without sent mailbox.',
+				Http::STATUS_FORBIDDEN,
+				[$message]
+			);
+		}
+
 		if ($message->getStatus() !== LocalMessage::STATUS_PROCESSED) {
 			return JsonResponse::error('Could not send message', Http::STATUS_INTERNAL_SERVER_ERROR, [$message]);
 		}
