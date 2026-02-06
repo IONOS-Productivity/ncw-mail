@@ -246,7 +246,7 @@ class OutboxController extends Controller {
 
 		if ($message->getStatus() === LocalMessage::STATUS_NO_SENT_MAILBOX) {
 			return JsonResponse::error(
-				'Configuration error: Cannot send message without sent mailbox.',
+				'Cannot send message: No "Sent" folder configured for this account.',
 				Http::STATUS_FORBIDDEN,
 				[$message]
 			);
