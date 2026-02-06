@@ -222,4 +222,53 @@ class IonosProviderFacade {
 
 		return $this->mutationService->resetAppPassword($userId, IonosConfigService::APP_PASSWORD_NAME_USER);
 	}
+
+	/**
+	 * Get all mailboxes managed by this provider
+	 *
+	 * Returns a list of all mailboxes (email accounts) managed by this provider
+	 * across all users. Used for administration/overview purposes.
+	 *
+	 * @return array<int, array{userId: string, email: string}> List of mailbox information
+	 */
+	public function getMailboxes(): array {
+		$this->logger->debug('Getting all IONOS mailboxes');
+
+		try {
+			$accountResponses = $this->queryService->getAllMailAccountResponses();
+
+			$mailboxes = [];
+			foreach ($accountResponses as $response) {
+				$email = $response->getEmail();
+				$userId = $response->getNextcloudUserId();
+
+				$mailboxes[] = [
+					'userId' => $userId,
+					'email' => $email,
+				];
+			}
+
+			$this->logger->debug('Retrieved IONOS mailboxes', [
+				'count' => count($mailboxes),
+			]);
+
+			return $mailboxes;
+		} catch (\Exception $e) {
+			$this->logger->error('Error getting IONOS mailboxes', [
+				'exception' => $e,
+			]);
+			return [];
+		}
+	}
+
+	/**
+	 * Delete a mailbox
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return bool True if deletion was successful
+	 * @throws \OCA\Mail\Exception\ServiceException If deletion fails
+	 */
+	public function deleteMailbox(string $userId): bool {
+		return $this->deleteAccount($userId);
+	}
 }

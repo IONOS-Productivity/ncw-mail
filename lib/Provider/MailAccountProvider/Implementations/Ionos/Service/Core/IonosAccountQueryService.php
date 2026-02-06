@@ -183,6 +183,45 @@ class IonosAccountQueryService {
 	}
 
 	/**
+	 * Get all IONOS mail accounts
+	 *
+	 * @return array<int, MailAccountResponse> List of mail account responses
+	 */
+	public function getAllMailAccountResponses(): array {
+		try {
+			$this->logger->debug('Getting all IONOS mail accounts', [
+				'extRef' => $this->configService->getExternalReference(),
+			]);
+
+			$apiInstance = $this->createApiInstance();
+			$result = $apiInstance->getAllFunctionalAccounts(
+				self::BRAND,
+				$this->configService->getExternalReference()
+			);
+
+			if (is_array($result)) {
+				$this->logger->debug('Retrieved IONOS mail accounts', [
+					'count' => count($result),
+				]);
+				return $result;
+			}
+
+			return [];
+		} catch (ApiException $e) {
+			$this->logger->error('API error getting all IONOS mail accounts', [
+				'statusCode' => $e->getCode(),
+				'error' => $e->getMessage(),
+			]);
+			return [];
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error getting all IONOS mail accounts', [
+				'error' => $e->getMessage(),
+			]);
+			return [];
+		}
+	}
+
+	/**
 	 * Get the current user ID from the session
 	 *
 	 * @return string The user ID

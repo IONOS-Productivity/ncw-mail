@@ -386,4 +386,85 @@ class IonosProviderFacadeTest extends TestCase {
 
 		$this->facade->generateAppPassword($userId);
 	}
+
+	public function testGetMailboxesReturnsEmptyArrayWhenNoAccounts(): void {
+		$this->logger->expects($this->exactly(2))
+			->method('debug');
+
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willReturn([]);
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertEmpty($result);
+	}
+
+	public function testGetMailboxesReturnsMailboxList(): void {
+		$mockResponse1 = $this->createMock(\IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse::class);
+		$mockResponse1->method('getEmail')->willReturn('user1@ionos.com');
+		$mockResponse1->method('getNextcloudUserId')->willReturn('user1');
+
+		$mockResponse2 = $this->createMock(\IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse::class);
+		$mockResponse2->method('getEmail')->willReturn('user2@ionos.com');
+		$mockResponse2->method('getNextcloudUserId')->willReturn('user2');
+
+		$this->logger->expects($this->exactly(2))
+			->method('debug');
+
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willReturn([$mockResponse1, $mockResponse2]);
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertCount(2, $result);
+
+		$this->assertEquals('user1', $result[0]['userId']);
+		$this->assertEquals('user1@ionos.com', $result[0]['email']);
+
+		$this->assertEquals('user2', $result[1]['userId']);
+		$this->assertEquals('user2@ionos.com', $result[1]['email']);
+	}
+
+	public function testGetMailboxesHandlesException(): void {
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Getting all IONOS mailboxes');
+
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willThrowException(new \Exception('Service error'));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Error getting IONOS mailboxes', $this->anything());
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertEmpty($result);
+	}
+
+	public function testGetMailboxesHandlesEmailWithoutName(): void {
+		$mockResponse = $this->createMock(\IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse::class);
+		$mockResponse->method('getEmail')->willReturn('user3@ionos.com');
+		$mockResponse->method('getNextcloudUserId')->willReturn('user3');
+
+		$this->logger->expects($this->exactly(2))
+			->method('debug');
+
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willReturn([$mockResponse]);
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertCount(1, $result);
+		$this->assertEquals('user3', $result[0]['userId']);
+		$this->assertEquals('user3@ionos.com', $result[0]['email']);
+	}
 }
