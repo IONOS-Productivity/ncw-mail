@@ -159,6 +159,40 @@ class ExternalAccountsController extends Controller {
 	}
 
 	/**
+	 * Get all enabled providers (admin only)
+	 *
+	 * Returns all enabled providers regardless of user availability.
+	 * Used by admins to manage mailboxes across all providers.
+	 *
+	 * @NoAdminRequired
+	 *
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function getEnabledProviders(): JSONResponse {
+		try {
+			$userId = $this->getUserIdOrFail();
+
+			$this->logger->debug('Getting enabled providers for admin', [
+				'userId' => $userId,
+			]);
+
+			$enabledProviders = $this->providerRegistry->getEnabledProviders();
+
+			$providersInfo = $this->serializeProviders($enabledProviders);
+
+			return MailJsonResponse::success([
+				'providers' => $providersInfo,
+			]);
+		} catch (\Exception $e) {
+			$this->logger->error('Error getting enabled providers', [
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not get providers');
+		}
+	}
+
+	/**
 	 * Generate an app password for a provider-managed account
 	 *
 	 * @NoAdminRequired
@@ -225,6 +259,93 @@ class ExternalAccountsController extends Controller {
 				'providerId' => $providerId,
 			]);
 			return MailJsonResponse::error('Could not generate app password');
+		}
+	}
+
+	/**
+	 * List all mailboxes for a specific provider
+	 *
+	 * @NoAdminRequired
+	 *
+	 * @param string $providerId The provider ID
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function indexMailboxes(string $providerId): JSONResponse {
+		try {
+			$userId = $this->getUserIdOrFail();
+
+			$this->logger->debug('Listing mailboxes for provider', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+			]);
+
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
+			}
+
+			$mailboxes = $provider->getMailboxes();
+
+			return MailJsonResponse::success(['mailboxes' => $mailboxes]);
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error listing mailboxes', [
+				'providerId' => $providerId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not list mailboxes');
+		}
+	}
+
+	/**
+	 * Delete a mailbox
+	 *
+	 * @NoAdminRequired
+	 *
+	 * @param string $providerId The provider ID
+	 * @param string $userId The user ID whose mailbox to delete
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function destroyMailbox(string $providerId, string $userId): JSONResponse {
+		try {
+			$currentUserId = $this->getUserIdOrFail();
+
+			$this->logger->info('Deleting mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'currentUserId' => $currentUserId,
+			]);
+
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
+			}
+
+			$success = $provider->deleteMailbox($userId);
+
+			if ($success) {
+				$this->logger->info('Mailbox deleted successfully', [
+					'userId' => $userId,
+				]);
+				return MailJsonResponse::success(['deleted' => true]);
+			} else {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_SERVICE_ERROR,
+					'message' => 'Failed to delete mailbox',
+				], Http::STATUS_INTERNAL_SERVER_ERROR);
+			}
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error deleting mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not delete mailbox');
 		}
 	}
 
