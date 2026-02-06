@@ -4,10 +4,10 @@
 -->
 
 <template>
-	<SettingsSection :name="t('mail', 'E-Mail Verwaltung')"
+	<SettingsSection :name="t('mail', 'Email Administration')"
 		:description="t('mail', 'Manage email accounts for your users')">
 		<div class="mailbox-administration">
-			<h3>{{ t('mail', 'E-Mails verwalten') }}</h3>
+			<h3>{{ t('mail', 'Manage Emails') }}</h3>
 
 			<!-- Loading state -->
 			<div v-if="loading" class="loading-container">
@@ -34,8 +34,8 @@
 				<table class="mailbox-table">
 					<thead>
 						<tr>
-							<th>{{ t('mail', 'E-Mail-Postfach') }}</th>
-							<th>{{ t('mail', 'Verknüpfter Benutzer') }}</th>
+							<th>{{ t('mail', 'Email Address') }}</th>
+							<th>{{ t('mail', 'Linked User') }}</th>
 							<th class="actions-column">{{ t('mail', 'Actions') }}</th>
 						</tr>
 					</thead>
