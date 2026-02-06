@@ -33,7 +33,7 @@
 				</template>
 			</ActionButton>
 			<ActionButton
-				v-if="message.status !== statusImapSentMailboxFail() && message.status !== statusSmtpError()"
+				v-if="message.status !== statusImapSentMailboxFail() && message.status !== statusSmtpError() && message.status !== statusNoSentMailbox()"
 				:close-after-click="true"
 				@click="sendMessageNow">
 				{{ t('mail', 'Send now') }}
@@ -70,6 +70,7 @@ import logger from '../logger.js'
 import OutboxAvatarMixin from '../mixins/OutboxAvatarMixin.js'
 import {
 	STATUS_IMAP_SENT_MAILBOX_FAIL,
+	STATUS_NO_SENT_MAILBOX,
 	STATUS_RAW,
 	STATUS_SMTP_ERROR,
 	UNDO_DELAY,
@@ -115,7 +116,9 @@ export default {
 		},
 
 		details() {
-			if (this.message.status === STATUS_IMAP_SENT_MAILBOX_FAIL) {
+			if (this.message.status === STATUS_NO_SENT_MAILBOX) {
+				return this.t('mail', 'No "Sent" folder configured. Please pick one in the account settings.')
+			} else if (this.message.status === STATUS_IMAP_SENT_MAILBOX_FAIL) {
 				return this.t('mail', 'Could not copy to "Sent" folder')
 			} else if (this.message.status === STATUS_SMTP_ERROR) {
 				return this.t('mail', 'Mail server error')
@@ -143,6 +146,10 @@ export default {
 	methods: {
 		statusImapSentMailboxFail() {
 			return STATUS_IMAP_SENT_MAILBOX_FAIL
+		},
+
+		statusNoSentMailbox() {
+			return STATUS_NO_SENT_MAILBOX
 		},
 
 		statusSmtpError() {

@@ -15,6 +15,7 @@ use OCA\Mail\Db\LocalMessage;
 use OCA\Mail\Db\LocalMessageMapper;
 use OCA\Mail\Db\MailAccount;
 use OCA\Mail\Db\MessageMapper;
+use OCA\Mail\Exception\SentMailboxNotSetException;
 use OCA\Mail\IMAP\IMAPClientFactory;
 use OCA\Mail\Send\AntiAbuseHandler;
 use OCA\Mail\Send\Chain;
@@ -24,6 +25,7 @@ use OCA\Mail\Send\SendHandler;
 use OCA\Mail\Send\SentMailboxHandler;
 use OCA\Mail\Service\Attachment\AttachmentService;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Log\LoggerInterface;
 
 class ChainTest extends TestCase {
 	private Chain $chain;
@@ -36,6 +38,7 @@ class ChainTest extends TestCase {
 	private AttachmentService|MockObject $attachmentService;
 	private MockObject|LocalMessageMapper $localMessageMapper;
 	private MockObject&IMAPClientFactory $clientFactory;
+	private LoggerInterface|MockObject $logger;
 
 	protected function setUp(): void {
 		$this->sentMailboxHandler = $this->createMock(SentMailboxHandler::class);
@@ -46,6 +49,7 @@ class ChainTest extends TestCase {
 		$this->attachmentService = $this->createMock(AttachmentService::class);
 		$this->localMessageMapper = $this->createMock(LocalMessageMapper::class);
 		$this->clientFactory = $this->createMock(IMAPClientFactory::class);
+		$this->logger = $this->createMock(LoggerInterface::class);
 		$this->chain = new Chain($this->sentMailboxHandler,
 			$this->antiAbuseHandler,
 			$this->sendHandler,
@@ -54,6 +58,7 @@ class ChainTest extends TestCase {
 			$this->attachmentService,
 			$this->localMessageMapper,
 			$this->clientFactory,
+			$this->logger,
 		);
 	}
 
@@ -127,5 +132,47 @@ class ChainTest extends TestCase {
 			->willReturn($expected);
 
 		$this->chain->process($account, $localMessage);
+	}
+
+	public function testProcessNoSentMailbox() {
+		$mailAccount = new MailAccount();
+		$mailAccount->setUserId('bob');
+		$mailAccount->setId(456);
+		$account = new Account($mailAccount);
+		$localMessage = new LocalMessage();
+		$localMessage->setId(100);
+		$localMessage->setStatus(LocalMessage::STATUS_RAW);
+		$client = $this->createMock(Horde_Imap_Client_Socket::class);
+		$client->expects(self::once())
+			->method('logout');
+
+		$this->sentMailboxHandler->expects(self::once())
+			->method('setNext');
+		$this->clientFactory->expects(self::once())
+			->method('getClient')
+			->willReturn($client);
+		$this->sentMailboxHandler->expects(self::once())
+			->method('process')
+			->with($account, $localMessage)
+			->willThrowException(new SentMailboxNotSetException());
+		$this->logger->expects(self::once())
+			->method('info')
+			->with('Message send aborted: No sent mailbox configured', [
+				'accountId' => 456,
+				'messageId' => 100,
+			]);
+		$this->attachmentService->expects(self::never())
+			->method('deleteLocalMessageAttachments');
+		$this->localMessageMapper->expects(self::never())
+			->method('deleteWithRecipients');
+		$this->localMessageMapper->expects(self::once())
+			->method('update')
+			->with($this->callback(function ($message) {
+				return $message->getStatus() === LocalMessage::STATUS_NO_SENT_MAILBOX;
+			}))
+			->willReturnArgument(0);
+
+		$result = $this->chain->process($account, $localMessage);
+		$this->assertEquals(LocalMessage::STATUS_NO_SENT_MAILBOX, $result->getStatus());
 	}
 }

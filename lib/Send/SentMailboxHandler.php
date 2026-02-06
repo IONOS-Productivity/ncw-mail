@@ -10,8 +10,15 @@ namespace OCA\Mail\Send;
 use Horde_Imap_Client_Socket;
 use OCA\Mail\Account;
 use OCA\Mail\Db\LocalMessage;
+use OCA\Mail\Exception\SentMailboxNotSetException;
+use Psr\Log\LoggerInterface;
 
 class SentMailboxHandler extends AHandler {
+	public function __construct(
+		private LoggerInterface $logger,
+	) {
+	}
+
 	#[\Override]
 	public function process(
 		Account $account,
@@ -19,8 +26,11 @@ class SentMailboxHandler extends AHandler {
 		Horde_Imap_Client_Socket $client,
 	): LocalMessage {
 		if ($account->getMailAccount()->getSentMailboxId() === null) {
-			$localMessage->setStatus(LocalMessage::STATUS_NO_SENT_MAILBOX);
-			return $localMessage;
+			$this->logger->warning('No sent mailbox configured for account', [
+				'accountId' => $account->getId(),
+				'userId' => $account->getUserId(),
+			]);
+			throw new SentMailboxNotSetException();
 		}
 		return $this->processNext($account, $localMessage, $client);
 	}
