@@ -249,6 +249,190 @@ class ExternalAccountsController extends Controller {
 	}
 
 	/**
+	 * List all mailboxes for a specific provider
+	 *
+	 * @NoAdminRequired
+	 *
+	 * @param string $providerId The provider ID
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function indexMailboxes(string $providerId): JSONResponse {
+		try {
+			$userId = $this->getUserIdOrFail();
+
+			$this->logger->debug('Listing mailboxes for provider', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+			]);
+
+			$provider = $this->providerRegistry->getProvider($providerId);
+			if ($provider === null) {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_PROVIDER_NOT_FOUND,
+					'message' => 'Provider not found: ' . $providerId,
+				], Http::STATUS_NOT_FOUND);
+			}
+
+			$mailboxes = $provider->getMailboxes();
+
+			return MailJsonResponse::success(['mailboxes' => $mailboxes]);
+		} catch (\Exception $e) {
+			$this->logger->error('Error listing mailboxes', [
+				'providerId' => $providerId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not list mailboxes');
+		}
+	}
+
+	/**
+	 * Update a mailbox (e.g., change localpart)
+	 *
+	 * @NoAdminRequired
+	 *
+	 * @param string $providerId The provider ID
+	 * @param string $userId The user ID whose mailbox to update
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function updateMailbox(string $providerId, string $userId): JSONResponse {
+		try {
+			$currentUserId = $this->getUserIdOrFail();
+
+			// Get update data from request
+			$data = $this->request->getParams();
+			unset($data['providerId']);
+			unset($data['userId']);
+			unset($data['_route']);
+
+			// Validate localpart if provided
+			if (isset($data['localpart'])) {
+				$localpart = trim($data['localpart']);
+				if (empty($localpart)) {
+					return MailJsonResponse::fail([
+						'error' => self::ERR_INVALID_PARAMETERS,
+						'message' => 'Localpart cannot be empty',
+					], Http::STATUS_BAD_REQUEST);
+				}
+				// Basic validation: alphanumeric, dots, hyphens, underscores
+				if (!preg_match('/^[a-zA-Z0-9._-]+$/', $localpart)) {
+					return MailJsonResponse::fail([
+						'error' => self::ERR_INVALID_PARAMETERS,
+						'message' => 'Localpart contains invalid characters',
+					], Http::STATUS_BAD_REQUEST);
+				}
+				$data['localpart'] = $localpart;
+			}
+
+			$this->logger->info('Updating mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'currentUserId' => $currentUserId,
+				'data' => array_keys($data),
+			]);
+
+			$provider = $this->providerRegistry->getProvider($providerId);
+			if ($provider === null) {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_PROVIDER_NOT_FOUND,
+					'message' => 'Provider not found: ' . $providerId,
+				], Http::STATUS_NOT_FOUND);
+			}
+
+			$mailbox = $provider->updateMailbox($userId, $data);
+
+			$this->logger->info('Mailbox updated successfully', [
+				'userId' => $userId,
+				'email' => $mailbox['email'] ?? null,
+			]);
+
+			return MailJsonResponse::success($mailbox);
+		} catch (\OCA\Mail\Exception\AccountAlreadyExistsException $e) {
+			$this->logger->warning('Email address already taken', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+			]);
+			return MailJsonResponse::fail([
+				'error' => 'EMAIL_ALREADY_TAKEN',
+				'message' => 'Email is already taken',
+			], Http::STATUS_CONFLICT);
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\InvalidArgumentException $e) {
+			$this->logger->error('Invalid parameters for mailbox update', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::fail([
+				'error' => self::ERR_INVALID_PARAMETERS,
+				'message' => $e->getMessage(),
+			], Http::STATUS_BAD_REQUEST);
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error updating mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not update mailbox');
+		}
+	}
+
+	/**
+	 * Delete a mailbox
+	 *
+	 * @NoAdminRequired
+	 *
+	 * @param string $providerId The provider ID
+	 * @param string $userId The user ID whose mailbox to delete
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function destroyMailbox(string $providerId, string $userId): JSONResponse {
+		try {
+			$currentUserId = $this->getUserIdOrFail();
+
+			$this->logger->info('Deleting mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'currentUserId' => $currentUserId,
+			]);
+
+			$provider = $this->providerRegistry->getProvider($providerId);
+			if ($provider === null) {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_PROVIDER_NOT_FOUND,
+					'message' => 'Provider not found: ' . $providerId,
+				], Http::STATUS_NOT_FOUND);
+			}
+
+			$success = $provider->deleteMailbox($userId);
+
+			if ($success) {
+				$this->logger->info('Mailbox deleted successfully', [
+					'userId' => $userId,
+				]);
+				return MailJsonResponse::success(['deleted' => true]);
+			} else {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_SERVICE_ERROR,
+					'message' => 'Failed to delete mailbox',
+				], Http::STATUS_INTERNAL_SERVER_ERROR);
+			}
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error deleting mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not delete mailbox');
+		}
+	}
+
+	/**
 	 * Get the current user ID
 	 *
 	 * @return string User ID string

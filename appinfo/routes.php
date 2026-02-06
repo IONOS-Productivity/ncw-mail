@@ -136,6 +136,21 @@ return [
 			'verb' => 'POST'
 		],
 		[
+			'name' => 'externalAccounts#indexMailboxes',
+			'url' => '/api/providers/{providerId}/mailboxes',
+			'verb' => 'GET'
+		],
+		[
+			'name' => 'externalAccounts#updateMailbox',
+			'url' => '/api/providers/{providerId}/mailboxes/{userId}',
+			'verb' => 'PUT'
+		],
+		[
+			'name' => 'externalAccounts#destroyMailbox',
+			'url' => '/api/providers/{providerId}/mailboxes/{userId}',
+			'verb' => 'DELETE'
+		],
+		[
 			'name' => 'tags#update',
 			'url' => '/api/tags/{id}',
 			'verb' => 'PUT'

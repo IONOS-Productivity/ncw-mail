@@ -222,4 +222,91 @@ class IonosProviderFacade {
 
 		return $this->mutationService->resetAppPassword($userId, IonosConfigService::APP_PASSWORD_NAME_USER);
 	}
+
+	/**
+	 * Get all mailboxes managed by this provider
+	 *
+	 * Returns a list of all mailboxes (email accounts) managed by this provider
+	 * across all users. Used for administration/overview purposes.
+	 *
+	 * @return array<int, array{userId: string, email: string, name: string}> List of mailbox information
+	 */
+	public function getMailboxes(): array {
+		$this->logger->debug('Getting all IONOS mailboxes');
+		
+		try {
+			$accountResponses = $this->queryService->getAllMailAccountResponses();
+			
+			$mailboxes = [];
+			foreach ($accountResponses as $response) {
+				// Extract user ID from the email or use a placeholder
+				// The API response contains the email but we need to derive the userId
+				$email = $response->getEmail();
+				
+				// For IONOS, the email format is typically userId@domain
+				// Extract userId from the email localpart
+				$emailParts = explode('@', $email);
+				$userId = $emailParts[0] ?? '';
+				
+				$mailboxes[] = [
+					'userId' => $userId,
+					'email' => $email,
+					'name' => $response->getName() ?? $userId,
+				];
+			}
+			
+			$this->logger->debug('Retrieved IONOS mailboxes', [
+				'count' => count($mailboxes),
+			]);
+			
+			return $mailboxes;
+		} catch (\Exception $e) {
+			$this->logger->error('Error getting IONOS mailboxes', [
+				'exception' => $e,
+			]);
+			return [];
+		}
+	}
+
+	/**
+	 * Update a mailbox (e.g., change localpart)
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param array<string, mixed> $data Update data
+	 * @return array{userId: string, email: string, name: string} Updated mailbox information
+	 * @throws \OCA\Mail\Exception\ServiceException If update fails
+	 */
+	public function updateMailbox(string $userId, array $data): array {
+		$this->logger->info('Updating IONOS mailbox via facade', [
+			'userId' => $userId,
+			'data' => array_keys($data),
+		]);
+
+		$localpart = $data['localpart'] ?? null;
+		$name = $data['name'] ?? '';
+
+		if ($localpart === null || $localpart === '') {
+			throw new \InvalidArgumentException('localpart is required for mailbox update');
+		}
+
+		// Update the account using the creation service (which handles updates)
+		$account = $this->creationService->createOrUpdateAccount($userId, $localpart, $name);
+
+		return [
+			'userId' => $userId,
+			'email' => $account->getEmail(),
+			'name' => $account->getName(),
+		];
+	}
+
+	/**
+	 * Delete a mailbox
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @return bool True if deletion was successful
+	 * @throws \OCA\Mail\Exception\ServiceException If deletion fails
+	 */
+	public function deleteMailbox(string $userId): bool {
+		return $this->deleteAccount($userId);
+	}
 }
