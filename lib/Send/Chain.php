@@ -15,6 +15,7 @@ use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\IMAP\IMAPClientFactory;
 use OCA\Mail\Service\Attachment\AttachmentService;
 use OCP\DB\Exception;
+use Psr\Log\LoggerInterface;
 
 class Chain {
 	public function __construct(
@@ -26,6 +27,7 @@ class Chain {
 		private AttachmentService $attachmentService,
 		private LocalMessageMapper $localMessageMapper,
 		private IMAPClientFactory $clientFactory,
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -54,6 +56,10 @@ class Chain {
 		try {
 			$result = $handlers->process($account, $localMessage, $client);
 		} catch (SentMailboxNotSetException $e) {
+			$this->logger->info('Message send aborted: No sent mailbox configured', [
+				'accountId' => $account->getId(),
+				'messageId' => $localMessage->getId(),
+			]);
 			// Set status to indicate the specific error
 			$localMessage->setStatus(LocalMessage::STATUS_NO_SENT_MAILBOX);
 			return $this->localMessageMapper->update($localMessage);

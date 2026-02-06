@@ -25,6 +25,7 @@ use OCA\Mail\Send\SendHandler;
 use OCA\Mail\Send\SentMailboxHandler;
 use OCA\Mail\Service\Attachment\AttachmentService;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Log\LoggerInterface;
 
 class ChainTest extends TestCase {
 	private Chain $chain;
@@ -37,6 +38,7 @@ class ChainTest extends TestCase {
 	private AttachmentService|MockObject $attachmentService;
 	private MockObject|LocalMessageMapper $localMessageMapper;
 	private MockObject&IMAPClientFactory $clientFactory;
+	private LoggerInterface|MockObject $logger;
 
 	protected function setUp(): void {
 		$this->sentMailboxHandler = $this->createMock(SentMailboxHandler::class);
@@ -47,6 +49,7 @@ class ChainTest extends TestCase {
 		$this->attachmentService = $this->createMock(AttachmentService::class);
 		$this->localMessageMapper = $this->createMock(LocalMessageMapper::class);
 		$this->clientFactory = $this->createMock(IMAPClientFactory::class);
+		$this->logger = $this->createMock(LoggerInterface::class);
 		$this->chain = new Chain($this->sentMailboxHandler,
 			$this->antiAbuseHandler,
 			$this->sendHandler,
@@ -55,6 +58,7 @@ class ChainTest extends TestCase {
 			$this->attachmentService,
 			$this->localMessageMapper,
 			$this->clientFactory,
+			$this->logger,
 		);
 	}
 
@@ -133,6 +137,7 @@ class ChainTest extends TestCase {
 	public function testProcessNoSentMailbox() {
 		$mailAccount = new MailAccount();
 		$mailAccount->setUserId('bob');
+		$mailAccount->setId(456);
 		$account = new Account($mailAccount);
 		$localMessage = new LocalMessage();
 		$localMessage->setId(100);
@@ -150,6 +155,12 @@ class ChainTest extends TestCase {
 			->method('process')
 			->with($account, $localMessage)
 			->willThrowException(new SentMailboxNotSetException());
+		$this->logger->expects(self::once())
+			->method('info')
+			->with('Message send aborted: No sent mailbox configured', [
+				'accountId' => 456,
+				'messageId' => 100,
+			]);
 		$this->attachmentService->expects(self::never())
 			->method('deleteLocalMessageAttachments');
 		$this->localMessageMapper->expects(self::never())

@@ -117,7 +117,7 @@ export default {
 
 		details() {
 			if (this.message.status === STATUS_NO_SENT_MAILBOX) {
-				return this.t('mail', 'No "sent" folder configured. Please pick one in the account settings.')
+				return this.t('mail', 'No "Sent" folder configured. Please pick one in the account settings.')
 			} else if (this.message.status === STATUS_IMAP_SENT_MAILBOX_FAIL) {
 				return this.t('mail', 'Could not copy to "Sent" folder')
 			} else if (this.message.status === STATUS_SMTP_ERROR) {
