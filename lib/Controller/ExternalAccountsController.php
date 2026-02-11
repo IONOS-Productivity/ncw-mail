@@ -14,9 +14,11 @@ use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
 use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
+use OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountProviderService;
 use OCA\Mail\Service\AccountService;
+use OCA\Mail\Settings\ProviderAccountOverviewSettings;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
@@ -171,11 +173,10 @@ class ExternalAccountsController extends Controller {
 	 * Returns all enabled providers regardless of user availability.
 	 * Used by admins to manage mailboxes across all providers.
 	 *
-	 * @NoAdminRequired
-	 *
 	 * @return JSONResponse
 	 */
 	#[TrapError]
+	#[AuthorizedAdminSetting(settings: ProviderAccountOverviewSettings::class)]
 	public function getEnabledProviders(): JSONResponse {
 		try {
 			$userId = $this->getUserIdOrFail();
@@ -272,12 +273,11 @@ class ExternalAccountsController extends Controller {
 	/**
 	 * List all mailboxes for a specific provider
 	 *
-	 * @NoAdminRequired
-	 *
 	 * @param string $providerId The provider ID
 	 * @return JSONResponse
 	 */
 	#[TrapError]
+	#[AuthorizedAdminSetting(settings: ProviderAccountOverviewSettings::class)]
 	public function indexMailboxes(string $providerId): JSONResponse {
 		try {
 			$userId = $this->getUserIdOrFail();
@@ -337,13 +337,12 @@ class ExternalAccountsController extends Controller {
 	/**
 	 * Delete a mailbox
 	 *
-	 * @NoAdminRequired
-	 *
 	 * @param string $providerId The provider ID
 	 * @param string $userId The user ID whose mailbox to delete
 	 * @return JSONResponse
 	 */
 	#[TrapError]
+	#[AuthorizedAdminSetting(settings: ProviderAccountOverviewSettings::class)]
 	public function destroyMailbox(string $providerId, string $userId): JSONResponse {
 		try {
 			$currentUserId = $this->getUserIdOrFail();
@@ -507,10 +506,10 @@ class ExternalAccountsController extends Controller {
 	/**
 	 * Get a provider by ID and validate it exists
 	 *
-	 * @return \OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider|JSONResponse
-	 *                                                                                  Returns the provider if found, or JSONResponse error if not found
+	 * @return IMailAccountProvider|JSONResponse
+	 *                                           Returns the provider if found, or JSONResponse error if not found
 	 */
-	private function getValidatedProvider(string $providerId) {
+	private function getValidatedProvider(string $providerId): IMailAccountProvider|JSONResponse {
 		$provider = $this->providerRegistry->getProvider($providerId);
 		if ($provider === null) {
 			return MailJsonResponse::fail([
