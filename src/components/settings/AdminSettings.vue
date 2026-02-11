@@ -267,7 +267,6 @@
 			</article>
 		</div>
 	</SettingsSection>
-	<MailboxAdministration />
 </template>
 
 <script>
@@ -275,7 +274,6 @@ import ButtonVue from '@nextcloud/vue/components/NcButton'
 import GmailAdminOauthSettings from './GmailAdminOauthSettings.vue'
 import logger from '../../logger.js'
 import MicrosoftAdminOauthSettings from './MicrosoftAdminOauthSettings.vue'
-import MailboxAdministration from '../mailboxAdmin/MailboxAdministration.vue'
 import { showError, showSuccess } from '@nextcloud/dialogs'
 import { loadState } from '@nextcloud/initial-state'
 import ProvisioningSettings from './ProvisioningSettings.vue'
@@ -309,7 +307,6 @@ export default {
 		AntiSpamSettings,
 		MicrosoftAdminOauthSettings,
 		ProvisioningSettings,
-		MailboxAdministration,
 		SettingsSection,
 		ButtonVue,
 		IconAdd,
