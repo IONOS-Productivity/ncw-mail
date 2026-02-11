@@ -99,6 +99,8 @@ Learn more about the Nextcloud Ethical AI Rating [in our blog](https://nextcloud
 	</commands>
 	<settings>
 		<admin>OCA\Mail\Settings\AdminSettings</admin>
+		<admin>OCA\Mail\Settings\ProviderAccountOverviewSettings</admin>
+		<admin-section>OCA\Mail\Settings\Section\MailProviderAccountsSection</admin-section>
 	</settings>
 	<navigations>
 		<navigation>
