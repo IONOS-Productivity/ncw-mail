@@ -156,4 +156,16 @@ class IonosProvider implements IMailAccountProvider {
 			);
 		}
 	}
+
+	public function getMailboxes(): array {
+		return $this->facade->getMailboxes();
+	}
+
+	public function updateMailbox(string $userId, array $data): array {
+		return $this->facade->updateMailbox($userId, $data);
+	}
+
+	public function deleteMailbox(string $userId): bool {
+		return $this->facade->deleteMailbox($userId);
+	}
 }
