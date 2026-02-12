@@ -68,13 +68,10 @@ class ExternalAccountsController extends Controller {
 				'parameters' => array_keys($parameters),
 			]);
 
-			// Get the provider
-			$provider = $this->providerRegistry->getProvider($providerId);
-			if ($provider === null) {
-				return MailJsonResponse::fail([
-					'error' => self::ERR_PROVIDER_NOT_FOUND,
-					'message' => 'Provider not found: ' . $providerId,
-				], Http::STATUS_NOT_FOUND);
+			// Get and validate the provider
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
 			}
 
 			// Check if provider is enabled and available for this user
@@ -136,7 +133,7 @@ class ExternalAccountsController extends Controller {
 	}
 
 	/**
-	 * Get information about available providers
+	 * Get information about available providers for the current user
 	 *
 	 * @NoAdminRequired
 	 *
@@ -148,21 +145,7 @@ class ExternalAccountsController extends Controller {
 			$userId = $this->getUserIdOrFail();
 			$availableProviders = $this->providerRegistry->getAvailableProvidersForUser($userId);
 
-			$providersInfo = [];
-			foreach ($availableProviders as $provider) {
-				$capabilities = $provider->getCapabilities();
-				$providersInfo[] = [
-					'id' => $provider->getId(),
-					'name' => $provider->getName(),
-					'capabilities' => [
-						'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
-						'appPasswords' => $capabilities->supportsAppPasswords(),
-						'passwordReset' => $capabilities->supportsPasswordReset(),
-						'emailDomain' => $capabilities->getEmailDomain(),
-					],
-					'parameterSchema' => $capabilities->getCreationParameterSchema(),
-				];
-			}
+			$providersInfo = $this->serializeProviders($availableProviders);
 
 			return MailJsonResponse::success([
 				'providers' => $providersInfo,
@@ -201,12 +184,9 @@ class ExternalAccountsController extends Controller {
 				'providerId' => $providerId,
 			]);
 
-			$provider = $this->providerRegistry->getProvider($providerId);
-			if ($provider === null) {
-				return MailJsonResponse::fail([
-					'error' => self::ERR_PROVIDER_NOT_FOUND,
-					'message' => 'Provider not found',
-				], Http::STATUS_NOT_FOUND);
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
 			}
 
 			// Check if provider supports app passwords
@@ -282,5 +262,47 @@ class ExternalAccountsController extends Controller {
 		]));
 
 		return MailJsonResponse::fail($data);
+	}
+
+	/**
+	 * Get a provider by ID and validate it exists
+	 *
+	 * @return \OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider|JSONResponse
+	 *                                                                                  Returns the provider if found, or JSONResponse error if not found
+	 */
+	private function getValidatedProvider(string $providerId) {
+		$provider = $this->providerRegistry->getProvider($providerId);
+		if ($provider === null) {
+			return MailJsonResponse::fail([
+				'error' => self::ERR_PROVIDER_NOT_FOUND,
+				'message' => 'Provider not found: ' . $providerId,
+			], Http::STATUS_NOT_FOUND);
+		}
+		return $provider;
+	}
+
+	/**
+	 * Serialize an array of providers into a consistent format
+	 *
+	 * @param array $providers Array of IMailAccountProvider instances
+	 * @return array Serialized provider information
+	 */
+	private function serializeProviders(array $providers): array {
+		$providersInfo = [];
+		foreach ($providers as $provider) {
+			$capabilities = $provider->getCapabilities();
+			$providersInfo[] = [
+				'id' => $provider->getId(),
+				'name' => $provider->getName(),
+				'capabilities' => [
+					'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
+					'appPasswords' => $capabilities->supportsAppPasswords(),
+					'passwordReset' => $capabilities->supportsPasswordReset(),
+					'emailDomain' => $capabilities->getEmailDomain(),
+				],
+				'parameterSchema' => $capabilities->getCreationParameterSchema(),
+			];
+		}
+		return $providersInfo;
 	}
 }
