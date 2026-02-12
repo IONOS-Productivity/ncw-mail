@@ -56,8 +56,8 @@ import { NcButton as ButtonVue, NcLoadingIcon as IconLoading } from '@nextcloud/
 import IconKey from 'vue-material-design-icons/Key.vue'
 import IconContentCopy from 'vue-material-design-icons/ContentCopy.vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
-import logger from '../logger.js'
-import { generateAppPassword } from '../service/ProviderPasswordService.js'
+import logger from '../../logger.js'
+import { generateAppPassword } from '../../service/ProviderPasswordService.js'
 
 // JSend response statuses
 const JSEND_STATUS = {
