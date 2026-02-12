@@ -12,12 +12,12 @@ namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations\Ionos
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use GuzzleHttp\ClientInterface;
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
-use IONOS\MailConfigurationAPI\Client\Model\Imap;
+use IONOS\MailConfigurationAPI\Client\Model\ImapConfig;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountCreatedResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailServer;
-use IONOS\MailConfigurationAPI\Client\Model\Smtp;
+use IONOS\MailConfigurationAPI\Client\Model\SmtpConfig;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ApiMailConfigClientService;
@@ -121,8 +121,8 @@ class IonosMailServiceTest extends TestCase {
 		string $host = self::IMAP_HOST,
 		int $port = self::IMAP_PORT,
 		string $sslMode = 'ssl',
-	): Imap&MockObject {
-		$imapServer = $this->getMockBuilder(Imap::class)
+	): ImapConfig&MockObject {
+		$imapServer = $this->getMockBuilder(ImapConfig::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
 			->getMock();
@@ -139,8 +139,8 @@ class IonosMailServiceTest extends TestCase {
 		string $host = self::SMTP_HOST,
 		int $port = self::SMTP_PORT,
 		string $sslMode = 'tls',
-	): Smtp&MockObject {
-		$smtpServer = $this->getMockBuilder(Smtp::class)
+	): SmtpConfig&MockObject {
+		$smtpServer = $this->getMockBuilder(SmtpConfig::class)
 			->disableOriginalConstructor()
 			->onlyMethods(['getHost', 'getPort', 'getSslMode'])
 			->getMock();

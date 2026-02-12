@@ -11,12 +11,12 @@ namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service;
 
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
 use IONOS\MailConfigurationAPI\Client\ApiException;
-use IONOS\MailConfigurationAPI\Client\Model\Imap;
+use IONOS\MailConfigurationAPI\Client\Model\ImapConfig;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountCreatedResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailCreateData;
-use IONOS\MailConfigurationAPI\Client\Model\Smtp;
+use IONOS\MailConfigurationAPI\Client\Model\SmtpConfig;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
@@ -333,13 +333,13 @@ class IonosMailService {
 	/**
 	 * Build mail account configuration from server details
 	 *
-	 * @param Imap $imapServer IMAP server configuration object
-	 * @param Smtp $smtpServer SMTP server configuration object
+	 * @param ImapConfig $imapServer IMAP server configuration object
+	 * @param SmtpConfig $smtpServer SMTP server configuration object
 	 * @param string $email Email address
 	 * @param string $password Account password
 	 * @return MailAccountConfig Complete mail account configuration
 	 */
-	private function buildMailAccountConfig(Imap $imapServer, Smtp $smtpServer, string $email, string $password): MailAccountConfig {
+	private function buildMailAccountConfig(ImapConfig $imapServer, SmtpConfig $smtpServer, string $email, string $password): MailAccountConfig {
 		$imapConfig = new MailServerConfig(
 			host: $imapServer->getHost(),
 			port: $imapServer->getPort(),
