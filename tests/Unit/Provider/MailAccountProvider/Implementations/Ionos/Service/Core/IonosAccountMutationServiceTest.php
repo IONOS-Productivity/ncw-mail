@@ -13,10 +13,10 @@ use ChristophWurst\Nextcloud\Testing\TestCase;
 use GuzzleHttp\Client;
 use IONOS\MailConfigurationAPI\Client\Api\MailConfigurationAPIApi;
 use IONOS\MailConfigurationAPI\Client\ApiException;
-use IONOS\MailConfigurationAPI\Client\Model\Imap;
+use IONOS\MailConfigurationAPI\Client\Model\ImapConfig;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountCreatedResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
-use IONOS\MailConfigurationAPI\Client\Model\Smtp;
+use IONOS\MailConfigurationAPI\Client\Model\SmtpConfig;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ApiMailConfigClientService;
@@ -473,12 +473,12 @@ class IonosAccountMutationServiceTest extends TestCase {
 	}
 
 	private function createMailAccountCreatedResponse(string $email, string $password): MailAccountCreatedResponse&MockObject {
-		$imap = $this->createMock(Imap::class);
+		$imap = $this->createMock(ImapConfig::class);
 		$imap->method('getHost')->willReturn('imap.example.com');
 		$imap->method('getPort')->willReturn(993);
 		$imap->method('getSslMode')->willReturn('TLS');
 
-		$smtp = $this->createMock(Smtp::class);
+		$smtp = $this->createMock(SmtpConfig::class);
 		$smtp->method('getHost')->willReturn('smtp.example.com');
 		$smtp->method('getPort')->willReturn(587);
 		$smtp->method('getSslMode')->willReturn('TLS');
