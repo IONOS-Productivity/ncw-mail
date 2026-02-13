@@ -105,7 +105,10 @@ export default {
 	},
 	async mounted() {
 		await this.loadProviders()
-		await this.loadMailboxes()
+		// Only load mailboxes if providers were loaded successfully
+		if (this.selectedProvider) {
+			await this.loadMailboxes()
+		}
 	},
 	methods: {
 		async loadProviders() {
@@ -123,16 +126,16 @@ export default {
 			}
 		},
 		async loadMailboxes() {
+			// Check if a provider is selected before starting
+			if (!this.selectedProvider) {
+				this.mailboxes = []
+				return
+			}
+
 			this.loading = true
 			this.error = null
 
 			try {
-				// Check if a provider is selected
-				if (!this.selectedProvider) {
-					this.mailboxes = []
-					return
-				}
-
 				const providerId = this.selectedProvider.id
 				const response = await getMailboxes(providerId)
 				this.mailboxes = response.data?.mailboxes || []
@@ -164,7 +167,7 @@ export default {
 
 				// Remove from list
 				this.mailboxes = this.mailboxes.filter(
-					m => m.userId !== this.selectedMailbox.userId
+					m => m.userId !== this.selectedMailbox.userId,
 				)
 			} catch (error) {
 				console.error('Failed to delete mailbox', error)
