@@ -205,6 +205,14 @@ class ExternalAccountsControllerTest extends TestCase {
 			public function getExistingAccountEmail(string $userId): ?string {
 				return 'existing@example.com';
 			}
+
+			public function getMailboxes(): array {
+				return [];
+			}
+
+			public function deleteMailbox(string $userId): bool {
+				return true;
+			}
 		};
 
 		$this->providerRegistry->method('getProvider')
@@ -447,6 +455,83 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->assertEquals('error', $data['status']);
 	}
 
+	public function testGetEnabledProviders(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$capabilities = new ProviderCapabilities(
+			multipleAccounts: true,
+			appPasswords: true,
+			passwordReset: false,
+			creationParameterSchema: [
+				'param1' => ['type' => 'string', 'required' => true],
+			],
+			emailDomain: 'example.com',
+		);
+
+		$provider1 = $this->createMock(IMailAccountProvider::class);
+		$provider1->method('getId')->willReturn('provider1');
+		$provider1->method('getName')->willReturn('Provider One');
+		$provider1->method('getCapabilities')->willReturn($capabilities);
+
+		$provider2 = $this->createMock(IMailAccountProvider::class);
+		$provider2->method('getId')->willReturn('provider2');
+		$provider2->method('getName')->willReturn('Provider Two');
+		$provider2->method('getCapabilities')->willReturn($capabilities);
+
+		$this->providerRegistry->method('getEnabledProviders')
+			->willReturn([
+				'provider1' => $provider1,
+				'provider2' => $provider2,
+			]);
+
+		$response = $this->controller->getEnabledProviders();
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertArrayHasKey('providers', $data['data']);
+		$this->assertCount(2, $data['data']['providers']);
+
+		$providerInfo = $data['data']['providers'][0];
+		$this->assertEquals('provider1', $providerInfo['id']);
+		$this->assertEquals('Provider One', $providerInfo['name']);
+		$this->assertTrue($providerInfo['capabilities']['multipleAccounts']);
+	}
+
+	public function testGetEnabledProvidersWithNoUserSession(): void {
+		$this->userSession->method('getUser')
+			->willReturn(null);
+
+		$response = $this->controller->getEnabledProviders();
+
+		$data = $response->getData();
+		$this->assertEquals('error', $data['status']);
+	}
+
+	public function testGetEnabledProvidersWithException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->providerRegistry->method('getEnabledProviders')
+			->willThrowException(new \Exception('Registry error'));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Error getting enabled providers', $this->anything());
+
+		$response = $this->controller->getEnabledProviders();
+
+		$data = $response->getData();
+		$this->assertEquals('error', $data['status']);
+	}
+
 
 	public function testGeneratePasswordWithNoAccountId(): void {
 		$user = $this->createMock(IUser::class);
@@ -595,6 +680,122 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$response = $this->controller->generatePassword('test-provider');
 
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+	}
+
+	// Mailbox management tests
+
+	public function testIndexMailboxesSuccess(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$mailboxes = [
+			['userId' => 'user1', 'email' => 'user1@example.com', 'name' => 'User One'],
+			['userId' => 'user2', 'email' => 'user2@example.com', 'name' => 'User Two'],
+		];
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('getMailboxes')
+			->willReturn($mailboxes);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->indexMailboxes('test-provider');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertEquals($mailboxes, $data['data']['mailboxes']);
+	}
+
+	public function testIndexMailboxesWithProviderNotFound(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->providerRegistry->method('getProvider')
+			->with('nonexistent')
+			->willReturn(null);
+
+		$response = $this->controller->indexMailboxes('nonexistent');
+
+		$this->assertEquals(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('PROVIDER_NOT_FOUND', $data['data']['error']);
+	}
+
+	public function testDestroyMailboxSuccess(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('deleteMailbox')
+			->with('targetuser')
+			->willReturn(true);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'targetuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertTrue($data['data']['deleted']);
+	}
+
+	public function testDestroyMailboxWithProviderNotFound(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->providerRegistry->method('getProvider')
+			->with('nonexistent')
+			->willReturn(null);
+
+		$response = $this->controller->destroyMailbox('nonexistent', 'targetuser');
+
+		$this->assertEquals(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('PROVIDER_NOT_FOUND', $data['data']['error']);
+	}
+
+	public function testDestroyMailboxFailed(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('deleteMailbox')
+			->with('targetuser')
+			->willReturn(false);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'targetuser');
+
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);

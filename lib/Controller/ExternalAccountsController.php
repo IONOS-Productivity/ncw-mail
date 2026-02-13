@@ -15,8 +15,10 @@ use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountProviderService;
+use OCA\Mail\Settings\ProviderAccountOverviewSettings;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\Attribute\AuthorizedAdminSetting;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
@@ -68,13 +70,10 @@ class ExternalAccountsController extends Controller {
 				'parameters' => array_keys($parameters),
 			]);
 
-			// Get the provider
-			$provider = $this->providerRegistry->getProvider($providerId);
-			if ($provider === null) {
-				return MailJsonResponse::fail([
-					'error' => self::ERR_PROVIDER_NOT_FOUND,
-					'message' => 'Provider not found: ' . $providerId,
-				], Http::STATUS_NOT_FOUND);
+			// Get and validate the provider
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
 			}
 
 			// Check if provider is enabled and available for this user
@@ -136,7 +135,7 @@ class ExternalAccountsController extends Controller {
 	}
 
 	/**
-	 * Get information about available providers
+	 * Get information about available providers for the current user
 	 *
 	 * @NoAdminRequired
 	 *
@@ -148,27 +147,46 @@ class ExternalAccountsController extends Controller {
 			$userId = $this->getUserIdOrFail();
 			$availableProviders = $this->providerRegistry->getAvailableProvidersForUser($userId);
 
-			$providersInfo = [];
-			foreach ($availableProviders as $provider) {
-				$capabilities = $provider->getCapabilities();
-				$providersInfo[] = [
-					'id' => $provider->getId(),
-					'name' => $provider->getName(),
-					'capabilities' => [
-						'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
-						'appPasswords' => $capabilities->supportsAppPasswords(),
-						'passwordReset' => $capabilities->supportsPasswordReset(),
-						'emailDomain' => $capabilities->getEmailDomain(),
-					],
-					'parameterSchema' => $capabilities->getCreationParameterSchema(),
-				];
-			}
+			$providersInfo = $this->serializeProviders($availableProviders);
 
 			return MailJsonResponse::success([
 				'providers' => $providersInfo,
 			]);
 		} catch (\Exception $e) {
 			$this->logger->error('Error getting available providers', [
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not get providers');
+		}
+	}
+
+	/**
+	 * Get all enabled providers (admin only)
+	 *
+	 * Returns all enabled providers regardless of user availability.
+	 * Used by admins to manage mailboxes across all providers.
+	 *
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	#[AuthorizedAdminSetting(settings: ProviderAccountOverviewSettings::class)]
+	public function getEnabledProviders(): JSONResponse {
+		try {
+			$userId = $this->getUserIdOrFail();
+
+			$this->logger->debug('Getting enabled providers for admin', [
+				'userId' => $userId,
+			]);
+
+			$enabledProviders = $this->providerRegistry->getEnabledProviders();
+
+			$providersInfo = $this->serializeProviders($enabledProviders);
+
+			return MailJsonResponse::success([
+				'providers' => $providersInfo,
+			]);
+		} catch (\Exception $e) {
+			$this->logger->error('Error getting enabled providers', [
 				'exception' => $e,
 			]);
 			return MailJsonResponse::error('Could not get providers');
@@ -201,12 +219,9 @@ class ExternalAccountsController extends Controller {
 				'providerId' => $providerId,
 			]);
 
-			$provider = $this->providerRegistry->getProvider($providerId);
-			if ($provider === null) {
-				return MailJsonResponse::fail([
-					'error' => self::ERR_PROVIDER_NOT_FOUND,
-					'message' => 'Provider not found',
-				], Http::STATUS_NOT_FOUND);
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
 			}
 
 			// Check if provider supports app passwords
@@ -249,6 +264,91 @@ class ExternalAccountsController extends Controller {
 	}
 
 	/**
+	 * List all mailboxes for a specific provider
+	 *
+	 * @param string $providerId The provider ID
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	#[AuthorizedAdminSetting(settings: ProviderAccountOverviewSettings::class)]
+	public function indexMailboxes(string $providerId): JSONResponse {
+		try {
+			$userId = $this->getUserIdOrFail();
+
+			$this->logger->debug('Listing mailboxes for provider', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+			]);
+
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
+			}
+
+			$mailboxes = $provider->getMailboxes();
+
+			return MailJsonResponse::success(['mailboxes' => $mailboxes]);
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error listing mailboxes', [
+				'providerId' => $providerId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not list mailboxes');
+		}
+	}
+
+	/**
+	 * Delete a mailbox
+	 *
+	 * @param string $providerId The provider ID
+	 * @param string $userId The user ID whose mailbox to delete
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	#[AuthorizedAdminSetting(settings: ProviderAccountOverviewSettings::class)]
+	public function destroyMailbox(string $providerId, string $userId): JSONResponse {
+		try {
+			$currentUserId = $this->getUserIdOrFail();
+
+			$this->logger->info('Deleting mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'currentUserId' => $currentUserId,
+			]);
+
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
+			}
+
+			$success = $provider->deleteMailbox($userId);
+
+			if ($success) {
+				$this->logger->info('Mailbox deleted successfully', [
+					'userId' => $userId,
+				]);
+				return MailJsonResponse::success(['deleted' => true]);
+			} else {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_SERVICE_ERROR,
+					'message' => 'Failed to delete mailbox',
+				], Http::STATUS_INTERNAL_SERVER_ERROR);
+			}
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error deleting mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not delete mailbox');
+		}
+	}
+
+	/**
 	 * Get the current user ID
 	 *
 	 * @return string User ID string
@@ -282,5 +382,47 @@ class ExternalAccountsController extends Controller {
 		]));
 
 		return MailJsonResponse::fail($data);
+	}
+
+	/**
+	 * Get a provider by ID and validate it exists
+	 *
+	 * @return \OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider|JSONResponse
+	 *                                                                                  Returns the provider if found, or JSONResponse error if not found
+	 */
+	private function getValidatedProvider(string $providerId) {
+		$provider = $this->providerRegistry->getProvider($providerId);
+		if ($provider === null) {
+			return MailJsonResponse::fail([
+				'error' => self::ERR_PROVIDER_NOT_FOUND,
+				'message' => 'Provider not found: ' . $providerId,
+			], Http::STATUS_NOT_FOUND);
+		}
+		return $provider;
+	}
+
+	/**
+	 * Serialize an array of providers into a consistent format
+	 *
+	 * @param array $providers Array of IMailAccountProvider instances
+	 * @return array Serialized provider information
+	 */
+	private function serializeProviders(array $providers): array {
+		$providersInfo = [];
+		foreach ($providers as $provider) {
+			$capabilities = $provider->getCapabilities();
+			$providersInfo[] = [
+				'id' => $provider->getId(),
+				'name' => $provider->getName(),
+				'capabilities' => [
+					'multipleAccounts' => $capabilities->allowsMultipleAccounts(),
+					'appPasswords' => $capabilities->supportsAppPasswords(),
+					'passwordReset' => $capabilities->supportsPasswordReset(),
+					'emailDomain' => $capabilities->getEmailDomain(),
+				],
+				'parameterSchema' => $capabilities->getCreationParameterSchema(),
+			];
+		}
+		return $providersInfo;
 	}
 }

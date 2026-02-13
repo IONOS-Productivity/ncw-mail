@@ -53,6 +53,7 @@ module.exports = async () => ({
 		mail: path.join(__dirname, 'src/main.js'),
 		oauthpopup: path.join(__dirname, 'src/main-oauth-popup.js'),
 		settings: path.join(__dirname, 'src/main-settings'),
+		'provider-account-overview': path.join(__dirname, 'src/main-provider-account-overview'),
 		htmlresponse: path.join(__dirname, 'src/html-response.js'),
 	},
 	output: {
