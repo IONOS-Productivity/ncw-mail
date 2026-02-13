@@ -36,7 +36,6 @@
 
 <script>
 import { NcAvatar, NcActions, NcActionButton } from '@nextcloud/vue'
-import IconPencil from 'vue-material-design-icons/Pencil.vue'
 import IconDelete from 'vue-material-design-icons/Delete.vue'
 
 export default {
@@ -45,7 +44,6 @@ export default {
 		NcAvatar,
 		NcActions,
 		NcActionButton,
-		IconPencil,
 		IconDelete,
 	},
 	props: {
