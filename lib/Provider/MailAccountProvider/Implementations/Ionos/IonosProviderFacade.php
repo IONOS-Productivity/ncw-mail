@@ -17,7 +17,6 @@ use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAcc
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailConfigService;
 use OCA\Mail\Service\AccountService;
-use OCP\Security\ICrypto;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -35,7 +34,6 @@ class IonosProviderFacade {
 		private readonly IonosAccountCreationService $creationService,
 		private readonly IonosMailConfigService $mailConfigService,
 		private readonly AccountService $accountService,
-		private readonly ICrypto $crypto,
 		private readonly LoggerInterface $logger,
 	) {
 	}
@@ -311,30 +309,17 @@ class IonosProviderFacade {
 				throw new ServiceException('No local Nextcloud account found for IONOS email', 404);
 			}
 
-			// Update the remote IONOS mailbox and get new configuration
-			$mailConfig = $this->mutationService->updateMailboxLocalpart($userId, $localpart);
+			// Update the remote IONOS mailbox
+			$newEmail = $this->mutationService->updateMailboxLocalpart($userId, $localpart);
 
-			// Update the local account with new email
-			$mailAccount->setEmail($mailConfig->getEmail());
+			// Update the local account with new email and usernames
+			$mailAccount->setEmail($newEmail);
+			$mailAccount->setInboundUser($newEmail);
+			$mailAccount->setOutboundUser($newEmail);
+
 			if ($name !== '') {
 				$mailAccount->setName($name);
 			}
-
-			// Update IMAP settings (username changes to new email, password remains the same)
-			$imap = $mailConfig->getImap();
-			$mailAccount->setInboundHost($imap->getHost());
-			$mailAccount->setInboundPort($imap->getPort());
-			$mailAccount->setInboundSslMode($imap->getSecurity());
-			$mailAccount->setInboundUser($imap->getUsername());
-			// Note: Password is not updated - existing password continues to work
-
-			// Update SMTP settings (username changes to new email, password remains the same)
-			$smtp = $mailConfig->getSmtp();
-			$mailAccount->setOutboundHost($smtp->getHost());
-			$mailAccount->setOutboundPort($smtp->getPort());
-			$mailAccount->setOutboundSslMode($smtp->getSecurity());
-			$mailAccount->setOutboundUser($smtp->getUsername());
-			// Note: Password is not updated - existing password continues to work
 
 			// Save the updated account
 			$updatedMailAccount = $this->accountService->update($mailAccount);

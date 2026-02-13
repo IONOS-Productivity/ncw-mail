@@ -18,7 +18,6 @@ use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAcc
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailConfigService;
 use OCA\Mail\Service\AccountService;
-use OCP\Security\ICrypto;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
@@ -29,7 +28,6 @@ class IonosProviderFacadeTest extends TestCase {
 	private IonosAccountCreationService&MockObject $creationService;
 	private IonosMailConfigService&MockObject $mailConfigService;
 	private AccountService&MockObject $accountService;
-	private ICrypto&MockObject $crypto;
 	private LoggerInterface&MockObject $logger;
 	private IonosProviderFacade $facade;
 
@@ -42,7 +40,6 @@ class IonosProviderFacadeTest extends TestCase {
 		$this->creationService = $this->createMock(IonosAccountCreationService::class);
 		$this->mailConfigService = $this->createMock(IonosMailConfigService::class);
 		$this->accountService = $this->createMock(AccountService::class);
-		$this->crypto = $this->createMock(ICrypto::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->facade = new IonosProviderFacade(
@@ -52,7 +49,6 @@ class IonosProviderFacadeTest extends TestCase {
 			$this->creationService,
 			$this->mailConfigService,
 			$this->accountService,
-			$this->crypto,
 			$this->logger,
 		);
 	}
@@ -496,9 +492,7 @@ class IonosProviderFacadeTest extends TestCase {
 			->disableOriginalConstructor()
 			->addMethods([
 				'getEmail', 'getName',
-				'setEmail', 'setName',
-				'setInboundHost', 'setInboundPort', 'setInboundSslMode', 'setInboundUser', 'setInboundPassword',
-				'setOutboundHost', 'setOutboundPort', 'setOutboundSslMode', 'setOutboundUser', 'setOutboundPassword'
+				'setEmail', 'setName', 'setInboundUser', 'setOutboundUser'
 			])
 			->getMock();
 		$mockMailAccount->method('getEmail')->willReturn($newEmail);
@@ -513,33 +507,11 @@ class IonosProviderFacadeTest extends TestCase {
 			->with($userId)
 			->willReturn([$mockAccount]);
 
-		// Mock mailbox update
-		$mockMailConfig = $this->createMock(\OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig::class);
-		$mockImapConfig = $this->createMock(\OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig::class);
-		$mockSmtpConfig = $this->createMock(\OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig::class);
-
-		$mockImapConfig->method('getHost')->willReturn('imap.ionos.com');
-		$mockImapConfig->method('getPort')->willReturn(993);
-		$mockImapConfig->method('getSecurity')->willReturn('ssl');
-		$mockImapConfig->method('getUsername')->willReturn($newEmail);
-		// Note: Password is not returned and not updated
-
-		$mockSmtpConfig->method('getHost')->willReturn('smtp.ionos.com');
-		$mockSmtpConfig->method('getPort')->willReturn(587);
-		$mockSmtpConfig->method('getSecurity')->willReturn('tls');
-		$mockSmtpConfig->method('getUsername')->willReturn($newEmail);
-		// Note: Password is not returned and not updated
-
-		$mockMailConfig->method('getEmail')->willReturn($newEmail);
-		$mockMailConfig->method('getImap')->willReturn($mockImapConfig);
-		$mockMailConfig->method('getSmtp')->willReturn($mockSmtpConfig);
-
+		// Mock mailbox update - now returns just the new email
 		$this->mutationService->expects($this->once())
 			->method('updateMailboxLocalpart')
 			->with($userId, 'newusername')
-			->willReturn($mockMailConfig);
-
-		// Note: crypto is not used since passwords are not updated
+			->willReturn($newEmail);
 
 		// Mock account service update
 		$this->accountService->expects($this->once())

@@ -290,10 +290,10 @@ class IonosAccountMutationService {
 	 *
 	 * @param string $userId The Nextcloud user ID
 	 * @param string $newLocalpart The new local part of the email address (before @domain)
-	 * @return MailAccountConfig The updated mail account configuration
+	 * @return string The new email address
 	 * @throws ServiceException If update fails or new email is already taken
 	 */
-	public function updateMailboxLocalpart(string $userId, string $newLocalpart): MailAccountConfig {
+	public function updateMailboxLocalpart(string $userId, string $newLocalpart): string {
 		$domain = $this->configService->getMailDomain();
 		$newEmail = $newLocalpart . '@' . $domain;
 
@@ -352,20 +352,7 @@ class IonosAccountMutationService {
 				'statusCode' => $statusCode,
 			]);
 
-			// Retrieve the updated account configuration
-			$result = $apiInstance->getFunctionalAccount(
-				self::BRAND,
-				$this->configService->getExternalReference(),
-				$userId
-			);
-
-			if ($result instanceof MailAccountResponse) {
-				// Note: Password is not returned by getFunctionalAccount for security reasons
-				// The existing password in the local account will continue to work
-				return $this->buildMailAccountConfigFromResponse($result);
-			}
-
-			throw new ServiceException('Failed to retrieve updated mailbox configuration', self::HTTP_INTERNAL_SERVER_ERROR);
+			return $newEmail;
 		} catch (ServiceException $e) {
 			throw $e;
 		} catch (ApiException $e) {
@@ -538,25 +525,6 @@ class IonosAccountMutationService {
 			email: $email,
 			imap: $imapConfig,
 			smtp: $smtpConfig,
-		);
-	}
-
-	/**
-	 * Build mail account configuration from MailAccountResponse (existing account)
-	 *
-	 * Note: MailAccountResponse does not include password for security reasons.
-	 * The returned configuration will have empty passwords - the caller should
-	 * use the existing password from the local account.
-	 *
-	 * @param MailAccountResponse $response The account response from getFunctionalAccount
-	 * @return MailAccountConfig The mail account configuration with empty passwords
-	 */
-	private function buildMailAccountConfigFromResponse(MailAccountResponse $response): MailAccountConfig {
-		return $this->buildMailAccountConfig(
-			$response->getServer()->getImap(),
-			$response->getServer()->getSmtp(),
-			$response->getEmail(),
-			'' // Password is not available when retrieving existing accounts
 		);
 	}
 }
