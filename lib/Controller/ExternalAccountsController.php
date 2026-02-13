@@ -390,7 +390,7 @@ class ExternalAccountsController extends Controller {
 	 * @return \OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider|JSONResponse
 	 *                                                                                  Returns the provider if found, or JSONResponse error if not found
 	 */
-	private function getValidatedProvider(string $providerId) {
+	private function getValidatedProvider(string $providerId): \OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider|JSONResponse {
 		$provider = $this->providerRegistry->getProvider($providerId);
 		if ($provider === null) {
 			return MailJsonResponse::fail([
