@@ -397,6 +397,17 @@ class IonosProviderTest extends TestCase {
 		$this->assertEquals([], $result);
 	}
 
+	public function testGetMailboxesThrowsException(): void {
+		$this->facade->expects($this->once())
+			->method('getMailboxes')
+			->willThrowException(new \OCA\Mail\Exception\ServiceException('Service error'));
+
+		$this->expectException(\OCA\Mail\Exception\ServiceException::class);
+		$this->expectExceptionMessage('Service error');
+
+		$this->provider->getMailboxes();
+	}
+
 	public function testDeleteMailbox(): void {
 		$userId = 'testuser';
 

@@ -230,6 +230,7 @@ class IonosProviderFacade {
 	 * across all users. Used for administration/overview purposes.
 	 *
 	 * @return array<int, array{userId: string, email: string}> List of mailbox information
+	 * @throws \OCA\Mail\Exception\ServiceException If fetching mailboxes fails
 	 */
 	public function getMailboxes(): array {
 		$this->logger->debug('Getting all IONOS mailboxes');
@@ -257,7 +258,11 @@ class IonosProviderFacade {
 			$this->logger->error('Error getting IONOS mailboxes', [
 				'exception' => $e,
 			]);
-			return [];
+			throw new ServiceException(
+				'Failed to fetch mailboxes: ' . $e->getMessage(),
+				0,
+				$e
+			);
 		}
 	}
 

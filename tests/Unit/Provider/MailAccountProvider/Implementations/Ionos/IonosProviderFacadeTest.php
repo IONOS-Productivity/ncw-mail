@@ -442,10 +442,10 @@ class IonosProviderFacadeTest extends TestCase {
 			->method('error')
 			->with('Error getting IONOS mailboxes', $this->anything());
 
-		$result = $this->facade->getMailboxes();
+		$this->expectException(\OCA\Mail\Exception\ServiceException::class);
+		$this->expectExceptionMessage('Failed to fetch mailboxes: Service error');
 
-		$this->assertIsArray($result);
-		$this->assertEmpty($result);
+		$this->facade->getMailboxes();
 	}
 
 	public function testGetMailboxesHandlesEmailWithoutName(): void {
