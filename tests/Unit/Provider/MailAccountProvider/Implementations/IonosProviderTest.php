@@ -371,4 +371,55 @@ class IonosProviderTest extends TestCase {
 
 		$this->provider->generateAppPassword($userId);
 	}
+
+	public function testGetMailboxes(): void {
+		$expectedMailboxes = [
+			['userId' => 'user1', 'email' => 'user1@example.com'],
+			['userId' => 'user2', 'email' => 'user2@example.com'],
+		];
+
+		$this->facade->expects($this->once())
+			->method('getMailboxes')
+			->willReturn($expectedMailboxes);
+
+		$result = $this->provider->getMailboxes();
+
+		$this->assertEquals($expectedMailboxes, $result);
+	}
+
+	public function testGetMailboxesEmpty(): void {
+		$this->facade->expects($this->once())
+			->method('getMailboxes')
+			->willReturn([]);
+
+		$result = $this->provider->getMailboxes();
+
+		$this->assertEquals([], $result);
+	}
+
+	public function testDeleteMailbox(): void {
+		$userId = 'testuser';
+
+		$this->facade->expects($this->once())
+			->method('deleteMailbox')
+			->with($userId)
+			->willReturn(true);
+
+		$result = $this->provider->deleteMailbox($userId);
+
+		$this->assertTrue($result);
+	}
+
+	public function testDeleteMailboxReturnsFalse(): void {
+		$userId = 'testuser';
+
+		$this->facade->expects($this->once())
+			->method('deleteMailbox')
+			->with($userId)
+			->willReturn(false);
+
+		$result = $this->provider->deleteMailbox($userId);
+
+		$this->assertFalse($result);
+	}
 }
