@@ -50,14 +50,18 @@
 						<tr>
 							<th>{{ t('mail', 'Email Address') }}</th>
 							<th>{{ t('mail', 'Linked User') }}</th>
-							<th class="actions-column">{{ t('mail', 'Actions') }}</th>
+							<th class="actions-column">
+								{{ t('mail', 'Actions') }}
+							</th>
 						</tr>
 					</thead>
 					<tbody>
 						<ProviderMailboxListItem v-for="mailbox in mailboxes"
 							:key="mailbox.userId"
 							:mailbox="mailbox"
-							@delete="handleDelete" />
+							:provider-id="selectedProvider.id"
+							@delete="handleDelete"
+							@update="handleUpdate" />
 					</tbody>
 				</table>
 			</div>
@@ -151,6 +155,13 @@ export default {
 			this.selectedMailbox = mailbox
 			this.showDeleteModal = true
 		},
+		handleUpdate(updatedMailbox) {
+			// Find and update mailbox in list
+			const index = this.mailboxes.findIndex(m => m.userId === updatedMailbox.userId)
+			if (index !== -1) {
+				this.$set(this.mailboxes, index, updatedMailbox)
+			}
+		},
 		async confirmDelete() {
 			if (!this.selectedMailbox || !this.selectedProvider) {
 				return
@@ -164,7 +175,7 @@ export default {
 
 				// Remove from list
 				this.mailboxes = this.mailboxes.filter(
-					m => m.userId !== this.selectedMailbox.userId
+					m => m.userId !== this.selectedMailbox.userId,
 				)
 			} catch (error) {
 				console.error('Failed to delete mailbox', error)
