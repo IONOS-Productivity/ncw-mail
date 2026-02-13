@@ -143,9 +143,13 @@ export default {
 			const atIndex = email.indexOf('@')
 			return atIndex >= 0 ? email.substring(0, atIndex) : email
 		},
-		toggleEdit() {
-			this.editing = !this.editing
+		async toggleEdit() {
 			if (this.editing) {
+				// Exiting edit mode - save all changes
+				await this.saveAllChanges()
+			} else {
+				// Entering edit mode
+				this.editing = true
 				// Reset edited values when entering edit mode
 				this.editedName = this.mailbox.name || ''
 				this.editedLocalpart = this.localpartFromEmail
@@ -153,10 +157,61 @@ export default {
 				this.$nextTick(() => {
 					this.$refs.nameField?.$refs?.inputField?.$refs?.input?.focus()
 				})
-			} else {
-				// Reset values when canceling
+			}
+		},
+		async saveAllChanges() {
+			// Check which fields have changed
+			const trimmedName = this.editedName.trim()
+			const trimmedLocalpart = this.editedLocalpart.trim()
+			const nameChanged = trimmedName !== this.mailbox.name && trimmedName !== ''
+			const localpartChanged = trimmedLocalpart !== this.localpartFromEmail && trimmedLocalpart !== ''
+
+			// If no changes, just exit edit mode
+			if (!nameChanged && !localpartChanged) {
+				this.editing = false
+				return
+			}
+
+			// Build update data object with all changes
+			const updateData = {}
+			if (nameChanged) {
+				updateData.name = trimmedName
+			}
+			if (localpartChanged) {
+				// Validate localpart before adding to update
+				if (!/^[a-zA-Z0-9._-]+$/.test(trimmedLocalpart)) {
+					showError(this.t('mail', 'Email username contains invalid characters. Use only letters, numbers, dots, hyphens, and underscores.'))
+					return
+				}
+				updateData.localpart = trimmedLocalpart
+			}
+
+			// Save all changes at once
+			this.loading.name = nameChanged
+			this.loading.localpart = localpartChanged
+			try {
+				await this.updateMailboxField(updateData)
+
+				// Build success message
+				if (nameChanged && localpartChanged) {
+					showSuccess(this.t('mail', 'Mailbox updated successfully'))
+				} else if (nameChanged) {
+					showSuccess(this.t('mail', 'Display name updated successfully'))
+				} else if (localpartChanged) {
+					showSuccess(this.t('mail', 'Email address updated successfully'))
+				}
+
+				// Exit edit mode on success
+				this.editing = false
+			} catch (error) {
+				// Error already handled in updateMailboxField
+				// Revert to original values
 				this.editedName = this.mailbox.name || ''
 				this.editedLocalpart = this.localpartFromEmail
+				// Stay in edit mode so user can fix errors
+			} finally {
+				this.loading.name = false
+				this.loading.localpart = false
 			}
 		},
 		async updateName() {
