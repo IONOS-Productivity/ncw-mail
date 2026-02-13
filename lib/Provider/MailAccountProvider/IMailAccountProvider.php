@@ -141,6 +141,17 @@ interface IMailAccountProvider {
 	public function getMailboxes(): array;
 
 	/**
+	 * Update a mailbox (e.g., change localpart/username)
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param array<string, mixed> $data Update data (e.g., ['localpart' => 'newusername'])
+	 * @return array{userId: string, email: string, name: string} Updated mailbox information
+	 * @throws \OCA\Mail\Exception\AccountAlreadyExistsException If email is already taken
+	 * @throws \OCA\Mail\Exception\ServiceException If update fails
+	 */
+	public function updateMailbox(string $userId, array $data): array;
+
+	/**
 	 * Delete a mailbox
 	 *
 	 * @param string $userId The Nextcloud user ID

@@ -262,6 +262,37 @@ class IonosProviderFacade {
 	}
 
 	/**
+	 * Update a mailbox (e.g., change localpart)
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param array<string, mixed> $data Update data
+	 * @return array{userId: string, email: string, name: string} Updated mailbox information
+	 * @throws \OCA\Mail\Exception\ServiceException If update fails
+	 */
+	public function updateMailbox(string $userId, array $data): array {
+		$this->logger->info('Updating IONOS mailbox via facade', [
+			'userId' => $userId,
+			'data' => array_keys($data),
+		]);
+
+		$localpart = $data['localpart'] ?? null;
+		$name = $data['name'] ?? '';
+
+		if ($localpart === null || $localpart === '') {
+			throw new \InvalidArgumentException('localpart is required for mailbox update');
+		}
+
+		// Update the account using the creation service (which handles updates)
+		$account = $this->creationService->createOrUpdateAccount($userId, $localpart, $name);
+
+		return [
+			'userId' => $userId,
+			'email' => $account->getEmail(),
+			'name' => $account->getName(),
+		];
+	}
+
+	/**
 	 * Delete a mailbox
 	 *
 	 * @param string $userId The Nextcloud user ID
