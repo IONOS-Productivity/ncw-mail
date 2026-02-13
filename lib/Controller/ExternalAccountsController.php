@@ -13,6 +13,7 @@ use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
+use OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountProviderService;
 use OCA\Mail\Settings\ProviderAccountOverviewSettings;
@@ -387,10 +388,10 @@ class ExternalAccountsController extends Controller {
 	/**
 	 * Get a provider by ID and validate it exists
 	 *
-	 * @return \OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider|JSONResponse
-	 *                                                                                  Returns the provider if found, or JSONResponse error if not found
+	 * @return IMailAccountProvider|JSONResponse
+	 *                                           Returns the provider if found, or JSONResponse error if not found
 	 */
-	private function getValidatedProvider(string $providerId): \OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider|JSONResponse {
+	private function getValidatedProvider(string $providerId): IMailAccountProvider|JSONResponse {
 		$provider = $this->providerRegistry->getProvider($providerId);
 		if ($provider === null) {
 			return MailJsonResponse::fail([
