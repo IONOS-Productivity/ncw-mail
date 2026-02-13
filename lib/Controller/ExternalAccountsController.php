@@ -315,9 +315,7 @@ class ExternalAccountsController extends Controller {
 
 			// Get update data from request
 			$data = $this->request->getParams();
-			unset($data['providerId']);
-			unset($data['userId']);
-			unset($data['_route']);
+			unset($data['providerId'], $data['userId'], $data['_route']);
 
 			// Validate localpart if provided
 			if (isset($data['localpart'])) {
@@ -373,11 +371,6 @@ class ExternalAccountsController extends Controller {
 		} catch (ServiceException $e) {
 			return $this->buildServiceErrorResponse($e, $providerId);
 		} catch (\InvalidArgumentException $e) {
-			$this->logger->error('Invalid parameters for mailbox update', [
-				'providerId' => $providerId,
-				'userId' => $userId,
-				'exception' => $e,
-			]);
 			return MailJsonResponse::fail([
 				'error' => self::ERR_INVALID_PARAMETERS,
 				'message' => $e->getMessage(),
