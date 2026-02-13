@@ -60,7 +60,7 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$response = $this->controller->create('test-provider');
 
-		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$this->assertEquals(Http::STATUS_UNAUTHORIZED, $response->getStatus());
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 	}
@@ -872,9 +872,11 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->assertEquals(Http::STATUS_CONFLICT, $response->getStatus());
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
-		$this->assertEquals('EMAIL_ALREADY_TAKEN', $data['data']['error']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(409, $data['data']['statusCode']);
 		$this->assertEquals('Email already taken', $data['data']['message']);
-		$this->assertEquals($errorData, $data['data']['data']);
+		$this->assertEquals('existinguser@example.com', $data['data']['expectedEmail']);
+		$this->assertEquals('other@example.com', $data['data']['existingEmail']);
 	}
 
 	public function testDestroyMailboxSuccess(): void {

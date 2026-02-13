@@ -359,17 +359,6 @@ class ExternalAccountsController extends Controller {
 			]);
 
 			return MailJsonResponse::success($mailbox);
-		} catch (\OCA\Mail\Exception\AccountAlreadyExistsException $e) {
-			$this->logger->warning('Email address already taken', [
-				'providerId' => $providerId,
-				'userId' => $userId,
-				'data' => $e->getData(),
-			]);
-			return MailJsonResponse::fail([
-				'error' => 'EMAIL_ALREADY_TAKEN',
-				'message' => $e->getMessage(),
-				'data' => $e->getData(),
-			], Http::STATUS_CONFLICT);
 		} catch (ServiceException $e) {
 			return $this->buildServiceErrorResponse($e, $providerId);
 		} catch (\InvalidArgumentException $e) {
@@ -460,8 +449,8 @@ class ExternalAccountsController extends Controller {
 			'message' => $e->getMessage(),
 		];
 
-		// If it's a ProviderServiceException, merge in the additional data
-		if ($e instanceof ProviderServiceException) {
+		// Merge in additional data from exceptions that support it
+		if ($e instanceof ProviderServiceException || $e instanceof \OCA\Mail\Exception\AccountAlreadyExistsException) {
 			$data = array_merge($data, $e->getData());
 		}
 
@@ -469,7 +458,9 @@ class ExternalAccountsController extends Controller {
 			'providerId' => $providerId,
 		]));
 
-		return MailJsonResponse::fail($data);
+		// Use exception code as HTTP status, default to 400 if invalid
+		$httpStatus = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 400;
+		return MailJsonResponse::fail($data, $httpStatus);
 	}
 
 	/**
