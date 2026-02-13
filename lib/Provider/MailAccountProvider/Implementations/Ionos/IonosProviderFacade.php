@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos;
 
 use OCA\Mail\Account;
+use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountMutationService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountQueryService;
@@ -267,6 +268,7 @@ class IonosProviderFacade {
 	 * @param string $userId The Nextcloud user ID
 	 * @param array<string, mixed> $data Update data
 	 * @return array{userId: string, email: string, name: string} Updated mailbox information
+	 * @throws \OCA\Mail\Exception\AccountAlreadyExistsException If email is already taken
 	 * @throws \OCA\Mail\Exception\ServiceException If update fails
 	 */
 	public function updateMailbox(string $userId, array $data): array {
@@ -282,14 +284,26 @@ class IonosProviderFacade {
 			throw new \InvalidArgumentException('localpart is required for mailbox update');
 		}
 
-		// Update the account using the creation service (which handles updates)
-		$account = $this->creationService->createOrUpdateAccount($userId, $localpart, $name);
+		try {
+			// Update the account using the creation service (which handles updates)
+			$account = $this->creationService->createOrUpdateAccount($userId, $localpart, $name);
 
-		return [
-			'userId' => $userId,
-			'email' => $account->getEmail(),
-			'name' => $account->getName(),
-		];
+			return [
+				'userId' => $userId,
+				'email' => $account->getEmail(),
+				'name' => $account->getName(),
+			];
+		} catch (ProviderServiceException $e) {
+			// Convert 409 conflicts to AccountAlreadyExistsException
+			if ($e->getCode() === Service\IonosMailService::STATUS__409_CONFLICT) {
+				throw new \OCA\Mail\Exception\AccountAlreadyExistsException(
+					'Email address already exists',
+					$e->getCode(),
+					$e
+				);
+			}
+			throw $e;
+		}
 	}
 
 	/**

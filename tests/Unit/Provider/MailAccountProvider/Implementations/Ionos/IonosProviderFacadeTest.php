@@ -467,4 +467,88 @@ class IonosProviderFacadeTest extends TestCase {
 		$this->assertEquals('user3', $result[0]['userId']);
 		$this->assertEquals('user3@ionos.com', $result[0]['email']);
 	}
+
+	public function testUpdateMailboxSuccess(): void {
+		$userId = 'user123';
+		$data = [
+			'localpart' => 'newusername',
+			'name' => 'New Name',
+		];
+
+		$mockAccount = $this->createMock(Account::class);
+		$mockAccount->method('getEmail')->willReturn('newusername@ionos.com');
+		$mockAccount->method('getName')->willReturn('New Name');
+
+		$this->creationService->expects($this->once())
+			->method('createOrUpdateAccount')
+			->with($userId, 'newusername', 'New Name')
+			->willReturn($mockAccount);
+
+		$result = $this->facade->updateMailbox($userId, $data);
+
+		$this->assertIsArray($result);
+		$this->assertEquals($userId, $result['userId']);
+		$this->assertEquals('newusername@ionos.com', $result['email']);
+		$this->assertEquals('New Name', $result['name']);
+	}
+
+	public function testUpdateMailboxThrowsInvalidArgumentExceptionWhenLocalpartMissing(): void {
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('localpart is required for mailbox update');
+
+		$this->facade->updateMailbox('user123', ['name' => 'Test']);
+	}
+
+	public function testUpdateMailboxThrowsInvalidArgumentExceptionWhenLocalpartEmpty(): void {
+		$this->expectException(\InvalidArgumentException::class);
+		$this->expectExceptionMessage('localpart is required for mailbox update');
+
+		$this->facade->updateMailbox('user123', ['localpart' => '', 'name' => 'Test']);
+	}
+
+	public function testUpdateMailboxConverts409ToAccountAlreadyExistsException(): void {
+		$userId = 'user123';
+		$data = [
+			'localpart' => 'existinguser',
+			'name' => 'Test',
+		];
+
+		$providerException = new \OCA\Mail\Exception\ProviderServiceException(
+			'Email already exists',
+			\OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailService::STATUS__409_CONFLICT
+		);
+
+		$this->creationService->expects($this->once())
+			->method('createOrUpdateAccount')
+			->with($userId, 'existinguser', 'Test')
+			->willThrowException($providerException);
+
+		$this->expectException(\OCA\Mail\Exception\AccountAlreadyExistsException::class);
+		$this->expectExceptionMessage('Email address already exists');
+
+		$this->facade->updateMailbox($userId, $data);
+	}
+
+	public function testUpdateMailboxRethrowsNon409ProviderServiceException(): void {
+		$userId = 'user123';
+		$data = [
+			'localpart' => 'testuser',
+			'name' => 'Test',
+		];
+
+		$providerException = new \OCA\Mail\Exception\ProviderServiceException(
+			'Some other error',
+			500
+		);
+
+		$this->creationService->expects($this->once())
+			->method('createOrUpdateAccount')
+			->with($userId, 'testuser', 'Test')
+			->willThrowException($providerException);
+
+		$this->expectException(\OCA\Mail\Exception\ProviderServiceException::class);
+		$this->expectExceptionMessage('Some other error');
+
+		$this->facade->updateMailbox($userId, $data);
+	}
 }
