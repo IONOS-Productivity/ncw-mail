@@ -522,13 +522,13 @@ class IonosProviderFacadeTest extends TestCase {
 		$mockImapConfig->method('getPort')->willReturn(993);
 		$mockImapConfig->method('getSecurity')->willReturn('ssl');
 		$mockImapConfig->method('getUsername')->willReturn($newEmail);
-		$mockImapConfig->method('getPassword')->willReturn('password123');
+		// Note: Password is not returned and not updated
 
 		$mockSmtpConfig->method('getHost')->willReturn('smtp.ionos.com');
 		$mockSmtpConfig->method('getPort')->willReturn(587);
 		$mockSmtpConfig->method('getSecurity')->willReturn('tls');
 		$mockSmtpConfig->method('getUsername')->willReturn($newEmail);
-		$mockSmtpConfig->method('getPassword')->willReturn('password123');
+		// Note: Password is not returned and not updated
 
 		$mockMailConfig->method('getEmail')->willReturn($newEmail);
 		$mockMailConfig->method('getImap')->willReturn($mockImapConfig);
@@ -539,11 +539,7 @@ class IonosProviderFacadeTest extends TestCase {
 			->with($userId, 'newusername')
 			->willReturn($mockMailConfig);
 
-		// Mock crypto
-		$this->crypto->expects($this->exactly(2))
-			->method('encrypt')
-			->with('password123')
-			->willReturn('encrypted_password');
+		// Note: crypto is not used since passwords are not updated
 
 		// Mock account service update
 		$this->accountService->expects($this->once())

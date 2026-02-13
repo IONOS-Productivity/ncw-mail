@@ -314,27 +314,27 @@ class IonosProviderFacade {
 			// Update the remote IONOS mailbox and get new configuration
 			$mailConfig = $this->mutationService->updateMailboxLocalpart($userId, $localpart);
 
-			// Update the local account with new email and credentials
+			// Update the local account with new email
 			$mailAccount->setEmail($mailConfig->getEmail());
 			if ($name !== '') {
 				$mailAccount->setName($name);
 			}
 
-			// Update IMAP credentials
+			// Update IMAP settings (username changes to new email, password remains the same)
 			$imap = $mailConfig->getImap();
 			$mailAccount->setInboundHost($imap->getHost());
 			$mailAccount->setInboundPort($imap->getPort());
 			$mailAccount->setInboundSslMode($imap->getSecurity());
 			$mailAccount->setInboundUser($imap->getUsername());
-			$mailAccount->setInboundPassword($this->crypto->encrypt($imap->getPassword()));
+			// Note: Password is not updated - existing password continues to work
 
-			// Update SMTP credentials
+			// Update SMTP settings (username changes to new email, password remains the same)
 			$smtp = $mailConfig->getSmtp();
 			$mailAccount->setOutboundHost($smtp->getHost());
 			$mailAccount->setOutboundPort($smtp->getPort());
 			$mailAccount->setOutboundSslMode($smtp->getSecurity());
 			$mailAccount->setOutboundUser($smtp->getUsername());
-			$mailAccount->setOutboundPassword($this->crypto->encrypt($smtp->getPassword()));
+			// Note: Password is not updated - existing password continues to work
 
 			// Save the updated account
 			$updatedMailAccount = $this->accountService->update($mailAccount);

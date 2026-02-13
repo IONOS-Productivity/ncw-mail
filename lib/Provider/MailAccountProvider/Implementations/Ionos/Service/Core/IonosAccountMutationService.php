@@ -286,11 +286,11 @@ class IonosAccountMutationService {
 	 *
 	 * This method updates the email address by changing only the localpart (username before @).
 	 * It verifies that the new email address is not already taken by another user,
-	 * then updates the remote IONOS mailbox and generates a new app password.
+	 * then updates the remote IONOS mailbox.
 	 *
 	 * @param string $userId The Nextcloud user ID
 	 * @param string $newLocalpart The new local part of the email address (before @domain)
-	 * @return MailAccountConfig The updated mail account configuration with new password
+	 * @return MailAccountConfig The updated mail account configuration
 	 * @throws ServiceException If update fails or new email is already taken
 	 */
 	public function updateMailboxLocalpart(string $userId, string $newLocalpart): MailAccountConfig {
@@ -328,24 +328,31 @@ class IonosAccountMutationService {
 				throw new ServiceException('Invalid patch request', self::HTTP_INTERNAL_SERVER_ERROR);
 			}
 
-			// Update the mailbox via API
-			$apiInstance->patchMailbox(
+			// Update the mailbox via API and check response status
+			[, $statusCode] = $apiInstance->patchMailboxWithHttpInfo(
 				self::BRAND,
 				$this->configService->getExternalReference(),
 				$userId,
 				$patchRequest
 			);
 
+			// Verify the update was successful
+			if ($statusCode !== 200) {
+				$this->logger->error('Unexpected status code from patchMailbox API', [
+					'statusCode' => $statusCode,
+					'userId' => $userId,
+					'newEmail' => $newEmail,
+				]);
+				throw new ServiceException('Failed to update IONOS mailbox: unexpected status code ' . $statusCode, $statusCode);
+			}
+
 			$this->logger->info('Successfully updated IONOS mailbox email address', [
 				'userId' => $userId,
 				'newEmail' => $newEmail,
+				'statusCode' => $statusCode,
 			]);
 
-			// Generate a new app password after email change
-			$newPassword = $this->resetAppPassword($userId, IonosConfigService::APP_PASSWORD_NAME_USER);
-
 			// Retrieve the updated account configuration
-			$apiInstance = $this->createApiInstance();
 			$result = $apiInstance->getFunctionalAccount(
 				self::BRAND,
 				$this->configService->getExternalReference(),
@@ -353,12 +360,9 @@ class IonosAccountMutationService {
 			);
 
 			if ($result instanceof MailAccountResponse) {
-				return $this->buildMailAccountConfig(
-					$result->getServer()->getImap(),
-					$result->getServer()->getSmtp(),
-					$result->getEmail(),
-					$newPassword
-				);
+				// Note: Password is not returned by getFunctionalAccount for security reasons
+				// The existing password in the local account will continue to work
+				return $this->buildMailAccountConfigFromResponse($result);
 			}
 
 			throw new ServiceException('Failed to retrieve updated mailbox configuration', self::HTTP_INTERNAL_SERVER_ERROR);
@@ -534,6 +538,25 @@ class IonosAccountMutationService {
 			email: $email,
 			imap: $imapConfig,
 			smtp: $smtpConfig,
+		);
+	}
+
+	/**
+	 * Build mail account configuration from MailAccountResponse (existing account)
+	 *
+	 * Note: MailAccountResponse does not include password for security reasons.
+	 * The returned configuration will have empty passwords - the caller should
+	 * use the existing password from the local account.
+	 *
+	 * @param MailAccountResponse $response The account response from getFunctionalAccount
+	 * @return MailAccountConfig The mail account configuration with empty passwords
+	 */
+	private function buildMailAccountConfigFromResponse(MailAccountResponse $response): MailAccountConfig {
+		return $this->buildMailAccountConfig(
+			$response->getServer()->getImap(),
+			$response->getServer()->getSmtp(),
+			$response->getEmail(),
+			'' // Password is not available when retrieving existing accounts
 		);
 	}
 }
