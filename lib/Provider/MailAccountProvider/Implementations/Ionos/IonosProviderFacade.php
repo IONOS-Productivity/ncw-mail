@@ -294,11 +294,12 @@ class IonosProviderFacade {
 				'name' => $account->getName(),
 			];
 		} catch (ProviderServiceException $e) {
-			// Convert 409 conflicts to AccountAlreadyExistsException
+			// Convert 409 conflicts to AccountAlreadyExistsException, preserving error data
 			if ($e->getCode() === Service\IonosMailService::STATUS__409_CONFLICT) {
 				throw new \OCA\Mail\Exception\AccountAlreadyExistsException(
-					'Email address already exists',
+					$e->getMessage(),
 					$e->getCode(),
+					$e->getData(),
 					$e
 				);
 			}

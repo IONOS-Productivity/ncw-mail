@@ -513,9 +513,15 @@ class IonosProviderFacadeTest extends TestCase {
 			'name' => 'Test',
 		];
 
+		$errorData = [
+			'expectedEmail' => 'existinguser@ionos.com',
+			'existingEmail' => 'other@ionos.com',
+		];
+
 		$providerException = new \OCA\Mail\Exception\ProviderServiceException(
-			'Email already exists',
-			\OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailService::STATUS__409_CONFLICT
+			'IONOS account exists but email mismatch',
+			\OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailService::STATUS__409_CONFLICT,
+			$errorData
 		);
 
 		$this->creationService->expects($this->once())
@@ -523,10 +529,14 @@ class IonosProviderFacadeTest extends TestCase {
 			->with($userId, 'existinguser', 'Test')
 			->willThrowException($providerException);
 
-		$this->expectException(\OCA\Mail\Exception\AccountAlreadyExistsException::class);
-		$this->expectExceptionMessage('Email address already exists');
-
-		$this->facade->updateMailbox($userId, $data);
+		try {
+			$this->facade->updateMailbox($userId, $data);
+			$this->fail('Expected AccountAlreadyExistsException to be thrown');
+		} catch (\OCA\Mail\Exception\AccountAlreadyExistsException $e) {
+			$this->assertEquals('IONOS account exists but email mismatch', $e->getMessage());
+			$this->assertEquals(409, $e->getCode());
+			$this->assertEquals($errorData, $e->getData());
+		}
 	}
 
 	public function testUpdateMailboxRethrowsNon409ProviderServiceException(): void {

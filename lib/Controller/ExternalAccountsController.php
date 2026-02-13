@@ -363,10 +363,12 @@ class ExternalAccountsController extends Controller {
 			$this->logger->warning('Email address already taken', [
 				'providerId' => $providerId,
 				'userId' => $userId,
+				'data' => $e->getData(),
 			]);
 			return MailJsonResponse::fail([
 				'error' => 'EMAIL_ALREADY_TAKEN',
-				'message' => 'Email is already taken',
+				'message' => $e->getMessage(),
+				'data' => $e->getData(),
 			], Http::STATUS_CONFLICT);
 		} catch (ServiceException $e) {
 			return $this->buildServiceErrorResponse($e, $providerId);

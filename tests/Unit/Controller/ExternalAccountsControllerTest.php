@@ -848,9 +848,20 @@ class ExternalAccountsControllerTest extends TestCase {
 				'localpart' => 'existinguser',
 			]);
 
+		$errorData = [
+			'expectedEmail' => 'existinguser@example.com',
+			'existingEmail' => 'other@example.com',
+		];
+
+		$exception = new \OCA\Mail\Exception\AccountAlreadyExistsException(
+			'Email already taken',
+			409,
+			$errorData
+		);
+
 		$provider = $this->createMock(IMailAccountProvider::class);
 		$provider->method('updateMailbox')
-			->willThrowException(new \OCA\Mail\Exception\AccountAlreadyExistsException('Email already taken'));
+			->willThrowException($exception);
 
 		$this->providerRegistry->method('getProvider')
 			->with('test-provider')
@@ -862,7 +873,8 @@ class ExternalAccountsControllerTest extends TestCase {
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 		$this->assertEquals('EMAIL_ALREADY_TAKEN', $data['data']['error']);
-		$this->assertEquals('Email is already taken', $data['data']['message']);
+		$this->assertEquals('Email already taken', $data['data']['message']);
+		$this->assertEquals($errorData, $data['data']['data']);
 	}
 
 	public function testDestroyMailboxSuccess(): void {
