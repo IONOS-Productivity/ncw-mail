@@ -10,13 +10,14 @@ declare(strict_types=1);
 namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos;
 
 use OCA\Mail\Account;
-use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountMutationService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountQueryService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountCreationService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailConfigService;
+use OCA\Mail\Service\AccountService;
+use OCP\Security\ICrypto;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -33,6 +34,8 @@ class IonosProviderFacade {
 		private readonly IonosAccountMutationService $mutationService,
 		private readonly IonosAccountCreationService $creationService,
 		private readonly IonosMailConfigService $mailConfigService,
+		private readonly AccountService $accountService,
+		private readonly ICrypto $crypto,
 		private readonly LoggerInterface $logger,
 	) {
 	}
@@ -265,6 +268,9 @@ class IonosProviderFacade {
 	/**
 	 * Update a mailbox (e.g., change localpart)
 	 *
+	 * This method updates the mailbox by changing the localpart (email username).
+	 * It first updates the remote IONOS mailbox, then updates the local Nextcloud account.
+	 *
 	 * @param string $userId The Nextcloud user ID
 	 * @param array<string, mixed> $data Update data
 	 * @return array{userId: string, email: string, name: string} Updated mailbox information
@@ -285,21 +291,72 @@ class IonosProviderFacade {
 		}
 
 		try {
-			// Update the account using the creation service (which handles updates)
-			$account = $this->creationService->createOrUpdateAccount($userId, $localpart, $name);
+			// Get the current email BEFORE updating (to find the local account)
+			$currentEmail = $this->queryService->getIonosEmailForUser($userId);
+			if ($currentEmail === null) {
+				throw new ServiceException('No IONOS account found for user', 404);
+			}
+
+			// Get all accounts for this user and find the one with the current IONOS email
+			$existingAccounts = $this->accountService->findByUserId($userId);
+			$mailAccount = null;
+			foreach ($existingAccounts as $account) {
+				if (strcasecmp($account->getEmail(), $currentEmail) === 0) {
+					$mailAccount = $account->getMailAccount();
+					break;
+				}
+			}
+
+			if ($mailAccount === null) {
+				throw new ServiceException('No local Nextcloud account found for IONOS email', 404);
+			}
+
+			// Update the remote IONOS mailbox and get new configuration
+			$mailConfig = $this->mutationService->updateMailboxLocalpart($userId, $localpart);
+
+			// Update the local account with new email and credentials
+			$mailAccount->setEmail($mailConfig->getEmail());
+			if ($name !== '') {
+				$mailAccount->setName($name);
+			}
+
+			// Update IMAP credentials
+			$imap = $mailConfig->getImap();
+			$mailAccount->setInboundHost($imap->getHost());
+			$mailAccount->setInboundPort($imap->getPort());
+			$mailAccount->setInboundSslMode($imap->getSecurity());
+			$mailAccount->setInboundUser($imap->getUsername());
+			$mailAccount->setInboundPassword($this->crypto->encrypt($imap->getPassword()));
+
+			// Update SMTP credentials
+			$smtp = $mailConfig->getSmtp();
+			$mailAccount->setOutboundHost($smtp->getHost());
+			$mailAccount->setOutboundPort($smtp->getPort());
+			$mailAccount->setOutboundSslMode($smtp->getSecurity());
+			$mailAccount->setOutboundUser($smtp->getUsername());
+			$mailAccount->setOutboundPassword($this->crypto->encrypt($smtp->getPassword()));
+
+			// Save the updated account
+			$updatedMailAccount = $this->accountService->update($mailAccount);
+
+			$this->logger->info('Successfully updated IONOS mailbox', [
+				'userId' => $userId,
+				'oldEmail' => $currentEmail,
+				'newEmail' => $updatedMailAccount->getEmail(),
+			]);
 
 			return [
 				'userId' => $userId,
-				'email' => $account->getEmail(),
-				'name' => $account->getName(),
+				'email' => $updatedMailAccount->getEmail(),
+				'name' => $updatedMailAccount->getName(),
 			];
-		} catch (ProviderServiceException $e) {
-			// Convert 409 conflicts to AccountAlreadyExistsException, preserving error data
-			if ($e->getCode() === Service\IonosMailService::STATUS__409_CONFLICT) {
+		} catch (ServiceException $e) {
+			// Convert 409 conflicts to AccountAlreadyExistsException
+			if ($e->getCode() === 409) {
 				throw new \OCA\Mail\Exception\AccountAlreadyExistsException(
 					$e->getMessage(),
 					$e->getCode(),
-					$e->getData(),
+					[],
 					$e
 				);
 			}

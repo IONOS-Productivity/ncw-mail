@@ -12,8 +12,10 @@ namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Co
 use IONOS\MailConfigurationAPI\Client\ApiException;
 use IONOS\MailConfigurationAPI\Client\Model\ImapConfig;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountCreatedResponse;
+use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailCreateData;
+use IONOS\MailConfigurationAPI\Client\Model\PatchMailRequest;
 use IONOS\MailConfigurationAPI\Client\Model\SmtpConfig;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
@@ -276,6 +278,155 @@ class IonosAccountMutationService {
 				'appName' => $appName
 			]);
 			throw new ServiceException('Failed to reset IONOS app password', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
+	}
+
+	/**
+	 * Update the localpart of an IONOS email account
+	 *
+	 * This method updates the email address by changing only the localpart (username before @).
+	 * It verifies that the new email address is not already taken by another user,
+	 * then updates the remote IONOS mailbox and generates a new app password.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $newLocalpart The new local part of the email address (before @domain)
+	 * @return MailAccountConfig The updated mail account configuration with new password
+	 * @throws ServiceException If update fails or new email is already taken
+	 */
+	public function updateMailboxLocalpart(string $userId, string $newLocalpart): MailAccountConfig {
+		$domain = $this->configService->getMailDomain();
+		$newEmail = $newLocalpart . '@' . $domain;
+
+		$this->logger->info('Updating IONOS mailbox localpart', [
+			'userId' => $userId,
+			'newLocalpart' => $newLocalpart,
+			'newEmail' => $newEmail,
+		]);
+
+		// Check if the new email is already taken by another user
+		if ($this->isEmailTakenByAnotherUser($userId, $newEmail)) {
+			throw new ServiceException(
+				'The email address ' . $newEmail . ' is already taken by another user',
+				409 // Conflict
+			);
+		}
+
+		try {
+			$apiInstance = $this->createApiInstance();
+
+			// Create patch request to update the email address
+			$patchRequest = new PatchMailRequest();
+			$patchRequest->setOp(PatchMailRequest::OP_REPLACE);
+			$patchRequest->setPath(PatchMailRequest::PATH_MAILADDRESS);
+			$patchRequest->setValue($newLocalpart);
+
+			if (!$patchRequest->valid()) {
+				$this->logger->error('Invalid patch request for mailbox update', [
+					'userId' => $userId,
+					'invalidProperties' => $patchRequest->listInvalidProperties(),
+				]);
+				throw new ServiceException('Invalid patch request', self::HTTP_INTERNAL_SERVER_ERROR);
+			}
+
+			// Update the mailbox via API
+			$apiInstance->patchMailbox(
+				self::BRAND,
+				$this->configService->getExternalReference(),
+				$userId,
+				$patchRequest
+			);
+
+			$this->logger->info('Successfully updated IONOS mailbox email address', [
+				'userId' => $userId,
+				'newEmail' => $newEmail,
+			]);
+
+			// Generate a new app password after email change
+			$newPassword = $this->resetAppPassword($userId, IonosConfigService::APP_PASSWORD_NAME_USER);
+
+			// Retrieve the updated account configuration
+			$apiInstance = $this->createApiInstance();
+			$result = $apiInstance->getFunctionalAccount(
+				self::BRAND,
+				$this->configService->getExternalReference(),
+				$userId
+			);
+
+			if ($result instanceof MailAccountResponse) {
+				return $this->buildMailAccountConfig(
+					$result->getServer()->getImap(),
+					$result->getServer()->getSmtp(),
+					$result->getEmail(),
+					$newPassword
+				);
+			}
+
+			throw new ServiceException('Failed to retrieve updated mailbox configuration', self::HTTP_INTERNAL_SERVER_ERROR);
+		} catch (ServiceException $e) {
+			throw $e;
+		} catch (ApiException $e) {
+			$this->logger->error('API Exception when updating mailbox localpart', [
+				'statusCode' => $e->getCode(),
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody(),
+				'userId' => $userId,
+				'newEmail' => $newEmail,
+			]);
+			throw new ServiceException('Failed to update IONOS mailbox: ' . $e->getMessage(), $e->getCode(), $e);
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when updating mailbox localpart', [
+				'exception' => $e,
+				'userId' => $userId,
+				'newEmail' => $newEmail,
+			]);
+			throw new ServiceException('Failed to update IONOS mailbox', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
+	}
+
+	/**
+	 * Check if an email address is already taken by another user
+	 *
+	 * @param string $currentUserId The current user ID (to exclude from check)
+	 * @param string $email The email address to check
+	 * @return bool True if the email is taken by another user
+	 */
+	private function isEmailTakenByAnotherUser(string $currentUserId, string $email): bool {
+		try {
+			$apiInstance = $this->createApiInstance();
+			$allAccounts = $apiInstance->getAllFunctionalAccounts(
+				self::BRAND,
+				$this->configService->getExternalReference()
+			);
+
+			if (!is_array($allAccounts)) {
+				return false;
+			}
+
+			foreach ($allAccounts as $account) {
+				if ($account instanceof MailAccountResponse) {
+					$accountEmail = $account->getEmail();
+					$accountUserId = $account->getNextcloudUserId();
+
+					// Check if email matches and belongs to a different user
+					if (strcasecmp($accountEmail, $email) === 0 && $accountUserId !== $currentUserId) {
+						$this->logger->warning('Email already taken by another user', [
+							'email' => $email,
+							'takenByUserId' => $accountUserId,
+							'requestedByUserId' => $currentUserId,
+						]);
+						return true;
+					}
+				}
+			}
+
+			return false;
+		} catch (\Exception $e) {
+			$this->logger->error('Error checking if email is taken', [
+				'email' => $email,
+				'exception' => $e,
+			]);
+			// If we can't check, assume it's not taken (fail open to allow the operation)
+			return false;
 		}
 	}
 

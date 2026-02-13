@@ -17,6 +17,8 @@ use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\Ion
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountCreationService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailConfigService;
+use OCA\Mail\Service\AccountService;
+use OCP\Security\ICrypto;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
@@ -26,6 +28,8 @@ class IonosProviderFacadeTest extends TestCase {
 	private IonosAccountMutationService&MockObject $mutationService;
 	private IonosAccountCreationService&MockObject $creationService;
 	private IonosMailConfigService&MockObject $mailConfigService;
+	private AccountService&MockObject $accountService;
+	private ICrypto&MockObject $crypto;
 	private LoggerInterface&MockObject $logger;
 	private IonosProviderFacade $facade;
 
@@ -37,6 +41,8 @@ class IonosProviderFacadeTest extends TestCase {
 		$this->mutationService = $this->createMock(IonosAccountMutationService::class);
 		$this->creationService = $this->createMock(IonosAccountCreationService::class);
 		$this->mailConfigService = $this->createMock(IonosMailConfigService::class);
+		$this->accountService = $this->createMock(AccountService::class);
+		$this->crypto = $this->createMock(ICrypto::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->facade = new IonosProviderFacade(
@@ -45,6 +51,8 @@ class IonosProviderFacadeTest extends TestCase {
 			$this->mutationService,
 			$this->creationService,
 			$this->mailConfigService,
+			$this->accountService,
+			$this->crypto,
 			$this->logger,
 		);
 	}
@@ -470,25 +478,84 @@ class IonosProviderFacadeTest extends TestCase {
 
 	public function testUpdateMailboxSuccess(): void {
 		$userId = 'user123';
+		$currentEmail = 'oldusername@ionos.com';
+		$newEmail = 'newusername@ionos.com';
 		$data = [
 			'localpart' => 'newusername',
 			'name' => 'New Name',
 		];
 
-		$mockAccount = $this->createMock(Account::class);
-		$mockAccount->method('getEmail')->willReturn('newusername@ionos.com');
-		$mockAccount->method('getName')->willReturn('New Name');
+		// Mock current email retrieval
+		$this->queryService->expects($this->once())
+			->method('getIonosEmailForUser')
+			->with($userId)
+			->willReturn($currentEmail);
 
-		$this->creationService->expects($this->once())
-			->method('createOrUpdateAccount')
-			->with($userId, 'newusername', 'New Name')
-			->willReturn($mockAccount);
+		// Mock finding existing account
+		$mockMailAccount = $this->getMockBuilder(\OCA\Mail\Db\MailAccount::class)
+			->disableOriginalConstructor()
+			->addMethods([
+				'getEmail', 'getName',
+				'setEmail', 'setName',
+				'setInboundHost', 'setInboundPort', 'setInboundSslMode', 'setInboundUser', 'setInboundPassword',
+				'setOutboundHost', 'setOutboundPort', 'setOutboundSslMode', 'setOutboundUser', 'setOutboundPassword'
+			])
+			->getMock();
+		$mockMailAccount->method('getEmail')->willReturn($newEmail);
+		$mockMailAccount->method('getName')->willReturn('New Name');
+
+		$mockAccount = $this->createMock(Account::class);
+		$mockAccount->method('getEmail')->willReturn($currentEmail);
+		$mockAccount->method('getMailAccount')->willReturn($mockMailAccount);
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with($userId)
+			->willReturn([$mockAccount]);
+
+		// Mock mailbox update
+		$mockMailConfig = $this->createMock(\OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig::class);
+		$mockImapConfig = $this->createMock(\OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig::class);
+		$mockSmtpConfig = $this->createMock(\OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig::class);
+
+		$mockImapConfig->method('getHost')->willReturn('imap.ionos.com');
+		$mockImapConfig->method('getPort')->willReturn(993);
+		$mockImapConfig->method('getSecurity')->willReturn('ssl');
+		$mockImapConfig->method('getUsername')->willReturn($newEmail);
+		$mockImapConfig->method('getPassword')->willReturn('password123');
+
+		$mockSmtpConfig->method('getHost')->willReturn('smtp.ionos.com');
+		$mockSmtpConfig->method('getPort')->willReturn(587);
+		$mockSmtpConfig->method('getSecurity')->willReturn('tls');
+		$mockSmtpConfig->method('getUsername')->willReturn($newEmail);
+		$mockSmtpConfig->method('getPassword')->willReturn('password123');
+
+		$mockMailConfig->method('getEmail')->willReturn($newEmail);
+		$mockMailConfig->method('getImap')->willReturn($mockImapConfig);
+		$mockMailConfig->method('getSmtp')->willReturn($mockSmtpConfig);
+
+		$this->mutationService->expects($this->once())
+			->method('updateMailboxLocalpart')
+			->with($userId, 'newusername')
+			->willReturn($mockMailConfig);
+
+		// Mock crypto
+		$this->crypto->expects($this->exactly(2))
+			->method('encrypt')
+			->with('password123')
+			->willReturn('encrypted_password');
+
+		// Mock account service update
+		$this->accountService->expects($this->once())
+			->method('update')
+			->with($mockMailAccount)
+			->willReturn($mockMailAccount);
 
 		$result = $this->facade->updateMailbox($userId, $data);
 
 		$this->assertIsArray($result);
 		$this->assertEquals($userId, $result['userId']);
-		$this->assertEquals('newusername@ionos.com', $result['email']);
+		$this->assertEquals($newEmail, $result['email']);
 		$this->assertEquals('New Name', $result['name']);
 	}
 
@@ -508,55 +575,86 @@ class IonosProviderFacadeTest extends TestCase {
 
 	public function testUpdateMailboxConverts409ToAccountAlreadyExistsException(): void {
 		$userId = 'user123';
+		$currentEmail = 'oldusername@ionos.com';
 		$data = [
 			'localpart' => 'existinguser',
 			'name' => 'Test',
 		];
 
-		$errorData = [
-			'expectedEmail' => 'existinguser@ionos.com',
-			'existingEmail' => 'other@ionos.com',
-		];
+		// Mock current email retrieval
+		$this->queryService->expects($this->once())
+			->method('getIonosEmailForUser')
+			->with($userId)
+			->willReturn($currentEmail);
 
-		$providerException = new \OCA\Mail\Exception\ProviderServiceException(
-			'IONOS account exists but email mismatch',
-			\OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailService::STATUS__409_CONFLICT,
-			$errorData
+		// Mock finding existing account
+		$mockMailAccount = $this->createMock(\OCA\Mail\Db\MailAccount::class);
+		$mockAccount = $this->createMock(Account::class);
+		$mockAccount->method('getEmail')->willReturn($currentEmail);
+		$mockAccount->method('getMailAccount')->willReturn($mockMailAccount);
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with($userId)
+			->willReturn([$mockAccount]);
+
+		// Mock mutation service throwing 409 conflict
+		$serviceException = new \OCA\Mail\Exception\ServiceException(
+			'The email address existinguser@ionos.com is already taken by another user',
+			409
 		);
 
-		$this->creationService->expects($this->once())
-			->method('createOrUpdateAccount')
-			->with($userId, 'existinguser', 'Test')
-			->willThrowException($providerException);
+		$this->mutationService->expects($this->once())
+			->method('updateMailboxLocalpart')
+			->with($userId, 'existinguser')
+			->willThrowException($serviceException);
 
 		try {
 			$this->facade->updateMailbox($userId, $data);
 			$this->fail('Expected AccountAlreadyExistsException to be thrown');
 		} catch (\OCA\Mail\Exception\AccountAlreadyExistsException $e) {
-			$this->assertEquals('IONOS account exists but email mismatch', $e->getMessage());
+			$this->assertEquals('The email address existinguser@ionos.com is already taken by another user', $e->getMessage());
 			$this->assertEquals(409, $e->getCode());
-			$this->assertEquals($errorData, $e->getData());
 		}
 	}
 
-	public function testUpdateMailboxRethrowsNon409ProviderServiceException(): void {
+	public function testUpdateMailboxRethrowsNon409ServiceException(): void {
 		$userId = 'user123';
+		$currentEmail = 'oldusername@ionos.com';
 		$data = [
 			'localpart' => 'testuser',
 			'name' => 'Test',
 		];
 
-		$providerException = new \OCA\Mail\Exception\ProviderServiceException(
+		// Mock current email retrieval
+		$this->queryService->expects($this->once())
+			->method('getIonosEmailForUser')
+			->with($userId)
+			->willReturn($currentEmail);
+
+		// Mock finding existing account
+		$mockMailAccount = $this->createMock(\OCA\Mail\Db\MailAccount::class);
+		$mockAccount = $this->createMock(Account::class);
+		$mockAccount->method('getEmail')->willReturn($currentEmail);
+		$mockAccount->method('getMailAccount')->willReturn($mockMailAccount);
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with($userId)
+			->willReturn([$mockAccount]);
+
+		// Mock mutation service throwing non-409 error
+		$serviceException = new \OCA\Mail\Exception\ServiceException(
 			'Some other error',
 			500
 		);
 
-		$this->creationService->expects($this->once())
-			->method('createOrUpdateAccount')
-			->with($userId, 'testuser', 'Test')
-			->willThrowException($providerException);
+		$this->mutationService->expects($this->once())
+			->method('updateMailboxLocalpart')
+			->with($userId, 'testuser')
+			->willThrowException($serviceException);
 
-		$this->expectException(\OCA\Mail\Exception\ProviderServiceException::class);
+		$this->expectException(\OCA\Mail\Exception\ServiceException::class);
 		$this->expectExceptionMessage('Some other error');
 
 		$this->facade->updateMailbox($userId, $data);
