@@ -385,7 +385,7 @@ export default {
 			const existingEmail = errorData.existingEmail || ''
 
 			// Provider-specific error handling
-			if (errorData.error === 'SERVICE_ERROR' || errorData.error === 'IONOS_API_ERROR') {
+			if (errorData.error === 'SERVICE_ERROR') {
 				switch (statusCode) {
 				case 400:
 					this.feedback = t('mail', 'Invalid email address or account data provided')
