@@ -776,4 +776,106 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->assertEquals(403, $data['data']['statusCode']);
 		$this->assertEquals('quota exceeded', $data['data']['reason']);
 	}
+
+	/**
+	 * @dataProvider sanitizeErrorMessageProvider
+	 */
+	public function testCreateSanitizesErrorMessagesWithUrls(string $errorMessage, string $expectedSanitized): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn(['param1' => 'value1']);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('isAvailableForUser')
+			->willReturn(true);
+		$provider->method('createAccount')
+			->willThrowException(new ServiceException($errorMessage, 500));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->create('test-provider');
+
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertStringContainsString($expectedSanitized, $data['data']['message']);
+		$this->assertStringNotContainsString('internal.server.com', $data['data']['message']);
+		$this->assertStringNotContainsString('api.example.org', $data['data']['message']);
+	}
+
+	public static function sanitizeErrorMessageProvider(): array {
+		return [
+			'HTTP URL with path' => [
+				'Connection failed to http://internal.server.com/api/v1/endpoint',
+				'http://[SERVER]/api/v1/endpoint',
+			],
+			'HTTPS URL with path' => [
+				'Error from https://api.example.org/v2/users',
+				'https://[SERVER]/v2/users',
+			],
+			'URL with port' => [
+				'Failed to connect to https://internal.server.com:8443/admin',
+				'https://[SERVER]/admin',
+			],
+			'URL with port and no path' => [
+				'Timeout connecting to http://api.example.org:3000',
+				'http://[SERVER]',
+			],
+			'Multiple URLs in message' => [
+				'Redirect from http://old.server.com/path to https://new.server.com/newpath failed',
+				'http://[SERVER]/path',
+			],
+			'URL without path' => [
+				'Cannot reach https://internal.server.com',
+				'https://[SERVER]',
+			],
+			'Message without URL' => [
+				'Generic error message without URLs',
+				'Generic error message without URLs',
+			],
+		];
+	}
+
+	public function testGeneratePasswordSanitizesErrorMessagesWithUrls(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('accountId')
+			->willReturn(123);
+
+		$capabilities = new ProviderCapabilities(
+			appPasswords: true,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('getCapabilities')
+			->willReturn($capabilities);
+		$provider->method('generateAppPassword')
+			->willThrowException(new ServiceException('API error at https://api.internal.example.com/v1/passwords', 500));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->generatePassword('test-provider');
+
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertStringContainsString('https://[SERVER]/v1/passwords', $data['data']['message']);
+		$this->assertStringNotContainsString('api.internal.example.com', $data['data']['message']);
+	}
 }
