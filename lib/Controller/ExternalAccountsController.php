@@ -16,6 +16,7 @@ use OCA\Mail\Http\TrapError;
 use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountProviderService;
+use OCA\Mail\Service\AccountService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
@@ -39,6 +40,7 @@ class ExternalAccountsController extends Controller {
 		IRequest $request,
 		private ProviderRegistryService $providerRegistry,
 		private AccountProviderService $accountProviderService,
+		private AccountService $accountService,
 		private IUserSession $userSession,
 		private IUserManager $userManager,
 		private IConfig $config,
@@ -330,6 +332,113 @@ class ExternalAccountsController extends Controller {
 		}
 
 		return $mailbox->withUserName($user->getDisplayName());
+	}
+
+	/**
+	 * Delete a mailbox
+	 *
+	 * @NoAdminRequired
+	 *
+	 * @param string $providerId The provider ID
+	 * @param string $userId The user ID whose mailbox to delete
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function destroyMailbox(string $providerId, string $userId): JSONResponse {
+		try {
+			$currentUserId = $this->getUserIdOrFail();
+
+			// Get email from query parameters and decode it
+			$email = $this->request->getParam('email');
+			if (empty($email)) {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_INVALID_PARAMETERS,
+					'message' => 'Email parameter is required',
+				], Http::STATUS_BAD_REQUEST);
+			}
+
+			// URL decode the email parameter (handles encoded @ and other special chars)
+			$email = urldecode($email);
+
+			// Validate email format
+			if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_INVALID_PARAMETERS,
+					'message' => 'Invalid email format',
+				], Http::STATUS_BAD_REQUEST);
+			}
+
+			$this->logger->info('Deleting mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'email' => $email,
+				'currentUserId' => $currentUserId,
+			]);
+
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
+			}
+
+			// Find associated mail app account before deletion
+			$mailAppAccountId = null;
+			try {
+				$accounts = $this->accountService->findByUserIdAndAddress($userId, $email);
+				if (!empty($accounts)) {
+					$mailAppAccountId = $accounts[0]->getId();
+				}
+			} catch (\Exception $e) {
+				$this->logger->warning('Could not retrieve mail app account before deletion', [
+					'userId' => $userId,
+					'email' => $email,
+					'exception' => $e,
+				]);
+			}
+
+			// Delete provider mailbox
+			$success = $provider->deleteAccount($userId, $email);
+
+			if ($success) {
+				// Also delete local mail app account if it exists
+				if ($mailAppAccountId !== null) {
+					try {
+						$this->accountService->delete($userId, $mailAppAccountId);
+						$this->logger->info('Deleted associated mail app account', [
+							'userId' => $userId,
+							'accountId' => $mailAppAccountId,
+							'email' => $email,
+						]);
+					} catch (\Exception $e) {
+						// Log but don't fail - provider mailbox was deleted successfully
+						$this->logger->warning('Could not delete associated mail app account', [
+							'userId' => $userId,
+							'accountId' => $mailAppAccountId,
+							'exception' => $e,
+						]);
+					}
+				}
+
+				$this->logger->info('Mailbox deleted successfully', [
+					'userId' => $userId,
+					'deletedMailAppAccount' => $mailAppAccountId !== null,
+				]);
+				return MailJsonResponse::success(['deleted' => true]);
+			} else {
+				return MailJsonResponse::fail([
+					'error' => self::ERR_SERVICE_ERROR,
+					'message' => 'Failed to delete mailbox',
+				], Http::STATUS_INTERNAL_SERVER_ERROR);
+			}
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error deleting mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not delete mailbox');
+		}
 	}
 
 	/**
