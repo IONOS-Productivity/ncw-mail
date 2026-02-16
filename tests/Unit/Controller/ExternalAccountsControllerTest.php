@@ -19,6 +19,7 @@ use OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider;
 use OCA\Mail\Provider\MailAccountProvider\ProviderCapabilities;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountProviderService;
+use OCA\Mail\Service\AccountService;
 use OCP\AppFramework\Http;
 use OCP\IConfig;
 use OCP\IRequest;
@@ -34,6 +35,7 @@ class ExternalAccountsControllerTest extends TestCase {
 	private IRequest&MockObject $request;
 	private ProviderRegistryService&MockObject $providerRegistry;
 	private AccountProviderService&MockObject $accountProviderService;
+	private AccountService&MockObject $accountService;
 	private IUserSession&MockObject $userSession;
 	private IUserManager&MockObject $userManager;
 	private IConfig&MockObject $config;
@@ -46,6 +48,7 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->request = $this->createMock(IRequest::class);
 		$this->providerRegistry = $this->createMock(ProviderRegistryService::class);
 		$this->accountProviderService = $this->createMock(AccountProviderService::class);
+		$this->accountService = $this->createMock(AccountService::class);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->userManager = $this->createMock(IUserManager::class);
 		$this->config = $this->createMock(IConfig::class);
@@ -56,6 +59,7 @@ class ExternalAccountsControllerTest extends TestCase {
 			$this->request,
 			$this->providerRegistry,
 			$this->accountProviderService,
+			$this->accountService,
 			$this->userSession,
 			$this->userManager,
 			$this->config,
@@ -1260,5 +1264,497 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->assertEquals('fail', $data['status']);
 		$this->assertStringContainsString('https://[SERVER]/v1/mailboxes', $data['data']['message']);
 		$this->assertStringNotContainsString('api.internal.example.com', $data['data']['message']);
+	}
+
+	public function testDestroyMailboxWithNoUserSession(): void {
+		$this->userSession->method('getUser')
+			->willReturn(null);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_UNAUTHORIZED, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+	}
+
+	public function testDestroyMailboxWithProviderNotFound(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$this->providerRegistry->method('getProvider')
+			->with('nonexistent')
+			->willReturn(null);
+
+		$response = $this->controller->destroyMailbox('nonexistent', 'testuser');
+
+		$this->assertEquals(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('PROVIDER_NOT_FOUND', $data['data']['error']);
+	}
+
+	public function testDestroyMailboxWithMissingEmail(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn(null);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('INVALID_PARAMETERS', $data['data']['error']);
+		$this->assertEquals('Email parameter is required', $data['data']['message']);
+	}
+
+	public function testDestroyMailboxWithEmptyEmail(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('');
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('INVALID_PARAMETERS', $data['data']['error']);
+		$this->assertEquals('Email parameter is required', $data['data']['message']);
+	}
+
+	public function testDestroyMailboxWithInvalidEmailFormat(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('not-an-email');
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('INVALID_PARAMETERS', $data['data']['error']);
+		$this->assertEquals('Invalid email format', $data['data']['message']);
+	}
+
+	public function testDestroyMailboxSuccessWithoutMailAppAccount(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->with('testuser', 'test@example.com')
+			->willReturn(true);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		// No mail app account exists
+		$this->accountService->method('findByUserIdAndAddress')
+			->with('testuser', 'test@example.com')
+			->willReturn([]);
+
+		$this->logger->expects($this->exactly(2))
+			->method('info')
+			->withConsecutive(
+				['Deleting mailbox', $this->anything()],
+				['Mailbox deleted successfully', $this->callback(function ($context) {
+					return $context['userId'] === 'testuser' && $context['deletedMailAppAccount'] === false;
+				})]
+			);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertTrue($data['data']['deleted']);
+	}
+
+	public function testDestroyMailboxSuccessWithMailAppAccountDeleted(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->with('testuser', 'test@example.com')
+			->willReturn(true);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		// Mail app account exists
+		$mailAccount = new MailAccount();
+		$mailAccount->setId(123);
+		$mailAccount->setEmail('test@example.com');
+		$account = new Account($mailAccount);
+
+		$this->accountService->method('findByUserIdAndAddress')
+			->with('testuser', 'test@example.com')
+			->willReturn([$account]);
+
+		$this->accountService->expects($this->once())
+			->method('delete')
+			->with('testuser', 123);
+
+		$this->logger->expects($this->exactly(3))
+			->method('info')
+			->withConsecutive(
+				['Deleting mailbox', $this->anything()],
+				['Deleted associated mail app account', $this->callback(function ($context) {
+					return $context['userId'] === 'testuser'
+						&& $context['accountId'] === 123
+						&& $context['email'] === 'test@example.com';
+				})],
+				['Mailbox deleted successfully', $this->callback(function ($context) {
+					return $context['userId'] === 'testuser' && $context['deletedMailAppAccount'] === true;
+				})]
+			);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertTrue($data['data']['deleted']);
+	}
+
+	public function testDestroyMailboxSuccessWhenMailAppAccountDeletionFails(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->with('testuser', 'test@example.com')
+			->willReturn(true);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		// Mail app account exists
+		$mailAccount = new MailAccount();
+		$mailAccount->setId(123);
+		$mailAccount->setEmail('test@example.com');
+		$account = new Account($mailAccount);
+
+		$this->accountService->method('findByUserIdAndAddress')
+			->with('testuser', 'test@example.com')
+			->willReturn([$account]);
+
+		// Mail app account deletion fails
+		$this->accountService->method('delete')
+			->willThrowException(new \Exception('Account deletion failed'));
+
+		// Should log warning but still succeed
+		$this->logger->expects($this->once())
+			->method('warning')
+			->with('Could not delete associated mail app account', $this->anything());
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertTrue($data['data']['deleted']);
+	}
+
+	public function testDestroyMailboxSuccessWhenFindingMailAppAccountFails(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->with('testuser', 'test@example.com')
+			->willReturn(true);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		// Finding mail app account throws exception
+		$this->accountService->method('findByUserIdAndAddress')
+			->willThrowException(new \Exception('Database error'));
+
+		// Should log warning but still succeed
+		$this->logger->expects($this->once())
+			->method('warning')
+			->with('Could not retrieve mail app account before deletion', $this->anything());
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertTrue($data['data']['deleted']);
+	}
+
+	public function testDestroyMailboxWhenProviderDeleteAccountReturnsFalse(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->with('testuser', 'test@example.com')
+			->willReturn(false);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->accountService->method('findByUserIdAndAddress')
+			->willReturn([]);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals('Failed to delete mailbox', $data['data']['message']);
+	}
+
+	public function testDestroyMailboxWithServiceException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->willThrowException(new ServiceException('Service error', 500));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->accountService->method('findByUserIdAndAddress')
+			->willReturn([]);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(500, $data['data']['statusCode']);
+	}
+
+	public function testDestroyMailboxWithProviderServiceException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->willThrowException(new ProviderServiceException('Provider error', 503, ['reason' => 'API unavailable']));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->accountService->method('findByUserIdAndAddress')
+			->willReturn([]);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_SERVICE_UNAVAILABLE, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(503, $data['data']['statusCode']);
+		$this->assertEquals('API unavailable', $data['data']['reason']);
+	}
+
+	public function testDestroyMailboxWithGenericException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->willThrowException(new \Exception('Unexpected error'));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->accountService->method('findByUserIdAndAddress')
+			->willReturn([]);
+
+		$this->logger->expects($this->atLeastOnce())
+			->method('error')
+			->with('Unexpected error deleting mailbox', $this->anything());
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$data = $response->getData();
+		$this->assertEquals('error', $data['status']);
+		$this->assertStringContainsString('Could not delete mailbox', $data['message']);
+	}
+
+	public function testDestroyMailboxSanitizesErrorMessagesWithUrls(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test@example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->willThrowException(new ServiceException('API error at https://api.internal.example.com/v1/delete', 500));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->accountService->method('findByUserIdAndAddress')
+			->willReturn([]);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertStringContainsString('https://[SERVER]/v1/delete', $data['data']['message']);
+		$this->assertStringNotContainsString('api.internal.example.com', $data['data']['message']);
+	}
+
+	public function testDestroyMailboxWithEncodedEmail(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		// Email with URL-encoded @ symbol
+		$this->request->method('getParam')
+			->with('email')
+			->willReturn('test%40example.com');
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('deleteAccount')
+			->with('testuser', 'test@example.com')  // Should be decoded
+			->willReturn(true);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->accountService->method('findByUserIdAndAddress')
+			->with('testuser', 'test@example.com')  // Should be decoded
+			->willReturn([]);
+
+		$response = $this->controller->destroyMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertTrue($data['data']['deleted']);
 	}
 }
