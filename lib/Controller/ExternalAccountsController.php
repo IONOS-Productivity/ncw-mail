@@ -261,9 +261,34 @@ class ExternalAccountsController extends Controller {
 			'providerId' => $providerId,
 		]));
 
+		// sanitize internal info from payload returned to customer
+		$data['message'] = $this->sanitizeErrorMessage($data['message']);
+
 		// Use exception code as HTTP status, default to 400 if invalid
 		$httpStatus = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 400;
 		return MailJsonResponse::fail($data, $httpStatus);
+	}
+
+	/**
+	 * Sanitize error messages by redacting server URLs
+	 *
+	 * Detects and replaces hostnames with [SERVER]
+	 * while preserving the protocol and path for debugging purposes.
+	 *
+	 * @param string $message The error message to sanitize
+	 * @return string The sanitized message
+	 */
+	private function sanitizeErrorMessage(string $message): string {
+		// Pattern to match any URL
+		// Captures: (protocol)(hostname:port)(path)
+		$pattern = '/(https?:\/\/)([a-zA-Z0-9.-]+(?::\d+)?)(\/[^\s]*)?/';
+
+		return preg_replace_callback($pattern, function ($matches) {
+			$protocol = $matches[1];
+			$path = $matches[3] ?? '';
+
+			return $protocol . '[SERVER]' . $path;
+		}, $message);
 	}
 
 	/**
