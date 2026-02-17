@@ -11,12 +11,15 @@ namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations\Ionos
 
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Account;
+use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\IonosProviderFacade;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountMutationService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountQueryService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountCreationService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailConfigService;
+use OCA\Mail\Service\AccountService;
+use OCP\IUserManager;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
@@ -26,6 +29,8 @@ class IonosProviderFacadeTest extends TestCase {
 	private IonosAccountMutationService&MockObject $mutationService;
 	private IonosAccountCreationService&MockObject $creationService;
 	private IonosMailConfigService&MockObject $mailConfigService;
+	private AccountService&MockObject $accountService;
+	private IUserManager&MockObject $userManager;
 	private LoggerInterface&MockObject $logger;
 	private IonosProviderFacade $facade;
 
@@ -37,6 +42,8 @@ class IonosProviderFacadeTest extends TestCase {
 		$this->mutationService = $this->createMock(IonosAccountMutationService::class);
 		$this->creationService = $this->createMock(IonosAccountCreationService::class);
 		$this->mailConfigService = $this->createMock(IonosMailConfigService::class);
+		$this->accountService = $this->createMock(AccountService::class);
+		$this->userManager = $this->createMock(IUserManager::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->facade = new IonosProviderFacade(
@@ -45,6 +52,8 @@ class IonosProviderFacadeTest extends TestCase {
 			$this->mutationService,
 			$this->creationService,
 			$this->mailConfigService,
+			$this->accountService,
+			$this->userManager,
 			$this->logger,
 		);
 	}
@@ -385,5 +394,253 @@ class IonosProviderFacadeTest extends TestCase {
 		$this->expectExceptionMessage('Password generation failed');
 
 		$this->facade->generateAppPassword($userId);
+	}
+
+	public function testGetMailboxesSuccess(): void {
+		$mockResponse1 = $this->createMock(\IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse::class);
+		$mockResponse1->method('getEmail')->willReturn('user1@example.com');
+		$mockResponse1->method('getNextcloudUserId')->willReturn('user1');
+
+		$mockResponse2 = $this->createMock(\IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse::class);
+		$mockResponse2->method('getEmail')->willReturn('user2@example.com');
+		$mockResponse2->method('getNextcloudUserId')->willReturn('user2');
+
+		$accountResponses = [$mockResponse1, $mockResponse2];
+
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willReturn($accountResponses);
+
+		$mockUser1 = $this->createMock(\OCP\IUser::class);
+		$mockUser2 = $this->createMock(\OCP\IUser::class);
+
+		$this->userManager->expects($this->exactly(2))
+			->method('get')
+			->willReturnMap([
+				['user1', $mockUser1],
+				['user2', $mockUser2],
+			]);
+
+		$mockMailAccount1 = $this->getMockBuilder(\OCA\Mail\Db\MailAccount::class)
+			->disableOriginalConstructor()
+			->addMethods(['getId', 'getName', 'getEmail'])
+			->getMock();
+		$mockMailAccount1->method('getId')->willReturn(1);
+		$mockMailAccount1->method('getName')->willReturn('User 1 Mail');
+		$mockMailAccount1->method('getEmail')->willReturn('user1@example.com');
+
+		$mockAccount1 = $this->createMock(Account::class);
+		$mockAccount1->method('getMailAccount')->willReturn($mockMailAccount1);
+		$mockAccount1->method('getEmail')->willReturn('user1@example.com');
+
+		$mockMailAccount2 = $this->getMockBuilder(\OCA\Mail\Db\MailAccount::class)
+			->disableOriginalConstructor()
+			->addMethods(['getId', 'getName', 'getEmail'])
+			->getMock();
+		$mockMailAccount2->method('getId')->willReturn(2);
+		$mockMailAccount2->method('getName')->willReturn('User 2 Mail');
+		$mockMailAccount2->method('getEmail')->willReturn('user2@example.com');
+
+		$mockAccount2 = $this->createMock(Account::class);
+		$mockAccount2->method('getMailAccount')->willReturn($mockMailAccount2);
+		$mockAccount2->method('getEmail')->willReturn('user2@example.com');
+
+		$this->accountService->expects($this->exactly(2))
+			->method('findByUserId')
+			->willReturnMap([
+				['user1', [$mockAccount1]],
+				['user2', [$mockAccount2]],
+			]);
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertCount(2, $result);
+		$this->assertContainsOnlyInstancesOf(MailboxInfo::class, $result);
+
+		$this->assertEquals('user1', $result[0]->userId);
+		$this->assertEquals('user1@example.com', $result[0]->email);
+		$this->assertTrue($result[0]->userExists);
+		$this->assertEquals(1, $result[0]->mailAppAccountId);
+		$this->assertEquals('User 1 Mail', $result[0]->mailAppAccountName);
+		$this->assertTrue($result[0]->mailAppAccountExists);
+
+		$this->assertEquals('user2', $result[1]->userId);
+		$this->assertEquals('user2@example.com', $result[1]->email);
+		$this->assertTrue($result[1]->userExists);
+		$this->assertEquals(2, $result[1]->mailAppAccountId);
+		$this->assertEquals('User 2 Mail', $result[1]->mailAppAccountName);
+		$this->assertTrue($result[1]->mailAppAccountExists);
+	}
+
+	public function testGetMailboxesWithNonExistentUser(): void {
+		$mockResponse = $this->createMock(\IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse::class);
+		$mockResponse->method('getEmail')->willReturn('deleted@example.com');
+		$mockResponse->method('getNextcloudUserId')->willReturn('deleteduser');
+
+		$accountResponses = [$mockResponse];
+
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willReturn($accountResponses);
+
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with('deleteduser')
+			->willReturn(null);
+
+		$this->accountService->expects($this->never())
+			->method('findByUserId');
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertCount(1, $result);
+		$this->assertContainsOnlyInstancesOf(MailboxInfo::class, $result);
+
+		$this->assertEquals('deleteduser', $result[0]->userId);
+		$this->assertEquals('deleted@example.com', $result[0]->email);
+		$this->assertFalse($result[0]->userExists);
+		$this->assertNull($result[0]->mailAppAccountId);
+		$this->assertNull($result[0]->mailAppAccountName);
+		$this->assertFalse($result[0]->mailAppAccountExists);
+	}
+
+	public function testGetMailboxesWithNoMailAppAccount(): void {
+		$mockResponse = $this->createMock(\IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse::class);
+		$mockResponse->method('getEmail')->willReturn('nomail@example.com');
+		$mockResponse->method('getNextcloudUserId')->willReturn('user1');
+
+		$accountResponses = [$mockResponse];
+
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willReturn($accountResponses);
+
+		$mockUser = $this->createMock(\OCP\IUser::class);
+
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with('user1')
+			->willReturn($mockUser);
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with('user1')
+			->willReturn([]);
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertCount(1, $result);
+		$this->assertContainsOnlyInstancesOf(MailboxInfo::class, $result);
+
+		$this->assertEquals('user1', $result[0]->userId);
+		$this->assertEquals('nomail@example.com', $result[0]->email);
+		$this->assertTrue($result[0]->userExists);
+		$this->assertNull($result[0]->mailAppAccountId);
+		$this->assertNull($result[0]->mailAppAccountName);
+		$this->assertFalse($result[0]->mailAppAccountExists);
+	}
+
+	public function testGetMailboxesWithDifferentEmailInMailApp(): void {
+		$mockResponse = $this->createMock(\IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse::class);
+		$mockResponse->method('getEmail')->willReturn('provider@example.com');
+		$mockResponse->method('getNextcloudUserId')->willReturn('user1');
+
+		$accountResponses = [$mockResponse];
+
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willReturn($accountResponses);
+
+		$mockUser = $this->createMock(\OCP\IUser::class);
+
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with('user1')
+			->willReturn($mockUser);
+
+		$mockMailAccount = $this->getMockBuilder(\OCA\Mail\Db\MailAccount::class)
+			->disableOriginalConstructor()
+			->addMethods(['getEmail'])
+			->getMock();
+		$mockMailAccount->method('getEmail')->willReturn('different@example.com');
+
+		$mockAccount = $this->createMock(Account::class);
+		$mockAccount->method('getMailAccount')->willReturn($mockMailAccount);
+		$mockAccount->method('getEmail')->willReturn('different@example.com');
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with('user1')
+			->willReturn([$mockAccount]);
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertCount(1, $result);
+		$this->assertContainsOnlyInstancesOf(MailboxInfo::class, $result);
+
+		$this->assertEquals('user1', $result[0]->userId);
+		$this->assertEquals('provider@example.com', $result[0]->email);
+		$this->assertTrue($result[0]->userExists);
+		$this->assertNull($result[0]->mailAppAccountId);
+		$this->assertNull($result[0]->mailAppAccountName);
+		$this->assertFalse($result[0]->mailAppAccountExists);
+	}
+
+	public function testGetMailboxesWithAccountServiceException(): void {
+		$mockResponse = $this->createMock(\IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse::class);
+		$mockResponse->method('getEmail')->willReturn('user@example.com');
+		$mockResponse->method('getNextcloudUserId')->willReturn('user1');
+
+		$accountResponses = [$mockResponse];
+
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willReturn($accountResponses);
+
+		$mockUser = $this->createMock(\OCP\IUser::class);
+
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with('user1')
+			->willReturn($mockUser);
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with('user1')
+			->willThrowException(new \Exception('Account service error'));
+
+		$this->logger->expects($this->atLeastOnce())
+			->method('debug');
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertCount(1, $result);
+		$this->assertContainsOnlyInstancesOf(MailboxInfo::class, $result);
+
+		$this->assertEquals('user1', $result[0]->userId);
+		$this->assertEquals('user@example.com', $result[0]->email);
+		$this->assertTrue($result[0]->userExists);
+		$this->assertNull($result[0]->mailAppAccountId);
+		$this->assertNull($result[0]->mailAppAccountName);
+		$this->assertFalse($result[0]->mailAppAccountExists);
+	}
+
+	public function testGetMailboxesEmpty(): void {
+		$this->queryService->expects($this->once())
+			->method('getAllMailAccountResponses')
+			->willReturn([]);
+
+		$this->logger->expects($this->atLeastOnce())
+			->method('debug');
+
+		$result = $this->facade->getMailboxes();
+
+		$this->assertIsArray($result);
+		$this->assertEmpty($result);
 	}
 }

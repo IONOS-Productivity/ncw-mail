@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\Mail\Provider\MailAccountProvider;
 
 use OCA\Mail\Account;
+use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 
 /**
  * Interface for external mail account providers
@@ -128,4 +129,20 @@ interface IMailAccountProvider {
 	 * @throws \InvalidArgumentException If provider doesn't support app passwords
 	 */
 	public function generateAppPassword(string $userId): string;
+
+	/**
+	 * Get all mailboxes managed by this provider
+	 *
+	 * Returns a list of all mailboxes (email accounts) managed by this provider
+	 * across all users. Used for administration/overview purposes.
+	 *
+	 * The returned data includes status information to help identify configuration issues:
+	 * - userExists: Whether the Nextcloud user still exists
+	 * - mailAppAccountExists: Whether a mail app account is configured for this email
+	 * - mailAppAccountId/Name: Details of the configured mail app account (if exists)
+	 *
+	 * @return array<int, MailboxInfo> List of enriched mailbox information
+	 * @throws \OCA\Mail\Exception\ServiceException If fetching mailboxes fails
+	 */
+	public function getMailboxes(): array;
 }

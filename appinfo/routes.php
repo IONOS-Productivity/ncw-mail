@@ -131,6 +131,11 @@ return [
 			'verb' => 'GET'
 		],
 		[
+			'name' => 'externalAccounts#indexMailboxes',
+			'url' => '/api/admin/providers/{providerId}/mailboxes',
+			'verb' => 'GET'
+		],
+		[
 			'name' => 'externalAccounts#create',
 			'url' => '/api/providers/{providerId}/accounts',
 			'verb' => 'POST'

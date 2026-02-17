@@ -399,6 +399,151 @@ class IonosAccountQueryServiceTest extends TestCase {
 		$this->assertNotNull($result);
 	}
 
+	public function testGetAllMailAccountResponsesSuccess(): void {
+		$this->configService->method('getExternalReference')->willReturn('ext-ref');
+		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
+		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+
+		$response1 = $this->createMailAccountResponse('user1@example.com');
+		$response2 = $this->createMailAccountResponse('user2@example.com');
+		$expectedResponses = [$response1, $response2];
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$apiInstance->expects($this->once())
+			->method('getAllFunctionalAccounts')
+			->with('IONOS', 'ext-ref')
+			->willReturn($expectedResponses);
+
+		$client = $this->createMock(Client::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$this->logger->expects($this->atLeastOnce())
+			->method('debug');
+
+		$result = $this->service->getAllMailAccountResponses();
+
+		$this->assertIsArray($result);
+		$this->assertCount(2, $result);
+		$this->assertSame($expectedResponses, $result);
+	}
+
+	public function testGetAllMailAccountResponsesEmpty(): void {
+		$this->configService->method('getExternalReference')->willReturn('ext-ref');
+		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
+		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$apiInstance->expects($this->once())
+			->method('getAllFunctionalAccounts')
+			->with('IONOS', 'ext-ref')
+			->willReturn([]);
+
+		$client = $this->createMock(Client::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$this->logger->expects($this->atLeastOnce())
+			->method('debug');
+
+		$result = $this->service->getAllMailAccountResponses();
+
+		$this->assertIsArray($result);
+		$this->assertEmpty($result);
+	}
+
+	public function testGetAllMailAccountResponsesWithUnexpectedType(): void {
+		$this->configService->method('getExternalReference')->willReturn('ext-ref');
+		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
+		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$apiInstance->expects($this->once())
+			->method('getAllFunctionalAccounts')
+			->with('IONOS', 'ext-ref')
+			->willReturn('unexpected-string-result');
+
+		$client = $this->createMock(Client::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Unexpected response type getting all IONOS mail accounts', $this->anything());
+
+		$this->expectException(\OCA\Mail\Exception\ServiceException::class);
+		$this->expectExceptionMessage('Failed to get IONOS mail accounts: unexpected response');
+		$this->expectExceptionCode(500);
+
+		$this->service->getAllMailAccountResponses();
+	}
+
+	public function testGetAllMailAccountResponsesWithApiException(): void {
+		$this->configService->method('getExternalReference')->willReturn('ext-ref');
+		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
+		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+
+		$apiException = new ApiException('API Error', 503, null, 'Service Unavailable');
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$apiInstance->expects($this->once())
+			->method('getAllFunctionalAccounts')
+			->with('IONOS', 'ext-ref')
+			->willThrowException($apiException);
+
+		$client = $this->createMock(Client::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('API Exception when calling MailConfigurationAPIApi->getAllFunctionalAccounts', $this->anything());
+
+		$this->expectException(\OCA\Mail\Exception\ServiceException::class);
+		$this->expectExceptionMessage('Failed to get IONOS mail accounts: API Error');
+		$this->expectExceptionCode(503);
+
+		$this->service->getAllMailAccountResponses();
+	}
+
+	public function testGetAllMailAccountResponsesWithGenericException(): void {
+		$this->configService->method('getExternalReference')->willReturn('ext-ref');
+		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
+		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+
+		$exception = new \Exception('Unexpected error');
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$apiInstance->expects($this->once())
+			->method('getAllFunctionalAccounts')
+			->with('IONOS', 'ext-ref')
+			->willThrowException($exception);
+
+		$client = $this->createMock(Client::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Exception when calling MailConfigurationAPIApi->getAllFunctionalAccounts', $this->anything());
+
+		$this->expectException(\OCA\Mail\Exception\ServiceException::class);
+		$this->expectExceptionMessage('Failed to get IONOS mail accounts');
+		$this->expectExceptionCode(500);
+
+		$this->service->getAllMailAccountResponses();
+	}
+
 	private function createMailAccountResponse(string $email): MockObject {
 		// Create mock IMAP server
 		$imap = $this->getMockBuilder(\stdClass::class)
