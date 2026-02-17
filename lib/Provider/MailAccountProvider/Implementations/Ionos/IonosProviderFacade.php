@@ -9,13 +9,17 @@ declare(strict_types=1);
 
 namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos;
 
+use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use OCA\Mail\Account;
 use OCA\Mail\Exception\ServiceException;
+use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountMutationService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountQueryService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosAccountCreationService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosMailConfigService;
+use OCA\Mail\Service\AccountService;
+use OCP\IUserManager;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -32,6 +36,8 @@ class IonosProviderFacade {
 		private readonly IonosAccountMutationService $mutationService,
 		private readonly IonosAccountCreationService $creationService,
 		private readonly IonosMailConfigService $mailConfigService,
+		private readonly AccountService $accountService,
+		private readonly IUserManager $userManager,
 		private readonly LoggerInterface $logger,
 	) {
 	}
@@ -221,5 +227,96 @@ class IonosProviderFacade {
 		]);
 
 		return $this->mutationService->resetAppPassword($userId, IonosConfigService::APP_PASSWORD_NAME_USER);
+	}
+
+	/**
+	 * Get all mailboxes managed by this provider
+	 *
+	 * Returns a list of all mailboxes (email accounts) managed by this provider
+	 * across all users. Used for administration/overview purposes.
+	 *
+	 * Enriches the data with:
+	 * - User existence status (whether NC user exists)
+	 * - Mail app account status (whether mail app account is configured)
+	 * - Mail app account details (ID and name if configured)
+	 *
+	 * @return array<int, MailboxInfo> List of enriched mailbox information
+	 * @throws ServiceException If retrieving mailboxes fails
+	 */
+	public function getMailboxes(): array {
+		$this->logger->debug('Getting all IONOS mailboxes');
+
+		$accountResponses = $this->queryService->getAllMailAccountResponses();
+
+		$mailboxes = [];
+		foreach ($accountResponses as $response) {
+			$mailboxes[] = $this->createMailboxInfo($response);
+		}
+
+		$this->logger->debug('Retrieved IONOS mailboxes', ['count' => count($mailboxes)]);
+
+		return $mailboxes;
+	}
+
+	/**
+	 * Create mailbox info from API response
+	 *
+	 * @param MailAccountResponse $response The API response
+	 * @return MailboxInfo The mailbox information
+	 */
+	private function createMailboxInfo(MailAccountResponse $response): MailboxInfo {
+		$email = $response->getEmail();
+		$userId = $response->getNextcloudUserId();
+
+		$user = $this->userManager->get($userId);
+		$userExists = $user !== null;
+
+		$mailAppAccountId = null;
+		$mailAppAccountName = null;
+		$mailAppAccountExists = false;
+
+		if ($userExists) {
+			$matchingAccount = $this->findMatchingMailAppAccount($userId, $email);
+			if ($matchingAccount !== null) {
+				$mailAccount = $matchingAccount->getMailAccount();
+				$mailAppAccountId = $mailAccount->getId();
+				$mailAppAccountName = $mailAccount->getName();
+				$mailAppAccountExists = true;
+			}
+		}
+
+		return new MailboxInfo(
+			userId: $userId,
+			email: $email,
+			userExists: $userExists,
+			mailAppAccountId: $mailAppAccountId,
+			mailAppAccountName: $mailAppAccountName,
+			mailAppAccountExists: $mailAppAccountExists,
+		);
+	}
+
+	/**
+	 * Find mail app account matching the provider email
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $email The email address to match
+	 * @return Account|null The matching account or null if not found
+	 */
+	private function findMatchingMailAppAccount(string $userId, string $email): ?Account {
+		try {
+			$accounts = $this->accountService->findByUserId($userId);
+			foreach ($accounts as $account) {
+				if (strcasecmp($account->getEmail(), $email) === 0) {
+					return $account;
+				}
+			}
+		} catch (\Exception $e) {
+			$this->logger->debug('Error checking mail app account', [
+				'userId' => $userId,
+				'email' => $email,
+				'exception' => $e,
+			]);
+		}
+		return null;
 	}
 }

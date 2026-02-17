@@ -156,4 +156,8 @@ class IonosProvider implements IMailAccountProvider {
 			);
 		}
 	}
+
+	public function getMailboxes(): array {
+		return $this->facade->getMailboxes();
+	}
 }

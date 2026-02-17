@@ -14,13 +14,16 @@ use OCA\Mail\Controller\ExternalAccountsController;
 use OCA\Mail\Db\MailAccount;
 use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
+use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 use OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider;
 use OCA\Mail\Provider\MailAccountProvider\ProviderCapabilities;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountProviderService;
 use OCP\AppFramework\Http;
+use OCP\IConfig;
 use OCP\IRequest;
 use OCP\IUser;
+use OCP\IUserManager;
 use OCP\IUserSession;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
@@ -32,6 +35,8 @@ class ExternalAccountsControllerTest extends TestCase {
 	private ProviderRegistryService&MockObject $providerRegistry;
 	private AccountProviderService&MockObject $accountProviderService;
 	private IUserSession&MockObject $userSession;
+	private IUserManager&MockObject $userManager;
+	private IConfig&MockObject $config;
 	private LoggerInterface&MockObject $logger;
 	private ExternalAccountsController $controller;
 
@@ -42,6 +47,8 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->providerRegistry = $this->createMock(ProviderRegistryService::class);
 		$this->accountProviderService = $this->createMock(AccountProviderService::class);
 		$this->userSession = $this->createMock(IUserSession::class);
+		$this->userManager = $this->createMock(IUserManager::class);
+		$this->config = $this->createMock(IConfig::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->controller = new ExternalAccountsController(
@@ -50,6 +57,8 @@ class ExternalAccountsControllerTest extends TestCase {
 			$this->providerRegistry,
 			$this->accountProviderService,
 			$this->userSession,
+			$this->userManager,
+			$this->config,
 			$this->logger,
 		);
 	}
@@ -205,6 +214,10 @@ class ExternalAccountsControllerTest extends TestCase {
 
 			public function getExistingAccountEmail(string $userId): ?string {
 				return 'existing@example.com';
+			}
+
+			public function getMailboxes(): array {
+				throw new \RuntimeException('Should not be called');
 			}
 		};
 
@@ -952,6 +965,300 @@ class ExternalAccountsControllerTest extends TestCase {
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 		$this->assertStringContainsString('https://[SERVER]/v1/passwords', $data['data']['message']);
+		$this->assertStringNotContainsString('api.internal.example.com', $data['data']['message']);
+	}
+
+	public function testIndexMailboxesWithNoUserSession(): void {
+		$this->userSession->method('getUser')
+			->willReturn(null);
+
+		$response = $this->controller->indexMailboxes('test-provider');
+
+		$this->assertEquals(Http::STATUS_UNAUTHORIZED, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+	}
+
+	public function testIndexMailboxesWithProviderNotFound(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->providerRegistry->method('getProvider')
+			->with('nonexistent')
+			->willReturn(null);
+
+		$response = $this->controller->indexMailboxes('nonexistent');
+
+		$this->assertEquals(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('PROVIDER_NOT_FOUND', $data['data']['error']);
+	}
+
+	public function testIndexMailboxesSuccess(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$mailboxes = [
+			new MailboxInfo(
+				userId: 'user1',
+				email: 'user1@example.com',
+				userExists: true,
+				mailAppAccountId: 1,
+				mailAppAccountName: 'User 1 Mail',
+				mailAppAccountExists: true,
+			),
+			new MailboxInfo(
+				userId: 'user2',
+				email: 'user2@example.com',
+				userExists: false,
+				mailAppAccountId: null,
+				mailAppAccountName: null,
+				mailAppAccountExists: false,
+			),
+		];
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getMailboxes')
+			->willReturn($mailboxes);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$mockUser1 = $this->createMock(IUser::class);
+		$mockUser1->method('getDisplayName')->willReturn('User One Display');
+
+		$this->userManager->method('get')
+			->willReturnCallback(function ($userId) use ($mockUser1) {
+				if ($userId === 'user1') {
+					return $mockUser1;
+				}
+				return null;
+			});
+
+		$this->config->method('getSystemValue')
+			->with('debug', false)
+			->willReturn(false);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Listing mailboxes for provider', $this->anything());
+
+		$response = $this->controller->indexMailboxes('test-provider');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertArrayHasKey('mailboxes', $data['data']);
+		$this->assertCount(2, $data['data']['mailboxes']);
+
+		// Check first mailbox has userName
+		$this->assertEquals('User One Display', $data['data']['mailboxes'][0]['userName']);
+		$this->assertEquals('user1@example.com', $data['data']['mailboxes'][0]['email']);
+
+		// Check second mailbox has null userName (user doesn't exist)
+		$this->assertNull($data['data']['mailboxes'][1]['userName']);
+		$this->assertEquals('user2@example.com', $data['data']['mailboxes'][1]['email']);
+
+		// Check debug flag
+		$this->assertArrayHasKey('debug', $data['data']);
+		$this->assertFalse($data['data']['debug']);
+	}
+
+	public function testIndexMailboxesWithUserExistsButNoUserName(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$mailboxes = [
+			new MailboxInfo(
+				userId: 'user1',
+				email: 'user1@example.com',
+				userExists: true,
+				mailAppAccountId: null,
+				mailAppAccountName: null,
+				mailAppAccountExists: false,
+			),
+		];
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getMailboxes')
+			->willReturn($mailboxes);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		// User manager returns null even though userExists is true
+		// (edge case: user was deleted between provider check and user manager lookup)
+		$this->userManager->method('get')
+			->with('user1')
+			->willReturn(null);
+
+		$this->config->method('getSystemValue')
+			->with('debug', false)
+			->willReturn(false);
+
+		$response = $this->controller->indexMailboxes('test-provider');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertArrayHasKey('mailboxes', $data['data']);
+		$this->assertCount(1, $data['data']['mailboxes']);
+
+		// userName should be null if user manager can't find the user
+		$this->assertNull($data['data']['mailboxes'][0]['userName']);
+	}
+
+	public function testIndexMailboxesWithDebugEnabled(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$mailboxes = [];
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getMailboxes')
+			->willReturn($mailboxes);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->config->method('getSystemValue')
+			->with('debug', false)
+			->willReturn(true);
+
+		$response = $this->controller->indexMailboxes('test-provider');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertTrue($data['data']['debug']);
+	}
+
+	public function testIndexMailboxesWithServiceException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getMailboxes')
+			->willThrowException(new ServiceException('Service error', 500));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->indexMailboxes('test-provider');
+
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(500, $data['data']['statusCode']);
+	}
+
+	public function testIndexMailboxesWithProviderServiceException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getMailboxes')
+			->willThrowException(new ProviderServiceException('Provider error', 503, ['reason' => 'API timeout']));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->indexMailboxes('test-provider');
+
+		$this->assertEquals(Http::STATUS_SERVICE_UNAVAILABLE, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(503, $data['data']['statusCode']);
+		$this->assertEquals('API timeout', $data['data']['reason']);
+	}
+
+	public function testIndexMailboxesWithGenericException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getMailboxes')
+			->willThrowException(new \Exception('Unexpected error'));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->logger->expects($this->atLeastOnce())
+			->method('error')
+			->with('Unexpected error listing mailboxes', $this->anything());
+
+		$response = $this->controller->indexMailboxes('test-provider');
+
+		$data = $response->getData();
+		$this->assertEquals('error', $data['status']);
+		$this->assertStringContainsString('Could not list mailboxes', $data['message']);
+	}
+
+	public function testIndexMailboxesSanitizesErrorMessagesWithUrls(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getMailboxes')
+			->willThrowException(new ServiceException('API error at https://api.internal.example.com/v1/mailboxes', 500));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->indexMailboxes('test-provider');
+
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertStringContainsString('https://[SERVER]/v1/mailboxes', $data['data']['message']);
 		$this->assertStringNotContainsString('api.internal.example.com', $data['data']['message']);
 	}
 }
