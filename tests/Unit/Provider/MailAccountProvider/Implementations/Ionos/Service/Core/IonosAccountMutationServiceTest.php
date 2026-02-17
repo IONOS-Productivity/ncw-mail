@@ -274,6 +274,35 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$this->service->deleteEmailAccount($userId);
 	}
 
+	public function testDeleteEmailAccountServiceException(): void {
+		$userId = 'testuser';
+
+		$this->configService->method('getExternalReference')->willReturn('ext-ref');
+		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
+		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+
+		$serviceException = new ServiceException('Service layer error', 503);
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$apiInstance->method('deleteMailbox')
+			->willThrowException($serviceException);
+
+		$client = $this->createMock(Client::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		// Verify that ServiceException is re-thrown without additional logging
+		$this->logger->expects($this->never())
+			->method('error');
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionMessage('Service layer error');
+		$this->expectExceptionCode(503);
+
+		$this->service->deleteEmailAccount($userId);
+	}
+
 	public function testDeleteEmailAccountUnexpectedException(): void {
 		$userId = 'testuser';
 
