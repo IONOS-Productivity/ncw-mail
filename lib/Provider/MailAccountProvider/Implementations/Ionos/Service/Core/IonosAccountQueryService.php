@@ -11,6 +11,7 @@ namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Co
 
 use IONOS\MailConfigurationAPI\Client\ApiException;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
+use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ApiMailConfigClientService;
@@ -24,6 +25,7 @@ use Psr\Log\LoggerInterface;
 class IonosAccountQueryService {
 	private const BRAND = 'IONOS';
 	private const HTTP_NOT_FOUND = 404;
+	private const HTTP_INTERNAL_SERVER_ERROR = 500;
 
 	public function __construct(
 		private ApiMailConfigClientService $apiClientService,
@@ -180,6 +182,53 @@ class IonosAccountQueryService {
 	 */
 	public function getMailDomain(): string {
 		return $this->configService->getMailDomain();
+	}
+
+	/**
+	 * Get all IONOS mail accounts
+	 *
+	 * @return array<int, MailAccountResponse> List of mail account responses
+	 * @throws ServiceException If API call fails
+	 */
+	public function getAllMailAccountResponses(): array {
+		try {
+			$this->logger->debug('Getting all IONOS mail accounts', [
+				'extRef' => $this->configService->getExternalReference(),
+			]);
+
+			$apiInstance = $this->createApiInstance();
+			$result = $apiInstance->getAllFunctionalAccounts(
+				self::BRAND,
+				$this->configService->getExternalReference()
+			);
+
+			if (is_array($result)) {
+				$this->logger->debug('Retrieved IONOS mail accounts', [
+					'count' => count($result),
+				]);
+				return $result;
+			}
+
+			$this->logger->error('Unexpected response type getting all IONOS mail accounts', [
+				'result' => $result,
+			]);
+			throw new ServiceException('Failed to get IONOS mail accounts: unexpected response', self::HTTP_INTERNAL_SERVER_ERROR);
+		} catch (ServiceException $e) {
+			// Re-throw ServiceException without additional logging
+			throw $e;
+		} catch (ApiException $e) {
+			$this->logger->error('API Exception when calling MailConfigurationAPIApi->getAllFunctionalAccounts', [
+				'statusCode' => $e->getCode(),
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody(),
+			]);
+			throw new ServiceException('Failed to get IONOS mail accounts: ' . $e->getMessage(), $e->getCode(), $e);
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when calling MailConfigurationAPIApi->getAllFunctionalAccounts', [
+				'exception' => $e,
+			]);
+			throw new ServiceException('Failed to get IONOS mail accounts', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
 	}
 
 	/**
