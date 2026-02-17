@@ -261,7 +261,9 @@ class ExternalAccountsController extends Controller {
 			'providerId' => $providerId,
 		]));
 
-		return MailJsonResponse::fail($data);
+		// Use exception code as HTTP status, default to 400 if invalid
+		$httpStatus = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 400;
+		return MailJsonResponse::fail($data, $httpStatus);
 	}
 
 	/**
