@@ -549,6 +549,82 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->assertEquals('error', $data['status']);
 	}
 
+	public function testGetEnabledProviders(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$capabilities = new ProviderCapabilities(
+			multipleAccounts: true,
+			appPasswords: true,
+			passwordReset: false,
+			creationParameterSchema: [
+				'param1' => ['type' => 'string', 'required' => true],
+			],
+			emailDomain: 'example.com',
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('getId')->willReturn('test-provider');
+		$provider->method('getName')->willReturn('Test Provider');
+		$provider->method('getCapabilities')->willReturn($capabilities);
+
+		$this->providerRegistry->method('getEnabledProviders')
+			->willReturn(['test-provider' => $provider]);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('Getting enabled providers for admin', $this->anything());
+
+		$response = $this->controller->getEnabledProviders();
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertArrayHasKey('providers', $data['data']);
+		$this->assertCount(1, $data['data']['providers']);
+
+		$providerInfo = $data['data']['providers'][0];
+		$this->assertEquals('test-provider', $providerInfo['id']);
+		$this->assertEquals('Test Provider', $providerInfo['name']);
+		$this->assertTrue($providerInfo['capabilities']['multipleAccounts']);
+		$this->assertTrue($providerInfo['capabilities']['appPasswords']);
+		$this->assertFalse($providerInfo['capabilities']['passwordReset']);
+		$this->assertEquals('example.com', $providerInfo['capabilities']['emailDomain']);
+	}
+
+	public function testGetEnabledProvidersWithNoUserSession(): void {
+		$this->userSession->method('getUser')
+			->willReturn(null);
+
+		$response = $this->controller->getEnabledProviders();
+
+		$data = $response->getData();
+		$this->assertEquals('error', $data['status']);
+	}
+
+	public function testGetEnabledProvidersWithException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->providerRegistry->method('getEnabledProviders')
+			->willThrowException(new \Exception('Registry error'));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Error getting enabled providers', $this->anything());
+
+		$response = $this->controller->getEnabledProviders();
+
+		$data = $response->getData();
+		$this->assertEquals('error', $data['status']);
+	}
+
 
 	public function testGeneratePasswordWithNoAccountId(): void {
 		$user = $this->createMock(IUser::class);
