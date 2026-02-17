@@ -13,13 +13,16 @@ use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
+use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountProviderService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\IConfig;
 use OCP\IRequest;
+use OCP\IUserManager;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
@@ -37,6 +40,8 @@ class ExternalAccountsController extends Controller {
 		private ProviderRegistryService $providerRegistry,
 		private AccountProviderService $accountProviderService,
 		private IUserSession $userSession,
+		private IUserManager $userManager,
+		private IConfig $config,
 		private LoggerInterface $logger,
 	) {
 		parent::__construct($appName, $request);
@@ -260,6 +265,71 @@ class ExternalAccountsController extends Controller {
 			]);
 			return MailJsonResponse::error('Could not generate app password');
 		}
+	}
+
+	/**
+	 * List all mailboxes for a specific provider
+	 *
+	 * @NoAdminRequired
+	 *
+	 * @param string $providerId The provider ID
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function indexMailboxes(string $providerId): JSONResponse {
+		try {
+			$userId = $this->getUserIdOrFail();
+
+			$this->logger->debug('Listing mailboxes for provider', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+			]);
+
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
+			}
+
+			$mailboxes = $provider->getMailboxes();
+
+			// Extend mailboxes with user display names
+			$mailboxes = array_map(
+				fn (MailboxInfo $mailbox) => $this->enrichMailboxWithUserName($mailbox)->toArray(),
+				$mailboxes
+			);
+
+			return MailJsonResponse::success([
+				'mailboxes' => $mailboxes,
+				'debug' => $this->config->getSystemValue('debug', false),
+			]);
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error listing mailboxes', [
+				'providerId' => $providerId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not list mailboxes');
+		}
+	}
+
+	/**
+	 * Enrich mailbox with user display name
+	 *
+	 * @param MailboxInfo $mailbox The mailbox information
+	 * @return MailboxInfo The enriched mailbox with user display name
+	 */
+	private function enrichMailboxWithUserName(MailboxInfo $mailbox): MailboxInfo {
+		if (!$mailbox->userExists) {
+			return $mailbox;
+		}
+
+		$user = $this->userManager->get($mailbox->userId);
+		if ($user === null) {
+			return $mailbox;
+		}
+
+		return $mailbox->withUserName($user->getDisplayName());
 	}
 
 	/**
