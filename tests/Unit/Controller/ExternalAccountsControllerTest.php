@@ -60,7 +60,8 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$response = $this->controller->create('test-provider');
 
-		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		// getUserIdOrFail throws ServiceException with code 401
+		$this->assertEquals(Http::STATUS_UNAUTHORIZED, $response->getStatus());
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 	}
@@ -338,9 +339,12 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$response = $this->controller->create('test-provider');
 
+		// Verify HTTP status matches exception code
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(500, $data['data']['statusCode']);
 	}
 
 	public function testCreateWithProviderServiceException(): void {
@@ -367,10 +371,108 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$response = $this->controller->create('test-provider');
 
+		// Verify HTTP status matches exception code
+		$this->assertEquals(Http::STATUS_SERVICE_UNAVAILABLE, $response->getStatus());
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(503, $data['data']['statusCode']);
 		$this->assertEquals('API unavailable', $data['data']['detail']);
+	}
+
+	public function testCreateWithServiceExceptionInvalidCode(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn(['param1' => 'value1']);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('isAvailableForUser')
+			->willReturn(true);
+		$provider->method('createAccount')
+			->willThrowException(new ServiceException('Service error', 999));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->create('test-provider');
+
+		// Invalid exception code should default to 400
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(999, $data['data']['statusCode']);
+	}
+
+	public function testCreateWithServiceExceptionCodeZero(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn(['param1' => 'value1']);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('isAvailableForUser')
+			->willReturn(true);
+		$provider->method('createAccount')
+			->willThrowException(new ServiceException('Service error', 0));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->create('test-provider');
+
+		// Exception code 0 should default to 400
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+	}
+
+	public function testCreateWithServiceExceptionCode404(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn(['param1' => 'value1']);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('isAvailableForUser')
+			->willReturn(true);
+		$provider->method('createAccount')
+			->willThrowException(new ServiceException('Resource not found', 404));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->create('test-provider');
+
+		// Verify HTTP status matches exception code
+		$this->assertEquals(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(404, $data['data']['statusCode']);
 	}
 
 	public function testGetProviders(): void {
@@ -475,6 +577,8 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$response = $this->controller->generatePassword('test-provider');
 
+		// getUserIdOrFail throws ServiceException with code 401
+		$this->assertEquals(Http::STATUS_UNAUTHORIZED, $response->getStatus());
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 	}
@@ -595,8 +699,81 @@ class ExternalAccountsControllerTest extends TestCase {
 
 		$response = $this->controller->generatePassword('test-provider');
 
+		// Verify HTTP status matches exception code
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(500, $data['data']['statusCode']);
+	}
+
+	public function testGeneratePasswordWithServiceExceptionInvalidCode(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('accountId')
+			->willReturn(123);
+
+		$capabilities = new ProviderCapabilities(
+			appPasswords: true,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('getCapabilities')
+			->willReturn($capabilities);
+		$provider->method('generateAppPassword')
+			->willThrowException(new ServiceException('Service error', 200));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->generatePassword('test-provider');
+
+		// Exception code outside 400-599 range should default to 400
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+	}
+
+	public function testGeneratePasswordWithProviderServiceException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testuser');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParam')
+			->with('accountId')
+			->willReturn(123);
+
+		$capabilities = new ProviderCapabilities(
+			appPasswords: true,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('getCapabilities')
+			->willReturn($capabilities);
+		$provider->method('generateAppPassword')
+			->willThrowException(new ProviderServiceException('Provider error', 403, ['reason' => 'quota exceeded']));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->generatePassword('test-provider');
+
+		// Verify HTTP status matches exception code
+		$this->assertEquals(Http::STATUS_FORBIDDEN, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(403, $data['data']['statusCode']);
+		$this->assertEquals('quota exceeded', $data['data']['reason']);
 	}
 }
