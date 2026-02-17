@@ -131,6 +131,11 @@ return [
 			'verb' => 'GET'
 		],
 		[
+			'name' => 'externalAccounts#getEnabledProviders',
+			'url' => '/api/admin/providers',
+			'verb' => 'GET'
+		],
+		[
 			'name' => 'externalAccounts#create',
 			'url' => '/api/providers/{providerId}/accounts',
 			'verb' => 'POST'
