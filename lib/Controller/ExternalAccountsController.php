@@ -159,6 +159,40 @@ class ExternalAccountsController extends Controller {
 	}
 
 	/**
+	 * Get all enabled providers (admin only)
+	 *
+	 * Returns all enabled providers regardless of user availability.
+	 * Used by admins to manage mailboxes across all providers.
+	 *
+	 * @NoAdminRequired
+	 *
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	public function getEnabledProviders(): JSONResponse {
+		try {
+			$userId = $this->getUserIdOrFail();
+
+			$this->logger->debug('Getting enabled providers for admin', [
+				'userId' => $userId,
+			]);
+
+			$enabledProviders = $this->providerRegistry->getEnabledProviders();
+
+			$providersInfo = $this->serializeProviders($enabledProviders);
+
+			return MailJsonResponse::success([
+				'providers' => $providersInfo,
+			]);
+		} catch (\Exception $e) {
+			$this->logger->error('Error getting enabled providers', [
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not get providers');
+		}
+	}
+
+	/**
 	 * Generate an app password for a provider-managed account
 	 *
 	 * @NoAdminRequired
