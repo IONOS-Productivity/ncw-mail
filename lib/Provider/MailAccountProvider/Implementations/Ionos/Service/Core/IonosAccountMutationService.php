@@ -159,6 +159,9 @@ class IonosAccountMutationService {
 			]);
 
 			return true;
+		} catch (ServiceException $e) {
+			// Re-throw ServiceException without additional logging
+			throw $e;
 		} catch (ApiException $e) {
 			// 404 means the mailbox doesn't exist - treat as success
 			if ($e->getCode() === self::HTTP_NOT_FOUND) {
