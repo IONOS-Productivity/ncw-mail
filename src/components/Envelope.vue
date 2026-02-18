@@ -971,7 +971,7 @@ export default {
 				 *
 				 * In Mailbox.onDelete, fetchNextEnvelopes requires the current envelope to find the next envelope.
 				 * Therefore, it must run before removing the envelope.
-			 	 */
+				 */
 
 				if (removeEnvelope) {
 					this.$emit('delete', envelope)
