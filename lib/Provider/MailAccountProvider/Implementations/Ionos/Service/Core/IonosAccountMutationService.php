@@ -204,7 +204,7 @@ class IonosAccountMutationService {
 				]);
 				throw new ServiceException(
 					'Unable to verify mailbox before deletion; deletion aborted',
-					502
+					500
 				);
 			}
 
