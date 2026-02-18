@@ -240,7 +240,7 @@ class IonosProviderTest extends TestCase {
 	public function testDeleteAccount(): void {
 		$this->facade->expects($this->once())
 			->method('deleteAccount')
-			->with('testuser')
+			->with('testuser', 'user@example.com')
 			->willReturn(true);
 
 		$result = $this->provider->deleteAccount('testuser', 'user@example.com');
@@ -251,7 +251,7 @@ class IonosProviderTest extends TestCase {
 	public function testDeleteAccountReturnsFalse(): void {
 		$this->facade->expects($this->once())
 			->method('deleteAccount')
-			->with('testuser')
+			->with('testuser', 'user@example.com')
 			->willReturn(false);
 
 		$result = $this->provider->deleteAccount('testuser', 'user@example.com');
