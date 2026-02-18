@@ -51,7 +51,9 @@
 							<th>{{ t('mail', 'Email Address') }}</th>
 							<th>{{ t('mail', 'Display Name') }}</th>
 							<th>{{ t('mail', 'Linked User') }}</th>
-							<th v-if="debug">{{ t('mail', 'Status') }}</th>
+							<th v-if="debug">
+								{{ t('mail', 'Status') }}
+							</th>
 							<th class="actions-column">
 								{{ t('mail', 'Actions') }}
 							</th>
@@ -63,7 +65,8 @@
 							:mailbox="mailbox"
 							:provider-id="selectedProvider.id"
 							:debug="debug"
-							@delete="handleDelete" />
+							@delete="handleDelete"
+							@update="handleUpdate" />
 					</tbody>
 				</table>
 			</div>
@@ -158,6 +161,13 @@ export default {
 		handleDelete(mailbox) {
 			this.selectedMailbox = mailbox
 			this.showDeleteModal = true
+		},
+		handleUpdate(updatedMailbox) {
+			// Find and update mailbox in list
+			const index = this.mailboxes.findIndex(m => m.userId === updatedMailbox.userId)
+			if (index !== -1) {
+				this.$set(this.mailboxes, index, updatedMailbox)
+			}
 		},
 		async confirmDelete() {
 			if (!this.selectedMailbox || !this.selectedProvider) {

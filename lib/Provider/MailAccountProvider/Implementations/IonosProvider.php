@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\Mail\Provider\MailAccountProvider\Implementations;
 
 use OCA\Mail\Account;
+use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 use OCA\Mail\Provider\MailAccountProvider\IMailAccountProvider;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\IonosProviderFacade;
 use OCA\Mail\Provider\MailAccountProvider\IProviderCapabilities;
@@ -159,5 +160,9 @@ class IonosProvider implements IMailAccountProvider {
 
 	public function getMailboxes(): array {
 		return $this->facade->getMailboxes();
+	}
+
+	public function updateMailbox(string $userId, string $currentEmail, string $newLocalpart): MailboxInfo {
+		return $this->facade->updateMailbox($userId, $currentEmail, $newLocalpart);
 	}
 }

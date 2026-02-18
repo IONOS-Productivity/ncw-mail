@@ -146,4 +146,20 @@ interface IMailAccountProvider {
 	 * @throws \OCA\Mail\Exception\ServiceException If fetching mailboxes fails
 	 */
 	public function getMailboxes(): array;
+
+	/**
+	 * Update a mailbox (e.g., change localpart/username)
+	 *
+	 * Returns the same enriched payload structure as getMailboxes() to enable
+	 * proper UI updates.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $currentEmail The current email address of the mailbox
+	 * @param string $newLocalpart The new local part of the email address (empty string if no update)
+	 * @return MailboxInfo Enriched mailbox information
+	 * @throws \InvalidArgumentException If required data is missing or invalid
+	 * @throws \OCA\Mail\Exception\AccountAlreadyExistsException If email is already taken
+	 * @throws \OCA\Mail\Exception\ServiceException If update fails
+	 */
+	public function updateMailbox(string $userId, string $currentEmail, string $newLocalpart): MailboxInfo;
 }
