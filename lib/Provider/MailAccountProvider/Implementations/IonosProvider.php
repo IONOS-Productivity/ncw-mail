@@ -128,7 +128,7 @@ class IonosProvider implements IMailAccountProvider {
 	}
 
 	public function deleteAccount(string $userId, string $email): bool {
-		return $this->facade->deleteAccount($userId);
+		return $this->facade->deleteAccount($userId, $email);
 	}
 
 	public function managesEmail(string $userId, string $email): bool {

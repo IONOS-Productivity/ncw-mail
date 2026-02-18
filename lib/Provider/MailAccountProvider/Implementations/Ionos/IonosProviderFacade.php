@@ -146,19 +146,23 @@ class IonosProviderFacade {
 	 * Delete an IONOS mail account
 	 *
 	 * @param string $userId The Nextcloud user ID
+	 * @param string $email The email address to verify before deletion
 	 * @return bool True if deletion was successful
+	 * @throws \OCA\Mail\Exception\ServiceException If deletion fails
 	 */
-	public function deleteAccount(string $userId): bool {
+	public function deleteAccount(string $userId, string $email): bool {
 		$this->logger->info('Deleting IONOS account via facade', [
 			'userId' => $userId,
+			'email' => $email,
 		]);
 
 		try {
-			$this->mutationService->tryDeleteEmailAccount($userId);
+			$this->mutationService->tryDeleteEmailAccount($userId, $email);
 			return true;
 		} catch (\Exception $e) {
 			$this->logger->error('Error deleting IONOS account via facade', [
 				'userId' => $userId,
+				'email' => $email,
 				'exception' => $e,
 			]);
 			return false;

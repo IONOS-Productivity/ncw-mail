@@ -83,8 +83,9 @@ interface IMailAccountProvider {
 	 * Delete a mail account from the external provider
 	 *
 	 * @param string $userId The Nextcloud user ID
-	 * @param string $email The email address to delete
+	 * @param string $email The email address to identify the mailbox
 	 * @return bool True if deletion was successful
+	 * @throws \OCA\Mail\Exception\ServiceException If deletion fails
 	 */
 	public function deleteAccount(string $userId, string $email): bool;
 
