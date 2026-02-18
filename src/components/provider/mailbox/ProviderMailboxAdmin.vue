@@ -231,7 +231,7 @@ export default {
 			background-color: var(--color-background-dark);
 
 			th {
-				text-align: left;
+				text-align: start;
 				padding: 12px;
 				font-weight: 600;
 				border-bottom: 2px solid var(--color-border);
@@ -247,7 +247,7 @@ export default {
 				}
 
 				&.actions-column {
-					text-align: right;
+					text-align: end;
 					width: 150px;
 				}
 			}
