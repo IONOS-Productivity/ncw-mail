@@ -140,22 +140,73 @@ class IonosAccountMutationService {
 	 * Delete an IONOS email account via API
 	 *
 	 * @param string $userId The Nextcloud user ID
+	 * @param string $email The email address to verify before deletion
 	 * @return bool true if deletion was successful
 	 * @throws ServiceException
 	 */
-	public function deleteEmailAccount(string $userId): bool {
+	public function deleteEmailAccount(string $userId, string $email): bool {
 		$this->logger->info('Attempting to delete IONOS email account', [
 			'userId' => $userId,
+			'email' => $email,
 			'extRef' => $this->configService->getExternalReference(),
 		]);
 
 		try {
 			$apiInstance = $this->createApiInstance();
 
+			// First, verify the email matches the account we're about to delete
+			try {
+				$accountResponse = $apiInstance->getFunctionalAccount(
+					self::BRAND,
+					$this->configService->getExternalReference(),
+					$userId
+				);
+
+				if ($accountResponse instanceof MailAccountResponse) {
+					$currentEmail = $accountResponse->getEmail();
+
+					// Case-insensitive comparison
+					if (strcasecmp($currentEmail, $email) !== 0) {
+						$this->logger->warning('Email mismatch during deletion - refusing to delete', [
+							'userId' => $userId,
+							'requestedEmail' => $email,
+							'currentEmail' => $currentEmail,
+						]);
+						throw new ServiceException(
+							'Email mismatch: Cannot delete account. Requested: ' . $email . ', Found: ' . $currentEmail,
+							400
+						);
+					}
+
+					$this->logger->debug('Email verified before deletion', [
+						'userId' => $userId,
+						'email' => $email,
+					]);
+				}
+			} catch (ApiException $e) {
+				// If account doesn't exist (404), we can proceed to delete (it's already gone)
+				if ($e->getCode() === self::HTTP_NOT_FOUND) {
+					$this->logger->debug('IONOS mailbox does not exist (already deleted or never created)', [
+						'userId' => $userId,
+						'email' => $email,
+						'statusCode' => $e->getCode()
+					]);
+					return true;
+				}
+				// For other errors during verification, log but proceed with deletion attempt
+				$this->logger->warning('Could not verify email before deletion, proceeding anyway', [
+					'userId' => $userId,
+					'email' => $email,
+					'exception' => $e->getMessage(),
+				]);
+			}
+
+			// Proceed with deletion
 			$apiInstance->deleteMailbox(self::BRAND, $this->configService->getExternalReference(), $userId);
 
 			$this->logger->info('Successfully deleted IONOS email account', [
-				'userId' => $userId
+				'userId' => $userId,
+				'email' => $email
 			]);
 
 			return true;
@@ -167,6 +218,7 @@ class IonosAccountMutationService {
 			if ($e->getCode() === self::HTTP_NOT_FOUND) {
 				$this->logger->debug('IONOS mailbox does not exist (already deleted or never created)', [
 					'userId' => $userId,
+					'email' => $email,
 					'statusCode' => $e->getCode()
 				]);
 				return true;
@@ -176,14 +228,16 @@ class IonosAccountMutationService {
 				'statusCode' => $e->getCode(),
 				'message' => $e->getMessage(),
 				'responseBody' => $e->getResponseBody(),
-				'userId' => $userId
+				'userId' => $userId,
+				'email' => $email
 			]);
 
 			throw new ServiceException('Failed to delete IONOS mail: ' . $e->getMessage(), $e->getCode(), $e);
 		} catch (\Exception $e) {
 			$this->logger->error('Exception when calling MailConfigurationAPIApi->deleteMailbox', [
 				'exception' => $e,
-				'userId' => $userId
+				'userId' => $userId,
+				'email' => $email
 			]);
 
 			throw new ServiceException('Failed to delete IONOS mail', self::HTTP_INTERNAL_SERVER_ERROR, $e);
@@ -199,23 +253,26 @@ class IonosAccountMutationService {
 	 * interrupt the flow.
 	 *
 	 * @param string $userId The Nextcloud user ID
+	 * @param string $email The email address to verify before deletion
 	 * @return void
 	 */
-	public function tryDeleteEmailAccount(string $userId): void {
+	public function tryDeleteEmailAccount(string $userId, string $email): void {
 		// Check if IONOS integration is enabled
 		if (!$this->configService->isIonosIntegrationEnabled()) {
 			$this->logger->debug('IONOS integration is not enabled, skipping email account deletion', [
-				'userId' => $userId
+				'userId' => $userId,
+				'email' => $email
 			]);
 			return;
 		}
 
 		try {
-			$this->deleteEmailAccount($userId);
+			$this->deleteEmailAccount($userId, $email);
 			// Success is already logged by deleteEmailAccount
 		} catch (ServiceException $e) {
 			$this->logger->error('Failed to delete IONOS mailbox for user', [
 				'userId' => $userId,
+				'email' => $email,
 				'exception' => $e,
 			]);
 			// Don't throw - this is a fire and forget operation

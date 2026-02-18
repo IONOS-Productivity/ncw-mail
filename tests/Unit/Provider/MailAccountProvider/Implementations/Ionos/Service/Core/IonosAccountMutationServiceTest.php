@@ -204,6 +204,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 
 	public function testDeleteEmailAccountSuccess(): void {
 		$userId = 'testuser';
+		$email = 'testuser@example.com';
 
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
@@ -220,13 +221,14 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$this->apiClientService->method('newClient')->willReturn($client);
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
-		$result = $this->service->deleteEmailAccount($userId);
+		$result = $this->service->deleteEmailAccount($userId, $email);
 
 		$this->assertTrue($result);
 	}
 
 	public function testDeleteEmailAccountNotFound(): void {
 		$userId = 'testuser';
+		$email = 'testuser@example.com';
 
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
@@ -244,13 +246,14 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// 404 should be treated as success (already deleted)
-		$result = $this->service->deleteEmailAccount($userId);
+		$result = $this->service->deleteEmailAccount($userId, $email);
 
 		$this->assertTrue($result);
 	}
 
 	public function testDeleteEmailAccountApiException(): void {
 		$userId = 'testuser';
+		$email = 'testuser@example.com';
 
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
@@ -271,11 +274,12 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$this->expectExceptionMessage('Failed to delete IONOS mail: Server error');
 		$this->expectExceptionCode(500);
 
-		$this->service->deleteEmailAccount($userId);
+		$this->service->deleteEmailAccount($userId, $email);
 	}
 
 	public function testDeleteEmailAccountServiceException(): void {
 		$userId = 'testuser';
+		$email = 'testuser@example.com';
 
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
@@ -300,11 +304,12 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$this->expectExceptionMessage('Service layer error');
 		$this->expectExceptionCode(503);
 
-		$this->service->deleteEmailAccount($userId);
+		$this->service->deleteEmailAccount($userId, $email);
 	}
 
 	public function testDeleteEmailAccountUnexpectedException(): void {
 		$userId = 'testuser';
+		$email = 'testuser@example.com';
 
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
@@ -325,11 +330,12 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$this->expectExceptionMessage('Failed to delete IONOS mail');
 		$this->expectExceptionCode(500);
 
-		$this->service->deleteEmailAccount($userId);
+		$this->service->deleteEmailAccount($userId, $email);
 	}
 
 	public function testTryDeleteEmailAccountSuccess(): void {
 		$userId = 'testuser';
+		$email = 'testuser@example.com';
 
 		$this->configService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
@@ -351,11 +357,12 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		// Should not throw exception
-		$this->service->tryDeleteEmailAccount($userId);
+		$this->service->tryDeleteEmailAccount($userId, $email);
 	}
 
 	public function testTryDeleteEmailAccountDisabledIntegration(): void {
 		$userId = 'testuser';
+		$email = 'testuser@example.com';
 
 		$this->configService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
@@ -369,11 +376,12 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$this->apiClientService->expects($this->never())
 			->method('newClient');
 
-		$this->service->tryDeleteEmailAccount($userId);
+		$this->service->tryDeleteEmailAccount($userId, $email);
 	}
 
 	public function testTryDeleteEmailAccountSuppressesExceptions(): void {
 		$userId = 'testuser';
+		$email = 'testuser@example.com';
 
 		$this->configService->method('isIonosIntegrationEnabled')->willReturn(true);
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
@@ -395,7 +403,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 			->method('error');
 
 		// Should not throw exception (fire and forget)
-		$this->service->tryDeleteEmailAccount($userId);
+		$this->service->tryDeleteEmailAccount($userId, $email);
 	}
 
 	public function testResetAppPasswordSuccess(): void {
