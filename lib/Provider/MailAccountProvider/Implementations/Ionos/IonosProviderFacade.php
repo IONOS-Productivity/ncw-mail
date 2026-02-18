@@ -401,8 +401,8 @@ class IonosProviderFacade {
 
 				foreach ($existingAccounts as $account) {
 					$email = $account->getEmail();
-					// Match the specific account by its full email address (current or new)
-					if (strcasecmp($email, $currentEmail) === 0 || strcasecmp($email, $newEmail) === 0) {
+					// Match the specific account by its current email address
+					if (strcasecmp($email, $currentEmail) === 0) {
 						$mailAccount = $account->getMailAccount();
 
 						$hasChanges = false;
@@ -427,6 +427,16 @@ class IonosProviderFacade {
 								'userId' => $userId,
 								'accountId' => $mailAppAccountId,
 								'newEmail' => $newEmail,
+							]);
+						} else {
+							// No changes needed, but still populate the account info
+							$mailAppAccountId = $mailAccount->getId();
+							$mailAppAccountName = $mailAccount->getName();
+							$mailAppAccountExists = true;
+
+							$this->logger->debug('Local mail account found but no changes needed', [
+								'userId' => $userId,
+								'accountId' => $mailAppAccountId,
 							]);
 						}
 
