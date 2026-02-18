@@ -327,8 +327,6 @@ class ExternalAccountsController extends Controller {
 	/**
 	 * Update a mailbox (e.g., change localpart or display name)
 	 *
-	 * @NoAdminRequired
-	 *
 	 * @param string $providerId The provider ID
 	 * @param string $userId The user ID whose mailbox to update
 	 * @return JSONResponse

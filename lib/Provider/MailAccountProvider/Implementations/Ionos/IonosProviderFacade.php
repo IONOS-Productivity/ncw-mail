@@ -347,7 +347,6 @@ class IonosProviderFacade {
 		]);
 
 		$localpart = $data['localpart'] ?? null;
-		$name = $data['name'] ?? '';
 
 		// Get current mailbox info from provider
 		$accountResponse = $this->queryService->getMailAccountResponse($userId);
@@ -397,41 +396,39 @@ class IonosProviderFacade {
 
 		if ($userExists) {
 			try {
-				// Get the IONOS mail domain to identify IONOS accounts
-				$ionosDomain = $this->configService->getMailDomain();
-
-				// Get all accounts for this user and find the IONOS one by domain
+				// Get all accounts for this user and find the matching one by email
 				$existingAccounts = $this->accountService->findByUserId($userId);
 
 				foreach ($existingAccounts as $account) {
 					$email = $account->getEmail();
-					// Check if this account's email matches the IONOS domain
-					if (str_ends_with(strtolower($email), '@' . strtolower($ionosDomain))) {
+					// Match the specific account by its full email address (current or new)
+					if (strcasecmp($email, $currentEmail) === 0 || strcasecmp($email, $newEmail) === 0) {
 						$mailAccount = $account->getMailAccount();
+
+						$hasChanges = false;
 
 						// Update the local account with new email and usernames (if email changed)
 						if ($newEmail !== $currentEmail) {
 							$mailAccount->setEmail($newEmail);
 							$mailAccount->setInboundUser($newEmail);
 							$mailAccount->setOutboundUser($newEmail);
+							$hasChanges = true;
 						}
 
-						if ($name !== '') {
-							$mailAccount->setName($name);
+						if ($hasChanges) {
+							// Save the updated account
+							$updatedMailAccount = $this->accountService->update($mailAccount);
+
+							$mailAppAccountId = $updatedMailAccount->getId();
+							$mailAppAccountName = $updatedMailAccount->getName();
+							$mailAppAccountExists = true;
+
+							$this->logger->info('Updated local mail account', [
+								'userId' => $userId,
+								'accountId' => $mailAppAccountId,
+								'newEmail' => $newEmail,
+							]);
 						}
-
-						// Save the updated account
-						$updatedMailAccount = $this->accountService->update($mailAccount);
-
-						$mailAppAccountId = $updatedMailAccount->getId();
-						$mailAppAccountName = $updatedMailAccount->getName();
-						$mailAppAccountExists = true;
-
-						$this->logger->info('Updated local mail account', [
-							'userId' => $userId,
-							'accountId' => $mailAppAccountId,
-							'newEmail' => $newEmail,
-						]);
 
 						break;
 					}

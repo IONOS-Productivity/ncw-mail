@@ -196,12 +196,16 @@ class IonosAccountMutationService {
 					]);
 					return true;
 				}
-				// For other errors during verification, log but proceed with deletion attempt
-				$this->logger->warning('Could not verify email before deletion, proceeding anyway', [
+				// For other errors during verification, log and abort deletion to avoid unintended mailbox removal
+				$this->logger->warning('Could not verify email before deletion, aborting deletion', [
 					'userId' => $userId,
 					'email' => $email,
 					'exception' => $e->getMessage(),
 				]);
+				throw new ServiceException(
+					'Unable to verify mailbox before deletion; deletion aborted',
+					502
+				);
 			}
 
 			// Proceed with deletion
