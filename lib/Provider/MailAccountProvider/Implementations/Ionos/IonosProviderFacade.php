@@ -323,4 +323,131 @@ class IonosProviderFacade {
 		}
 		return null;
 	}
+
+	/**
+	 * Update a mailbox (e.g., change localpart)
+	 *
+	 * This method updates the mailbox by changing the localpart (email username).
+	 * It updates the remote IONOS mailbox if localpart is provided, and also updates
+	 * the local Nextcloud account if it exists.
+	 *
+	 * If no localpart is provided (empty string), this method simply returns the current
+	 * mailbox information without making any changes to the remote IONOS mailbox.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $currentEmail The current email address of the mailbox
+	 * @param string $newLocalpart The new local part of the email address (empty string if no update)
+	 * @return MailboxInfo Enriched mailbox information
+	 * @throws \OCA\Mail\Exception\AccountAlreadyExistsException If email is already taken
+	 * @throws \OCA\Mail\Exception\ServiceException If update fails
+	 */
+	public function updateMailbox(string $userId, string $currentEmail, string $newLocalpart): MailboxInfo {
+		$this->logger->info('Updating IONOS mailbox via facade', [
+			'userId' => $userId,
+			'currentEmail' => $currentEmail,
+			'newLocalpart' => $newLocalpart,
+		]);
+
+		// If localpart is provided, update the remote IONOS mailbox
+		$newEmail = $currentEmail;
+		if ($newLocalpart !== '') {
+			try {
+				// Update the remote IONOS mailbox
+				$newEmail = $this->mutationService->updateMailboxLocalpart($userId, $newLocalpart);
+
+				$this->logger->info('Updated IONOS mailbox on provider', [
+					'userId' => $userId,
+					'oldEmail' => $currentEmail,
+					'newEmail' => $newEmail,
+				]);
+			} catch (ServiceException $e) {
+				// Convert 409 conflicts to AccountAlreadyExistsException
+				if ($e->getCode() === 409) {
+					throw new \OCA\Mail\Exception\AccountAlreadyExistsException(
+						$e->getMessage(),
+						$e->getCode(),
+						[],
+						$e
+					);
+				}
+				throw $e;
+			}
+		} else {
+			$this->logger->debug('No localpart provided, skipping remote mailbox update', [
+				'userId' => $userId,
+			]);
+		}
+
+		// Check if Nextcloud user exists
+		$user = $this->userManager->get($userId);
+		$userExists = $user !== null;
+
+		// Try to find and update local mail account if it exists
+		$mailAppAccountId = null;
+		$mailAppAccountName = null;
+		$mailAppAccountExists = false;
+
+		if ($userExists) {
+			try {
+				// Get the IONOS mail domain to identify IONOS accounts
+				$ionosDomain = $this->configService->getMailDomain();
+
+				// Get all accounts for this user and find the IONOS one by domain
+				$existingAccounts = $this->accountService->findByUserId($userId);
+
+				foreach ($existingAccounts as $account) {
+					$email = $account->getEmail();
+					// Check if this account's email matches the IONOS domain
+					if (str_ends_with(strtolower($email), '@' . strtolower($ionosDomain))) {
+						$mailAccount = $account->getMailAccount();
+
+						// Update the local account with new email and usernames (if email changed)
+						if ($newEmail !== $currentEmail) {
+							$mailAccount->setEmail($newEmail);
+							$mailAccount->setInboundUser($newEmail);
+							$mailAccount->setOutboundUser($newEmail);
+						}
+
+						// Save the updated account
+						$updatedMailAccount = $this->accountService->update($mailAccount);
+
+						$mailAppAccountId = $updatedMailAccount->getId();
+						$mailAppAccountName = $updatedMailAccount->getName();
+						$mailAppAccountExists = true;
+
+						$this->logger->info('Updated local mail account', [
+							'userId' => $userId,
+							'accountId' => $mailAppAccountId,
+							'newEmail' => $newEmail,
+						]);
+
+						break;
+					}
+				}
+			} catch (\Exception $e) {
+				// Log but don't fail - provider mailbox was updated successfully
+				$this->logger->warning('Could not update local mail account', [
+					'userId' => $userId,
+					'exception' => $e,
+				]);
+			}
+		}
+
+		$this->logger->info('Successfully updated IONOS mailbox', [
+			'userId' => $userId,
+			'email' => $newEmail,
+			'userExists' => $userExists,
+			'mailAppAccountExists' => $mailAppAccountExists,
+		]);
+
+		// Return enriched mailbox data using MailboxInfo DTO (consistent with getMailboxes)
+		return new MailboxInfo(
+			userId: $userId,
+			email: $newEmail,
+			userExists: $userExists,
+			mailAppAccountId: $mailAppAccountId,
+			mailAppAccountName: $mailAppAccountName,
+			mailAppAccountExists: $mailAppAccountExists,
+		);
+	}
 }

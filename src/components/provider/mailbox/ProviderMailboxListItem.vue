@@ -4,9 +4,26 @@
 -->
 
 <template>
-	<tr class="mailbox-list-item">
+	<tr class="mailbox-list-item" :class="{ 'editing': editing }">
 		<td class="email-column">
-			<span class="email-address">{{ mailbox.email }}</span>
+			<!-- View Mode: Show full email -->
+			<span v-if="!editing" class="email-address">{{ mailbox.email }}</span>
+
+			<!-- Edit Mode: Show localpart input with domain suffix -->
+			<template v-else>
+				<NcTextField ref="localpartField"
+					class="mailbox-field localpart-field"
+					:value.sync="editedLocalpart"
+					:label="t('mail', 'Email username')"
+					:disabled="loading"
+					autocomplete="off"
+					spellcheck="false"
+					@keydown.enter="saveChanges">
+					<template #helper-text>
+						<span class="domain-hint">{{ emailDomain }}</span>
+					</template>
+				</NcTextField>
+			</template>
 		</td>
 		<td class="displayname-column">
 			<!-- Show nothing if mail app account doesn't exist -->
@@ -14,10 +31,21 @@
 				<!-- Empty cell -->
 			</div>
 
-			<!-- Show display name if account exists -->
+			<!-- Show display name with editing if account exists -->
 			<div v-else class="displayname-content">
 				<!-- View Mode: Show name -->
-				<span class="display-name">{{ mailbox.mailAppAccountName || t('mail', 'No name') }}</span>
+				<span v-if="!editing" class="display-name">{{ mailbox.mailAppAccountName || t('mail', 'No name') }}</span>
+
+				<!-- Edit Mode: Show name input -->
+				<NcTextField v-else
+					ref="displayNameField"
+					class="mailbox-field displayname-field"
+					:value.sync="editedDisplayName"
+					:label="t('mail', 'Display name')"
+					:disabled="loading"
+					autocomplete="off"
+					spellcheck="false"
+					@keydown.enter="saveChanges" />
 			</div>
 		</td>
 		<td class="user-column">
@@ -58,8 +86,20 @@
 		<td class="actions-column">
 			<div class="actions">
 				<NcActions :inline="1">
+					<!-- Edit/Save Button (only if user exists) -->
+					<NcActionButton v-if="mailbox.userExists"
+						:disabled="loading"
+						@click="toggleEdit">
+						<template #icon>
+							<IconLoading v-if="loading" :size="20" />
+							<IconCheck v-else-if="editing" :size="20" />
+							<IconPencil v-else :size="20" />
+						</template>
+						{{ editing ? t('mail', 'Save') : t('mail', 'Edit') }}
+					</NcActionButton>
+
 					<!-- Delete Button (only in view mode) -->
-					<NcActionButton @click="$emit('delete', mailbox)">
+					<NcActionButton v-if="!editing" @click="$emit('delete', mailbox)">
 						<template #icon>
 							<IconDelete :size="20" />
 						</template>
@@ -72,13 +112,17 @@
 </template>
 
 <script>
-import { NcAvatar, NcActions, NcActionButton } from '@nextcloud/vue'
+import { NcAvatar, NcActions, NcActionButton, NcTextField } from '@nextcloud/vue'
+import { showError, showSuccess } from '@nextcloud/dialogs'
+import IconPencil from 'vue-material-design-icons/Pencil.vue'
 import IconDelete from 'vue-material-design-icons/Delete.vue'
 import IconCheck from 'vue-material-design-icons/Check.vue'
 import IconCheckCircle from 'vue-material-design-icons/CheckCircle.vue'
 import IconAlertCircle from 'vue-material-design-icons/AlertCircle.vue'
 import IconAccountOff from 'vue-material-design-icons/AccountOff.vue'
 import IconEmailOff from 'vue-material-design-icons/EmailOff.vue'
+import IconLoading from 'vue-material-design-icons/Loading.vue'
+import { updateMailbox } from '../../../service/ProviderMailboxService.js'
 
 export default {
 	name: 'ProviderMailboxListItem',
@@ -86,12 +130,15 @@ export default {
 		NcAvatar,
 		NcActions,
 		NcActionButton,
+		NcTextField,
+		IconPencil,
 		IconDelete,
 		IconCheck,
 		IconCheckCircle,
 		IconAlertCircle,
 		IconAccountOff,
 		IconEmailOff,
+		IconLoading,
 	},
 	props: {
 		mailbox: {
@@ -107,8 +154,24 @@ export default {
 			default: false,
 		},
 	},
-	emits: ['delete'],
+	emits: ['delete', 'update'],
+	data() {
+		return {
+			editing: false,
+			editedLocalpart: this.extractLocalpart(this.mailbox.email),
+			editedDisplayName: this.mailbox.mailAppAccountName || '',
+			loading: false,
+		}
+	},
 	computed: {
+		emailDomain() {
+			const atIndex = this.mailbox.email.indexOf('@')
+			return atIndex >= 0 ? this.mailbox.email.substring(atIndex) : ''
+		},
+		localpartFromEmail() {
+			const atIndex = this.mailbox.email.indexOf('@')
+			return atIndex >= 0 ? this.mailbox.email.substring(0, atIndex) : this.mailbox.email
+		},
 		// User status
 		userStatusIcon() {
 			return this.mailbox.userExists ? 'IconCheckCircle' : 'IconAccountOff'
@@ -134,6 +197,108 @@ export default {
 				: this.t('mail', 'Not configured')
 		},
 	},
+	methods: {
+		extractLocalpart(email) {
+			const atIndex = email.indexOf('@')
+			return atIndex >= 0 ? email.substring(0, atIndex) : email
+		},
+		toggleEdit() {
+			if (this.editing) {
+				// Save changes
+				this.saveChanges()
+			} else {
+				// Enter edit mode
+				this.editing = true
+				// Reset edited values when entering edit mode
+				this.editedLocalpart = this.localpartFromEmail
+				this.editedDisplayName = this.mailbox.mailAppAccountName || ''
+				// Focus localpart field on next tick
+				this.$nextTick(() => {
+					this.$refs.localpartField?.$refs?.inputField?.$refs?.input?.focus()
+				})
+			}
+		},
+		async saveChanges() {
+			if (this.loading) {
+				return
+			}
+
+			// Prepare update data
+			const data = {}
+			let hasChanges = false
+
+			// Check localpart changes
+			const trimmedLocalpart = this.editedLocalpart.trim()
+			if (trimmedLocalpart !== this.localpartFromEmail) {
+				// Validate localpart
+				if (trimmedLocalpart === '') {
+					showError(this.t('mail', 'Email username cannot be empty'))
+					return
+				}
+				if (!/^[a-zA-Z0-9._-]+$/.test(trimmedLocalpart)) {
+					showError(this.t('mail', 'Email username contains invalid characters. Use only letters, numbers, dots, hyphens, and underscores.'))
+					return
+				}
+				data.localpart = trimmedLocalpart
+				hasChanges = true
+			}
+
+			// Check display name changes (only if mail app account exists)
+			if (this.mailbox.mailAppAccountExists) {
+				const trimmedDisplayName = this.editedDisplayName.trim()
+				if (trimmedDisplayName !== (this.mailbox.mailAppAccountName || '')) {
+					// Validate display name
+					if (trimmedDisplayName === '') {
+						showError(this.t('mail', 'Display name cannot be empty'))
+						return
+					}
+					data.mailAppAccountName = trimmedDisplayName
+					hasChanges = true
+				}
+			}
+
+			// Exit if no changes
+			if (!hasChanges) {
+				showSuccess(this.t('mail', 'No changes to save'))
+				this.editing = false
+				return
+			}
+
+			this.loading = true
+			try {
+				const response = await updateMailbox(
+					this.providerId,
+					this.mailbox.userId,
+					data,
+				)
+
+				showSuccess(this.t('mail', 'Mailbox updated successfully'))
+
+				// Emit update event to parent with new mailbox data
+				this.$emit('update', response.data)
+
+				// Exit edit mode on success
+				this.editing = false
+			} catch (error) {
+				console.error('Failed to update mailbox', error)
+
+				// Extract error message from response
+				let errorMsg = this.t('mail', 'Failed to update mailbox')
+				if (error.response?.data?.data?.message) {
+					errorMsg = error.response.data.data.message
+				} else if (error.response?.status === 409) {
+					errorMsg = this.t('mail', 'Email address already exists')
+				}
+
+				showError(errorMsg)
+				// Revert to original values
+				this.editedLocalpart = this.localpartFromEmail
+				this.editedDisplayName = this.mailbox.mailAppAccountName || ''
+			} finally {
+				this.loading = false
+			}
+		},
+	},
 }
 </script>
 
@@ -142,6 +307,10 @@ export default {
 	td {
 		padding: 12px;
 		vertical-align: middle;
+	}
+
+	&.editing {
+		background-color: var(--color-background-hover);
 	}
 
 	.email-column {

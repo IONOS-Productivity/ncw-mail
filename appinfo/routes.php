@@ -146,6 +146,11 @@ return [
 			'verb' => 'DELETE'
 		],
 		[
+			'name' => 'externalAccounts#updateMailbox',
+			'url' => '/api/admin/providers/{providerId}/mailboxes/{userId}',
+			'verb' => 'PUT'
+		],
+		[
 			'name' => 'externalAccounts#create',
 			'url' => '/api/providers/{providerId}/accounts',
 			'verb' => 'POST'
