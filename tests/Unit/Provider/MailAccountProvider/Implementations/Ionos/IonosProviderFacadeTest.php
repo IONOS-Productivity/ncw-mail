@@ -183,41 +183,45 @@ class IonosProviderFacadeTest extends TestCase {
 
 	public function testDeleteAccountSuccess(): void {
 		$userId = 'user123';
+		$email = 'user123@example.com';
 
 		$this->logger->expects($this->once())
 			->method('info')
 			->with('Deleting IONOS account via facade', [
 				'userId' => $userId,
+				'email' => $email,
 			]);
 
 		$this->mutationService->expects($this->once())
 			->method('tryDeleteEmailAccount')
-			->with($userId);
+			->with($userId, $email);
 
-		$result = $this->facade->deleteAccount($userId);
+		$result = $this->facade->deleteAccount($userId, $email);
 
 		$this->assertTrue($result);
 	}
 
 	public function testDeleteAccountHandlesException(): void {
 		$userId = 'user123';
+		$email = 'user123@example.com';
 
 		$this->logger->expects($this->once())
 			->method('info')
 			->with('Deleting IONOS account via facade', [
 				'userId' => $userId,
+				'email' => $email,
 			]);
 
 		$this->mutationService->expects($this->once())
 			->method('tryDeleteEmailAccount')
-			->with($userId)
+			->with($userId, $email)
 			->willThrowException(new \Exception('Deletion failed'));
 
 		$this->logger->expects($this->once())
 			->method('error')
 			->with('Error deleting IONOS account via facade', $this->anything());
 
-		$result = $this->facade->deleteAccount($userId);
+		$result = $this->facade->deleteAccount($userId, $email);
 
 		$this->assertFalse($result);
 	}
