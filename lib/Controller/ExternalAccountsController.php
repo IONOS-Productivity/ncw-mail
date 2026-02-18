@@ -64,12 +64,8 @@ class ExternalAccountsController extends Controller {
 		try {
 			$userId = $this->getUserIdOrFail();
 
-			// Get parameters from request body
-			$parameters = $this->request->getParams();
-
-			// Remove Nextcloud-specific parameters
-			unset($parameters['providerId']);
-			unset($parameters['_route']);
+			// Clean request parameters
+			$parameters = $this->cleanRequestParams(['providerId', '_route']);
 
 			$this->logger->info('Starting external mail account creation', [
 				'userId' => $userId,
@@ -543,5 +539,19 @@ class ExternalAccountsController extends Controller {
 			];
 		}
 		return $providersInfo;
+	}
+
+	/**
+	 * Clean request parameters by removing framework-specific keys
+	 *
+	 * @param array<string> $keysToRemove Keys to remove from request params
+	 * @return array<string, mixed> Cleaned parameters
+	 */
+	private function cleanRequestParams(array $keysToRemove): array {
+		$data = $this->request->getParams();
+		foreach ($keysToRemove as $key) {
+			unset($data[$key]);
+		}
+		return $data;
 	}
 }
