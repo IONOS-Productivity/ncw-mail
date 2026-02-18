@@ -255,7 +255,7 @@ export default {
 	}
 
 	.actions-column {
-		text-align: right;
+		text-align: end;
 
 		.actions {
 			display: flex;
