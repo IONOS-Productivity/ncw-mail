@@ -221,7 +221,18 @@ class ExternalAccountsControllerTest extends TestCase {
 			}
 
 			public function getMailboxes(): array {
-				throw new \RuntimeException('Should not be called');
+				return [];
+			}
+
+			public function updateMailbox(string $userId, string $currentEmail, string $newLocalpart): MailboxInfo {
+				return new MailboxInfo(
+					userId: $userId,
+					email: 'test@example.com',
+					userExists: true,
+					mailAppAccountId: null,
+					mailAppAccountName: null,
+					mailAppAccountExists: false,
+				);
 			}
 		};
 
@@ -1756,5 +1767,775 @@ class ExternalAccountsControllerTest extends TestCase {
 		$data = $response->getData();
 		$this->assertEquals('success', $data['status']);
 		$this->assertTrue($data['data']['deleted']);
+	}
+
+	public function testUpdateMailboxWithNoUserSession(): void {
+		$this->userSession->method('getUser')
+			->willReturn(null);
+
+		$this->request->method('getParams')
+			->willReturn(['localpart' => 'newuser']);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_UNAUTHORIZED, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+	}
+
+	public function testUpdateMailboxWithProviderNotFound(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn(['localpart' => 'newuser']);
+
+		$this->providerRegistry->method('getProvider')
+			->with('nonexistent')
+			->willReturn(null);
+
+		$response = $this->controller->updateMailbox('nonexistent', 'testuser');
+
+		$this->assertEquals(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('PROVIDER_NOT_FOUND', $data['data']['error']);
+	}
+
+	public function testUpdateMailboxWithEmptyDisplayName(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'mailAppAccountName' => '',
+			]);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('INVALID_PARAMETERS', $data['data']['error']);
+		$this->assertEquals('Display name cannot be empty', $data['data']['message']);
+	}
+
+	public function testUpdateMailboxWithWhitespaceOnlyDisplayName(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'mailAppAccountName' => '   ',
+			]);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('INVALID_PARAMETERS', $data['data']['error']);
+		$this->assertEquals('Display name cannot be empty', $data['data']['message']);
+	}
+
+	public function testUpdateMailboxWithEmptyLocalpart(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => '',
+			]);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('INVALID_PARAMETERS', $data['data']['error']);
+		$this->assertEquals('Localpart cannot be empty', $data['data']['message']);
+	}
+
+	public function testUpdateMailboxWithWhitespaceOnlyLocalpart(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => '   ',
+			]);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('INVALID_PARAMETERS', $data['data']['error']);
+		$this->assertEquals('Localpart cannot be empty', $data['data']['message']);
+	}
+
+	/**
+	 * @dataProvider invalidLocalpartProvider
+	 */
+	public function testUpdateMailboxWithInvalidLocalpartCharacters(string $localpart): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => $localpart,
+			]);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('INVALID_PARAMETERS', $data['data']['error']);
+		$this->assertEquals('Localpart contains invalid characters', $data['data']['message']);
+	}
+
+	public static function invalidLocalpartProvider(): array {
+		return [
+			'with @ symbol' => ['user@domain'],
+			'with space' => ['user name'],
+			'with exclamation' => ['user!'],
+			'with hash' => ['user#123'],
+			'with percent' => ['user%20'],
+			'with ampersand' => ['user&name'],
+			'with asterisk' => ['user*'],
+			'with plus' => ['user+tag'],
+			'with equals' => ['user=name'],
+		];
+	}
+
+	/**
+	 * @dataProvider validLocalpartProvider
+	 */
+	public function testUpdateMailboxWithValidLocalpartFormats(string $localpart): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => $localpart,
+			]);
+
+		$updatedMailbox = new MailboxInfo(
+			userId: 'testuser',
+			email: $localpart . '@example.com',
+			userExists: true,
+			mailAppAccountId: null,
+			mailAppAccountName: null,
+			mailAppAccountExists: false,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		$provider->method('updateMailbox')
+			->with('testuser', 'olduser@example.com', $localpart)
+			->willReturn($updatedMailbox);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$mockUser = $this->createMock(IUser::class);
+		$mockUser->method('getDisplayName')->willReturn('Test User');
+
+		$this->userManager->method('get')
+			->with('testuser')
+			->willReturn($mockUser);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertEquals($localpart . '@example.com', $data['data']['email']);
+	}
+
+	public static function validLocalpartProvider(): array {
+		return [
+			'simple alphanumeric' => ['user123'],
+			'with dot' => ['user.name'],
+			'with hyphen' => ['user-name'],
+			'with underscore' => ['user_name'],
+			'multiple special chars' => ['user.name-123_test'],
+			'starting with number' => ['123user'],
+			'all uppercase' => ['USERNAME'],
+			'mixed case' => ['UserName'],
+		];
+	}
+
+	public function testUpdateMailboxWithLocalpartOnly(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => 'newuser',
+			]);
+
+		$updatedMailbox = new MailboxInfo(
+			userId: 'testuser',
+			email: 'newuser@example.com',
+			userExists: true,
+			mailAppAccountId: null,
+			mailAppAccountName: null,
+			mailAppAccountExists: false,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		$provider->method('updateMailbox')
+			->with('testuser', 'olduser@example.com', 'newuser')
+			->willReturn($updatedMailbox);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$mockUser = $this->createMock(IUser::class);
+		$mockUser->method('getDisplayName')->willReturn('Test User');
+
+		$this->userManager->method('get')
+			->with('testuser')
+			->willReturn($mockUser);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertEquals('newuser@example.com', $data['data']['email']);
+		$this->assertEquals('testuser', $data['data']['userId']);
+		$this->assertEquals('Test User', $data['data']['userName']);
+	}
+
+	public function testUpdateMailboxWithDisplayNameOnly(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'mailAppAccountName' => 'New Display Name',
+			]);
+
+		$mailAccount = new MailAccount();
+		$mailAccount->setId(123);
+		$mailAccount->setEmail('test@example.com');
+		$mailAccount->setName('Old Name');
+		$account = new Account($mailAccount);
+
+		$updatedMailbox = new MailboxInfo(
+			userId: 'testuser',
+			email: 'test@example.com',
+			userExists: true,
+			mailAppAccountId: 123,
+			mailAppAccountName: 'Old Name',
+			mailAppAccountExists: true,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('test@example.com');
+		$provider->method('updateMailbox')
+			->with('testuser', 'test@example.com', '')
+			->willReturn($updatedMailbox);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->accountService->method('find')
+			->with('testuser', 123)
+			->willReturn($account);
+
+		$updatedMailAccount = new MailAccount();
+		$updatedMailAccount->setId(123);
+		$updatedMailAccount->setEmail('test@example.com');
+		$updatedMailAccount->setName('New Display Name');
+
+		$this->accountService->method('update')
+			->willReturn($updatedMailAccount);
+
+		$mockUser = $this->createMock(IUser::class);
+		$mockUser->method('getDisplayName')->willReturn('Test User');
+
+		$this->userManager->method('get')
+			->with('testuser')
+			->willReturn($mockUser);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertEquals('test@example.com', $data['data']['email']);
+		$this->assertEquals('New Display Name', $data['data']['mailAppAccountName']);
+	}
+
+	public function testUpdateMailboxWithBothLocalpartAndDisplayName(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => 'newuser',
+				'mailAppAccountName' => 'New Display Name',
+			]);
+
+		$mailAccount = new MailAccount();
+		$mailAccount->setId(123);
+		$mailAccount->setEmail('newuser@example.com');
+		$mailAccount->setName('Old Name');
+		$account = new Account($mailAccount);
+
+		$updatedMailbox = new MailboxInfo(
+			userId: 'testuser',
+			email: 'newuser@example.com',
+			userExists: true,
+			mailAppAccountId: 123,
+			mailAppAccountName: 'Old Name',
+			mailAppAccountExists: true,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		$provider->method('updateMailbox')
+			->with('testuser', 'olduser@example.com', 'newuser')
+			->willReturn($updatedMailbox);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->accountService->method('find')
+			->with('testuser', 123)
+			->willReturn($account);
+
+		$updatedMailAccount = new MailAccount();
+		$updatedMailAccount->setId(123);
+		$updatedMailAccount->setEmail('newuser@example.com');
+		$updatedMailAccount->setName('New Display Name');
+
+		$this->accountService->method('update')
+			->willReturn($updatedMailAccount);
+
+		$mockUser = $this->createMock(IUser::class);
+		$mockUser->method('getDisplayName')->willReturn('Test User');
+
+		$this->userManager->method('get')
+			->with('testuser')
+			->willReturn($mockUser);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertEquals('newuser@example.com', $data['data']['email']);
+		$this->assertEquals('New Display Name', $data['data']['mailAppAccountName']);
+	}
+
+	public function testUpdateMailboxWithoutMailAppAccount(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => 'newuser',
+				'mailAppAccountName' => 'New Display Name',
+			]);
+
+		$updatedMailbox = new MailboxInfo(
+			userId: 'testuser',
+			email: 'newuser@example.com',
+			userExists: true,
+			mailAppAccountId: null,
+			mailAppAccountName: null,
+			mailAppAccountExists: false,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		$provider->method('updateMailbox')
+			->with('testuser', 'olduser@example.com', 'newuser')
+			->willReturn($updatedMailbox);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		// accountService should not be called since mailAppAccountId is null
+		$this->accountService->expects($this->never())
+			->method('find');
+
+		$mockUser = $this->createMock(IUser::class);
+		$mockUser->method('getDisplayName')->willReturn('Test User');
+
+		$this->userManager->method('get')
+			->with('testuser')
+			->willReturn($mockUser);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertEquals('newuser@example.com', $data['data']['email']);
+		// mailAppAccountName should be null since no mail account exists
+		$this->assertNull($data['data']['mailAppAccountName']);
+	}
+
+	public function testUpdateMailboxWithServiceException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => 'newuser',
+			]);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		$provider->method('updateMailbox')
+			->willThrowException(new ServiceException('Service error', 500));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(500, $data['data']['statusCode']);
+	}
+
+	public function testUpdateMailboxWithProviderServiceException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => 'newuser',
+			]);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		$provider->method('updateMailbox')
+			->willThrowException(new ProviderServiceException('Provider error', 503, ['reason' => 'API unavailable']));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_SERVICE_UNAVAILABLE, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('SERVICE_ERROR', $data['data']['error']);
+		$this->assertEquals(503, $data['data']['statusCode']);
+		$this->assertEquals('API unavailable', $data['data']['reason']);
+	}
+
+	public function testUpdateMailboxWithInvalidArgumentException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => 'newuser',
+			]);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		$provider->method('updateMailbox')
+			->willThrowException(new \InvalidArgumentException('Invalid localpart format'));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_BAD_REQUEST, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('fail', $data['status']);
+		$this->assertEquals('INVALID_PARAMETERS', $data['data']['error']);
+		$this->assertEquals('Invalid localpart format', $data['data']['message']);
+	}
+
+	public function testUpdateMailboxWithGenericException(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => 'newuser',
+			]);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		$provider->method('updateMailbox')
+			->willThrowException(new \Exception('Unexpected error'));
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$this->logger->expects($this->atLeastOnce())
+			->method('error')
+			->with('Unexpected error updating mailbox', $this->anything());
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$data = $response->getData();
+		$this->assertEquals('error', $data['status']);
+		$this->assertStringContainsString('Could not update mailbox', $data['message']);
+	}
+
+	public function testUpdateMailboxWhenMailAccountUpdateFails(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => 'newuser',
+				'mailAppAccountName' => 'New Display Name',
+			]);
+
+		$updatedMailbox = new MailboxInfo(
+			userId: 'testuser',
+			email: 'newuser@example.com',
+			userExists: true,
+			mailAppAccountId: 123,
+			mailAppAccountName: 'Old Name',
+			mailAppAccountExists: true,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		$provider->method('updateMailbox')
+			->with('testuser', 'olduser@example.com', 'newuser')
+			->willReturn($updatedMailbox);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		// Mail account update fails
+		$this->accountService->method('find')
+			->willThrowException(new \Exception('Account not found'));
+
+		$this->logger->expects($this->once())
+			->method('warning')
+			->with('Could not update mail account display name', $this->anything());
+
+		$mockUser = $this->createMock(IUser::class);
+		$mockUser->method('getDisplayName')->willReturn('Test User');
+
+		$this->userManager->method('get')
+			->with('testuser')
+			->willReturn($mockUser);
+
+		// Should still succeed even if mail account update fails
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertEquals('success', $data['status']);
+		$this->assertEquals('newuser@example.com', $data['data']['email']);
+		// Display name should remain unchanged since update failed
+		$this->assertEquals('Old Name', $data['data']['mailAppAccountName']);
+	}
+
+	public function testUpdateMailboxCleansRequestParams(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+
+		$this->userSession->method('getUser')
+			->willReturn($user);
+
+		$this->request->method('getParams')
+			->willReturn([
+				'providerId' => 'test-provider',
+				'userId' => 'testuser',
+				'_route' => 'some-route',
+				'localpart' => 'newuser',
+				'otherParam' => 'value',
+			]);
+
+		$updatedMailbox = new MailboxInfo(
+			userId: 'testuser',
+			email: 'newuser@example.com',
+			userExists: true,
+			mailAppAccountId: null,
+			mailAppAccountName: null,
+			mailAppAccountExists: false,
+		);
+
+		$provider = $this->createMock(IMailAccountProvider::class);
+		$provider->method('isEnabled')
+			->willReturn(true);
+		$provider->method('getProvisionedEmail')
+			->with('testuser')
+			->willReturn('olduser@example.com');
+		// Verify that only userId, currentEmail, and newLocalpart are passed
+		$provider->method('updateMailbox')
+			->with('testuser', 'olduser@example.com', 'newuser')
+			->willReturn($updatedMailbox);
+
+		$this->providerRegistry->method('getProvider')
+			->with('test-provider')
+			->willReturn($provider);
+
+		$mockUser = $this->createMock(IUser::class);
+		$mockUser->method('getDisplayName')->willReturn('Test User');
+
+		$this->userManager->method('get')
+			->with('testuser')
+			->willReturn($mockUser);
+
+		$response = $this->controller->updateMailbox('test-provider', 'testuser');
+
+		$this->assertEquals(Http::STATUS_OK, $response->getStatus());
 	}
 }

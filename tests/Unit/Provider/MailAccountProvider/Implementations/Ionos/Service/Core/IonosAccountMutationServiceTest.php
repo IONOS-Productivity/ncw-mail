@@ -21,6 +21,7 @@ use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ApiMailConfigClientService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountMutationService;
+use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountQueryService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
 use OCP\IUser;
 use OCP\IUserSession;
@@ -32,6 +33,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 	private IonosConfigService&MockObject $configService;
 	private IUserSession&MockObject $userSession;
 	private LoggerInterface&MockObject $logger;
+	private IonosAccountQueryService&MockObject $queryService;
 	private IonosAccountMutationService $service;
 
 	protected function setUp(): void {
@@ -41,12 +43,14 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$this->configService = $this->createMock(IonosConfigService::class);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
+		$this->queryService = $this->createMock(IonosAccountQueryService::class);
 
 		$this->service = new IonosAccountMutationService(
 			$this->apiClientService,
 			$this->configService,
 			$this->userSession,
 			$this->logger,
+			$this->queryService,
 		);
 	}
 
