@@ -37,6 +37,22 @@ export const deleteMailbox = (providerId, userId, email) => {
 }
 
 /**
+ * Update a mailbox (admin only)
+ *
+ * @param {string} providerId The provider ID
+ * @param {string} userId The user ID
+ * @param {object} data Update data (e.g., { localpart: 'newuser', name: 'New Name' })
+ * @return {Promise}
+ */
+export const updateMailbox = (providerId, userId, data) => {
+	const url = generateUrl('/apps/mail/api/admin/providers/{providerId}/mailboxes/{userId}', {
+		providerId,
+		userId,
+	})
+	return axios.put(url, data).then((resp) => resp.data)
+}
+
+/**
  * Get all enabled providers (admin only)
  *
  * Returns all enabled providers regardless of user availability.
