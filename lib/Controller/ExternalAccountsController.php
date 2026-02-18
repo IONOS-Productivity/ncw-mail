@@ -124,10 +124,7 @@ class ExternalAccountsController extends Controller {
 				'providerId' => $providerId,
 				'exception' => $e,
 			]);
-			return MailJsonResponse::fail([
-				'error' => self::ERR_INVALID_PARAMETERS,
-				'message' => $e->getMessage(),
-			], Http::STATUS_BAD_REQUEST);
+			return $this->createValidationErrorResponse($e->getMessage());
 		} catch (\Exception $e) {
 			$this->logger->error('Unexpected error during external account creation', [
 				'providerId' => $providerId,
@@ -252,10 +249,7 @@ class ExternalAccountsController extends Controller {
 				'accountId' => $accountId,
 				'providerId' => $providerId,
 			]);
-			return MailJsonResponse::fail([
-				'error' => self::ERR_INVALID_PARAMETERS,
-				'message' => $e->getMessage(),
-			], Http::STATUS_BAD_REQUEST);
+			return $this->createValidationErrorResponse($e->getMessage());
 		} catch (\Exception $e) {
 			$this->logger->error('Unexpected error generating app password', [
 				'exception' => $e,
@@ -346,10 +340,7 @@ class ExternalAccountsController extends Controller {
 			// Get email from query parameters and decode it
 			$email = $this->request->getParam('email');
 			if (empty($email)) {
-				return MailJsonResponse::fail([
-					'error' => self::ERR_INVALID_PARAMETERS,
-					'message' => 'Email parameter is required',
-				], Http::STATUS_BAD_REQUEST);
+				return $this->createValidationErrorResponse('Email parameter is required');
 			}
 
 			// URL decode the email parameter (handles encoded @ and other special chars)
@@ -357,10 +348,7 @@ class ExternalAccountsController extends Controller {
 
 			// Validate email format
 			if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-				return MailJsonResponse::fail([
-					'error' => self::ERR_INVALID_PARAMETERS,
-					'message' => 'Invalid email format',
-				], Http::STATUS_BAD_REQUEST);
+				return $this->createValidationErrorResponse('Invalid email format');
 			}
 
 			$this->logger->info('Deleting mailbox', [
@@ -553,5 +541,18 @@ class ExternalAccountsController extends Controller {
 			unset($data[$key]);
 		}
 		return $data;
+	}
+
+	/**
+	 * Create a validation error response
+	 *
+	 * @param string $message Error message
+	 * @return JSONResponse
+	 */
+	private function createValidationErrorResponse(string $message): JSONResponse {
+		return MailJsonResponse::fail([
+			'error' => self::ERR_INVALID_PARAMETERS,
+			'message' => $message,
+		], Http::STATUS_BAD_REQUEST);
 	}
 }
