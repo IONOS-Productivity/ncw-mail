@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace OCA\Mail\Controller;
 
-use OCA\Mail\Exception\ProviderServiceException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Http\JsonResponse as MailJsonResponse;
 use OCA\Mail\Http\TrapError;
@@ -21,6 +20,7 @@ use OCA\Mail\Service\AccountService;
 use OCA\Mail\Settings\ProviderAccountOverviewSettings;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\Attribute\AuthorizedAdminSetting;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
@@ -325,6 +325,89 @@ class ExternalAccountsController extends Controller {
 	}
 
 	/**
+	 * Update a mailbox (e.g., change localpart or display name)
+	 *
+	 * @param string $providerId The provider ID
+	 * @param string $userId The user ID whose mailbox to update
+	 * @return JSONResponse
+	 */
+	#[TrapError]
+	#[AuthorizedAdminSetting(settings: ProviderAccountOverviewSettings::class)]
+	public function updateMailbox(string $providerId, string $userId): JSONResponse {
+		try {
+			$currentUserId = $this->getUserIdOrFail();
+
+			// Clean request parameters
+			$data = $this->cleanRequestParams(['providerId', 'userId', '_route']);
+
+			// Extract and validate mailAppAccountName (handled separately from provider data)
+			$validationResult = $this->extractAndValidateMailAppAccountName($data);
+			if ($validationResult instanceof JSONResponse) {
+				return $validationResult;
+			}
+			[$mailAppAccountName, $data] = $validationResult;
+
+			// Validate localpart if provided
+			$localpartValidation = $this->validateLocalpartInData($data);
+			if ($localpartValidation instanceof JSONResponse) {
+				return $localpartValidation;
+			}
+
+			$this->logger->info('Updating mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'currentUserId' => $currentUserId,
+				'data' => array_keys($data),
+				'hasDisplayName' => $mailAppAccountName !== null,
+			]);
+
+			// Get and validate provider
+			$provider = $this->getValidatedProvider($providerId);
+			if ($provider instanceof JSONResponse) {
+				return $provider;
+			}
+
+			// Get current email from provider
+			$currentEmail = $provider->getProvisionedEmail($userId);
+			if ($currentEmail === null) {
+				return $this->createValidationErrorResponse('Mailbox not found for user');
+			}
+
+			// Extract newLocalpart from request data (empty string if not provided)
+			$newLocalpart = $data['localpart'] ?? '';
+
+			// Update mailbox via provider (localpart, etc.)
+			$mailbox = $provider->updateMailbox($userId, $currentEmail, $newLocalpart);
+
+			// Update display name in local mail account if requested
+			if ($mailAppAccountName !== null) {
+				$mailbox = $this->updateMailAccountDisplayName($userId, $mailbox, $mailAppAccountName);
+			}
+
+			// Add userName to mailbox (consistent with indexMailboxes)
+			$mailbox = $this->enrichMailboxWithUserName($mailbox);
+
+			$this->logger->info('Mailbox updated successfully', [
+				'userId' => $userId,
+				'email' => $mailbox->email,
+			]);
+
+			return MailJsonResponse::success($mailbox->toArray());
+		} catch (ServiceException $e) {
+			return $this->buildServiceErrorResponse($e, $providerId);
+		} catch (\InvalidArgumentException $e) {
+			return $this->createValidationErrorResponse($e->getMessage());
+		} catch (\Exception $e) {
+			$this->logger->error('Unexpected error updating mailbox', [
+				'providerId' => $providerId,
+				'userId' => $userId,
+				'exception' => $e,
+			]);
+			return MailJsonResponse::error('Could not update mailbox');
+		}
+	}
+
+	/**
 	 * Delete a mailbox
 	 *
 	 * @param string $providerId The provider ID
@@ -541,6 +624,94 @@ class ExternalAccountsController extends Controller {
 			unset($data[$key]);
 		}
 		return $data;
+	}
+
+	/**
+	 * Extract and validate mailAppAccountName from request data
+	 *
+	 * @param array<string, mixed> $data Request data (will be modified to remove mailAppAccountName)
+	 * @return array{0: string|null, 1: array<string, mixed>}|JSONResponse
+	 *                                                                     Returns [mailAppAccountName, cleanedData] on success, or error JSONResponse on failure
+	 */
+	private function extractAndValidateMailAppAccountName(array &$data): array|JSONResponse {
+		$mailAppAccountName = null;
+
+		if (isset($data['mailAppAccountName'])) {
+			$mailAppAccountName = trim($data['mailAppAccountName']);
+			if (empty($mailAppAccountName)) {
+				return $this->createValidationErrorResponse('Display name cannot be empty');
+			}
+			// Remove from data to prevent passing to provider
+			unset($data['mailAppAccountName']);
+		}
+
+		return [$mailAppAccountName, $data];
+	}
+
+	/**
+	 * Validate localpart in request data
+	 *
+	 * @param array<string, mixed> $data Request data (will be modified to trim localpart)
+	 * @return JSONResponse|null Returns error response on validation failure, null on success
+	 */
+	private function validateLocalpartInData(array &$data): ?JSONResponse {
+		if (!isset($data['localpart'])) {
+			return null;
+		}
+
+		$localpart = trim($data['localpart']);
+
+		if (empty($localpart)) {
+			return $this->createValidationErrorResponse('Localpart cannot be empty');
+		}
+
+		// Basic validation: alphanumeric, dots, hyphens, underscores
+		if (!preg_match('/^[a-zA-Z0-9._-]+$/', $localpart)) {
+			return $this->createValidationErrorResponse('Localpart contains invalid characters');
+		}
+
+		$data['localpart'] = $localpart;
+		return null;
+	}
+
+	/**
+	 * Update the display name of a local mail account
+	 *
+	 * @param string $userId The user ID
+	 * @param MailboxInfo $mailbox The mailbox information
+	 * @param string $mailAppAccountName The new display name
+	 * @return MailboxInfo Updated mailbox with new display name
+	 */
+	private function updateMailAccountDisplayName(
+		string $userId,
+		MailboxInfo $mailbox,
+		string $mailAppAccountName,
+	): MailboxInfo {
+		if ($mailbox->mailAppAccountId === null) {
+			return $mailbox;
+		}
+
+		try {
+			$account = $this->accountService->find($userId, $mailbox->mailAppAccountId);
+			$mailAccount = $account->getMailAccount();
+			$mailAccount->setName($mailAppAccountName);
+			$updatedAccount = $this->accountService->update($mailAccount);
+
+			$this->logger->info('Mail account display name updated', [
+				'accountId' => $mailbox->mailAppAccountId,
+				'newName' => $mailAppAccountName,
+			]);
+
+			return $mailbox->withMailAppAccountName($updatedAccount->getName());
+		} catch (\Exception $e) {
+			// Log but don't fail - provider mailbox was updated successfully
+			$this->logger->warning('Could not update mail account display name', [
+				'userId' => $userId,
+				'accountId' => $mailbox->mailAppAccountId,
+				'exception' => $e,
+			]);
+			return $mailbox;
+		}
 	}
 
 	/**

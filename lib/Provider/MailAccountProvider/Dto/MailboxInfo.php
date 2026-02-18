@@ -68,4 +68,22 @@ class MailboxInfo {
 			$userName,
 		);
 	}
+
+	/**
+	 * Create a new instance with updated mail app account name
+	 *
+	 * @param string|null $mailAppAccountName The mail app account display name
+	 * @return self New instance with updated mail app account name
+	 */
+	public function withMailAppAccountName(?string $mailAppAccountName): self {
+		return new self(
+			$this->userId,
+			$this->email,
+			$this->userExists,
+			$this->mailAppAccountId,
+			$mailAppAccountName,
+			$this->mailAppAccountExists,
+			$this->userName,
+		);
+	}
 }
