@@ -465,7 +465,7 @@ class ExternalAccountsController extends Controller {
 		];
 
 		// If it's a ProviderServiceException, merge in the additional data
-		if ($e instanceof ProviderServiceException) {
+		if (method_exists($e, 'getData')) {
 			$data = array_merge($data, $e->getData());
 		}
 
