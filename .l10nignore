@@ -1,0 +1,7 @@
+# Ignore vendor directory
+vendor/
+#vendor-bin/
+
+# Ignore JS build files
+js/
+build/
