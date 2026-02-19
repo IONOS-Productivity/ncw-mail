@@ -4,11 +4,11 @@
 -->
 
 <template>
-	<div class="row"
+	<tr class="mailbox-list__row"
 		:class="{ 'row--editing': editing }"
 		:data-cy-mailbox-row="mailbox.userId">
 		<!-- Email Address -->
-		<div class="row__cell row__cell--email"
+		<td class="row__cell row__cell--email"
 			data-cy-mailbox-list-cell-email>
 			<!-- View Mode: Show full email -->
 			<strong v-if="!editing"
@@ -31,10 +31,10 @@
 					<span class="domain-hint">{{ emailDomain }}</span>
 				</template>
 			</NcTextField>
-		</div>
+		</td>
 
 		<!-- Display Name -->
-		<div class="row__cell row__cell--displayname"
+		<td class="row__cell row__cell--displayname"
 			data-cy-mailbox-list-cell-displayname>
 			<template v-if="mailbox.mailAppAccountExists">
 				<!-- View Mode -->
@@ -54,10 +54,10 @@
 					spellcheck="false"
 					@keydown.enter="saveChanges" />
 			</template>
-		</div>
+		</td>
 
 		<!-- Linked User -->
-		<div class="row__cell row__cell--linked-user"
+		<td class="row__cell row__cell--linked-user"
 			data-cy-mailbox-list-cell-linked-user>
 			<div class="user-info">
 				<!-- Avatar if user exists, placeholder icon if deleted -->
@@ -78,10 +78,11 @@
 					<span class="row__subtitle">{{ mailbox.userId }}</span>
 				</div>
 			</div>
-		</div>
+		</td>
 
-		<!-- Status -->
-		<div class="row__cell row__cell--status"
+		<!-- Status — DEV ONLY -->
+		<td v-if="debug"
+			class="row__cell row__cell--status"
 			data-cy-mailbox-list-cell-status>
 			<div class="status-indicators">
 				<!-- User exists / deleted -->
@@ -96,10 +97,11 @@
 					<span class="status-label">{{ accountStatusLabel }}</span>
 				</div>
 			</div>
-		</div>
+		</td>
 
 		<!-- Actions -->
-		<div class="row__cell row__cell--actions"
+		<td class="row__cell row__cell--actions"
+			:class="{ 'row__cell--actions-end': !mailbox.userExists }"
 			data-cy-mailbox-list-cell-actions>
 			<NcActions :inline="1">
 				<!-- Edit/Save Button (only if user exists) -->
@@ -122,8 +124,8 @@
 					{{ t('mail', 'Delete') }}
 				</NcActionButton>
 			</NcActions>
-		</div>
-	</div>
+		</td>
+	</tr>
 </template>
 
 <script>
@@ -162,6 +164,10 @@ export default {
 		providerId: {
 			type: String,
 			required: true,
+		},
+		debug: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	emits: ['delete', 'update'],
@@ -315,7 +321,10 @@ export default {
 <style scoped lang="scss">
 @use './shared/styles' as styles;
 
-.row {
+// Apply row layout to the <tr> element (same pattern as UserRow.vue)
+.mailbox-list__row {
+	@include styles.row;
+
 	border-bottom: 1px solid var(--color-border);
 	transition: background-color 0.1s ease;
 
@@ -333,7 +342,7 @@ export default {
 		}
 	}
 
-	&--editing {
+	&.row--editing {
 		background-color: var(--color-background-hover);
 
 		.row__cell--email,
@@ -341,13 +350,17 @@ export default {
 			background-color: var(--color-background-hover);
 		}
 	}
+}
 
-	@include styles.row;
+// Apply cell styles using .row prefix to generate .row__cell selectors
+// (same pattern as UserRow.vue which has .row { @include styles.cell })
+.row {
 	@include styles.cell;
 
-	// Row-specific cell overrides
-	.row__cell {
-		// Allow email cell to overflow for editing fields
+	&__cell {
+		border-bottom: 1px solid var(--color-border);
+
+		// Email cell
 		&--email {
 			.email-address {
 				font-family: monospace;
@@ -366,6 +379,7 @@ export default {
 			}
 		}
 
+		// Linked user cell
 		&--linked-user {
 			.user-info {
 				display: flex;
@@ -398,7 +412,11 @@ export default {
 			}
 		}
 
+		// Status cell — DEV ONLY, will not be visible in production
 		&--status {
+			background-color: color-mix(in srgb, var(--color-warning) 8%, transparent);
+			border-inline: 1px dashed var(--color-warning);
+
 			.status-indicators {
 				display: flex;
 				flex-direction: column;
