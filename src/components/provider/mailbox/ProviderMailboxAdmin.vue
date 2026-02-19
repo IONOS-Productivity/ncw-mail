@@ -7,8 +7,6 @@
 	<SettingsSection :name="t('mail', 'Email Administration')"
 		:description="t('mail', 'Manage email accounts for your users')">
 		<div class="mailbox-administration">
-			<h3>{{ t('mail', 'Manage Emails') }}</h3>
-
 			<!-- Provider Selection (if multiple providers available) -->
 			<NcSelect v-if="providers.length > 1"
 				v-model="selectedProvider"
@@ -43,32 +41,52 @@
 				</template>
 			</NcEmptyContent>
 
-			<!-- Mailbox list -->
+			<!-- Mailbox list table -->
 			<div v-else class="mailbox-list">
-				<table class="mailbox-table">
-					<thead>
-						<tr>
-							<th>{{ t('mail', 'Email Address') }}</th>
-							<th>{{ t('mail', 'Display Name') }}</th>
-							<th>{{ t('mail', 'Linked User') }}</th>
-							<th v-if="debug">
-								{{ t('mail', 'Status') }}
-							</th>
-							<th class="actions-column">
-								{{ t('mail', 'Actions') }}
-							</th>
-						</tr>
+				<div class="mailbox-table">
+					<!-- Sticky header -->
+					<thead class="mailbox-table__header">
+						<div class="header">
+							<div class="header__cell header__cell--email"
+								data-cy-mailbox-list-header-email>
+								<strong>{{ t('mail', 'Email Address') }}</strong>
+							</div>
+							<div class="header__cell header__cell--displayname"
+								data-cy-mailbox-list-header-displayname>
+								<span>{{ t('mail', 'Display Name') }}</span>
+							</div>
+							<div class="header__cell header__cell--linked-user"
+								data-cy-mailbox-list-header-linked-user>
+								<span>{{ t('mail', 'Linked User') }}</span>
+							</div>
+							<div class="header__cell header__cell--status"
+								data-cy-mailbox-list-header-status>
+								<span>{{ t('mail', 'Status') }}</span>
+							</div>
+							<div class="header__cell header__cell--actions"
+								data-cy-mailbox-list-header-actions>
+								<span class="hidden-visually">{{ t('mail', 'Actions') }}</span>
+							</div>
+						</div>
 					</thead>
-					<tbody>
+
+					<!-- Body rows -->
+					<div class="mailbox-table__body">
 						<ProviderMailboxListItem v-for="mailbox in mailboxes"
 							:key="mailbox.userId"
 							:mailbox="mailbox"
 							:provider-id="selectedProvider.id"
-							:debug="debug"
 							@delete="handleDelete"
 							@update="handleUpdate" />
-					</tbody>
-				</table>
+					</div>
+
+					<!-- Footer: entry count -->
+					<tfoot class="mailbox-table__footer">
+						<span class="mailbox-count">
+							{{ n('mail', '%n mailbox', '%n mailboxes', mailboxes.length) }}
+						</span>
+					</tfoot>
+				</div>
 			</div>
 
 			<!-- Deletion modal -->
@@ -82,6 +100,7 @@
 
 <script>
 import { NcEmptyContent, NcLoadingIcon, NcNoteCard, NcSelect, NcSettingsSection as SettingsSection } from '@nextcloud/vue'
+import { n } from '@nextcloud/l10n'
 import IconMail from 'vue-material-design-icons/Email.vue'
 
 import ProviderMailboxListItem from './ProviderMailboxListItem.vue'
@@ -110,7 +129,6 @@ export default {
 			selectedProvider: null,
 			showDeleteModal: false,
 			selectedMailbox: null,
-			debug: false,
 		}
 	},
 	async mounted() {
@@ -118,6 +136,7 @@ export default {
 		await this.loadMailboxes()
 	},
 	methods: {
+		n,
 		async loadProviders() {
 			try {
 				const response = await getEnabledProviders()
@@ -146,7 +165,6 @@ export default {
 				const providerId = this.selectedProvider.id
 				const response = await getMailboxes(providerId)
 				this.mailboxes = response.data?.mailboxes || []
-				this.debug = response.data?.debug || false
 			} catch (error) {
 				console.error('Failed to load mailboxes', error)
 				this.error = this.t('mail', 'Failed to load mailboxes')
@@ -201,15 +219,9 @@ export default {
 </script>
 
 <style scoped lang="scss">
+@use './shared/styles' as styles;
+
 .mailbox-administration {
-	padding: 20px 0;
-
-	h3 {
-		margin-bottom: 20px;
-		font-weight: 600;
-		font-size: 18px;
-	}
-
 	.provider-selector {
 		margin-bottom: 20px;
 		max-width: 400px;
@@ -228,49 +240,69 @@ export default {
 			color: var(--color-text-lighter);
 		}
 	}
+}
 
-	.mailbox-list {
-		margin-top: 20px;
-	}
+.mailbox-list {
+	margin-top: 8px;
+}
 
-	.mailbox-table {
-		width: 100%;
-		border-collapse: collapse;
+.mailbox-table {
+	--row-height: 55px;
+	--cell-padding: 7px;
+	--cell-width: 200px;
+	--cell-width-large: 300px;
+	--sticky-column-z-index: 1;
 
-		thead {
+	// Block display + overflow: auto enables horizontal scroll
+	// while keeping sticky columns pinned
+	display: block;
+	overflow: auto;
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius-large);
+
+	&__header {
+		position: sticky;
+		top: 0;
+		z-index: calc(var(--sticky-column-z-index) + 1);
+		display: block;
+
+		.header {
+			border-bottom: 1px solid var(--color-border);
 			background-color: var(--color-background-dark);
 
-			th {
-				text-align: start;
-				padding: 12px;
-				font-weight: 600;
-				border-bottom: 2px solid var(--color-border);
-
-				&:nth-child(3) {
-					// Display Name column
-					width: 200px;
-				}
-
-				&:nth-child(4) {
-					// Status column
-					width: 180px;
-				}
-
-				&.actions-column {
-					text-align: end;
-					width: 150px;
-				}
-			}
+			@include styles.row;
+			@include styles.cell;
 		}
 
-		tbody {
-			tr {
-				border-bottom: 1px solid var(--color-border);
+		// Header-specific overrides
+		.header__cell {
+			font-weight: 600;
 
-				&:hover {
-					background-color: var(--color-background-hover);
-				}
+			span {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
 			}
+		}
+	}
+
+	&__body {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+	}
+
+	&__footer {
+		display: block;
+		position: sticky;
+		inset-inline-start: 0;
+
+		.mailbox-count {
+			display: block;
+			padding: 8px var(--cell-padding);
+			color: var(--color-text-maxcontrast);
+			font-size: 13px;
+			border-top: 1px solid var(--color-border);
 		}
 	}
 }
