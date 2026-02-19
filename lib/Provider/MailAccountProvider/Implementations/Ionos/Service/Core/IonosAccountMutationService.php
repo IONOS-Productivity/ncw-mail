@@ -424,6 +424,14 @@ class IonosAccountMutationService {
 				'userId' => $userId,
 				'newEmail' => $newEmail,
 			]);
+
+			// Special handling for 404 errors to provide a more helpful message
+			if ($e->getCode() === 404) {
+				$errorMessage = 'The IONOS API could not find the mailbox to update. This may be a backend API issue. '
+					. 'Please verify the mailbox exists in the IONOS system or contact IONOS support.';
+				throw new ServiceException($errorMessage, $e->getCode(), $e);
+			}
+
 			throw new ServiceException('Failed to update IONOS mailbox: ' . $e->getMessage(), $e->getCode(), $e);
 		} catch (\Exception $e) {
 			$this->logger->error('Exception when updating mailbox localpart', [
