@@ -40,6 +40,6 @@ class MailProviderAccountsSection implements IIconSection {
 
 	#[\Override]
 	public function getIcon(): string {
-		return $this->urlGenerator->imagePath('mail', 'mail.svg');
+		return $this->urlGenerator->imagePath('mail', 'mail-dark.svg');
 	}
 }
