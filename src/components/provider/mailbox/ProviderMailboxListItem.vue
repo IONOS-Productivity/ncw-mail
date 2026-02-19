@@ -4,115 +4,130 @@
 -->
 
 <template>
-	<tr class="mailbox-list-item" :class="{ 'editing': editing }">
-		<td class="email-column">
+	<div class="row"
+		:class="{ 'row--editing': editing }"
+		:data-cy-mailbox-row="mailbox.userId">
+		<!-- Email Address -->
+		<div class="row__cell row__cell--email"
+			data-cy-mailbox-list-cell-email>
 			<!-- View Mode: Show full email -->
-			<span v-if="!editing" class="email-address">{{ mailbox.email }}</span>
+			<strong v-if="!editing"
+				:title="mailbox.email.length > 30 ? mailbox.email : null"
+				class="email-address">
+				{{ mailbox.email }}
+			</strong>
 
 			<!-- Edit Mode: Show localpart input with domain suffix -->
-			<template v-else>
-				<NcTextField ref="localpartField"
-					class="mailbox-field localpart-field"
-					:value.sync="editedLocalpart"
-					:label="t('mail', 'Email username')"
-					:disabled="loading"
-					autocomplete="off"
-					spellcheck="false"
-					@keydown.enter="saveChanges">
-					<template #helper-text>
-						<span class="domain-hint">{{ emailDomain }}</span>
-					</template>
-				</NcTextField>
-			</template>
-		</td>
-		<td class="displayname-column">
-			<!-- Show nothing if mail app account doesn't exist -->
-			<div v-if="!mailbox.mailAppAccountExists" class="no-account">
-				<!-- Empty cell -->
-			</div>
+			<NcTextField v-else
+				ref="localpartField"
+				class="cell-field"
+				:value.sync="editedLocalpart"
+				:label="t('mail', 'Email username')"
+				:disabled="loading"
+				autocomplete="off"
+				spellcheck="false"
+				@keydown.enter="saveChanges">
+				<template #helper-text>
+					<span class="domain-hint">{{ emailDomain }}</span>
+				</template>
+			</NcTextField>
+		</div>
 
-			<!-- Show display name with editing if account exists -->
-			<div v-else class="displayname-content">
-				<!-- View Mode: Show name -->
-				<span v-if="!editing" class="display-name">{{ mailbox.mailAppAccountName || t('mail', 'No name') }}</span>
+		<!-- Display Name -->
+		<div class="row__cell row__cell--displayname"
+			data-cy-mailbox-list-cell-displayname>
+			<template v-if="mailbox.mailAppAccountExists">
+				<!-- View Mode -->
+				<span v-if="!editing"
+					:title="(mailbox.mailAppAccountName || '').length > 25 ? mailbox.mailAppAccountName : null">
+					{{ mailbox.mailAppAccountName || t('mail', 'No name') }}
+				</span>
 
-				<!-- Edit Mode: Show name input -->
+				<!-- Edit Mode -->
 				<NcTextField v-else
 					ref="displayNameField"
-					class="mailbox-field displayname-field"
+					class="cell-field"
 					:value.sync="editedDisplayName"
 					:label="t('mail', 'Display name')"
 					:disabled="loading"
 					autocomplete="off"
 					spellcheck="false"
 					@keydown.enter="saveChanges" />
-			</div>
-		</td>
-		<td class="user-column">
+			</template>
+		</div>
+
+		<!-- Linked User -->
+		<div class="row__cell row__cell--linked-user"
+			data-cy-mailbox-list-cell-linked-user>
 			<div class="user-info">
-				<!-- Show avatar if user exists, otherwise show icon -->
+				<!-- Avatar if user exists, placeholder icon if deleted -->
 				<NcAvatar v-if="mailbox.userExists"
 					:user="mailbox.userId"
 					:size="32"
-					:display-name="mailbox.userName || mailbox.userId" />
+					:display-name="mailbox.userName || mailbox.userId"
+					disable-menu
+					:show-user-status="false" />
 				<div v-else class="user-icon-placeholder">
 					<IconAccountOff :size="32" />
 				</div>
 
 				<div class="user-details">
-					<!-- Display: userName (userId) -->
 					<span v-if="mailbox.userName" class="user-display">
-						{{ mailbox.userName }} <span class="user-id-inline">({{ mailbox.userId }})</span>
+						{{ mailbox.userName }}
 					</span>
-					<span v-else class="user-display">{{ mailbox.userId }}</span>
+					<span class="row__subtitle">{{ mailbox.userId }}</span>
 				</div>
 			</div>
-		</td>
-		<td v-if="debug" class="status-column">
+		</div>
+
+		<!-- Status -->
+		<div class="row__cell row__cell--status"
+			data-cy-mailbox-list-cell-status>
 			<div class="status-indicators">
-				<!-- User exists status -->
+				<!-- User exists / deleted -->
 				<div class="status-item" :class="userStatusClass">
 					<component :is="userStatusIcon" :size="16" />
 					<span class="status-label">{{ userStatusLabel }}</span>
 				</div>
 
-				<!-- Mail app account status -->
+				<!-- Mail app account configured -->
 				<div class="status-item" :class="accountStatusClass">
 					<component :is="accountStatusIcon" :size="16" />
 					<span class="status-label">{{ accountStatusLabel }}</span>
 				</div>
 			</div>
-		</td>
-		<td class="actions-column">
-			<div class="actions">
-				<NcActions :inline="1">
-					<!-- Edit/Save Button (only if user exists) -->
-					<NcActionButton v-if="mailbox.userExists"
-						:disabled="loading"
-						@click="toggleEdit">
-						<template #icon>
-							<IconLoading v-if="loading" :size="20" />
-							<IconCheck v-else-if="editing" :size="20" />
-							<IconPencil v-else :size="20" />
-						</template>
-						{{ editing ? t('mail', 'Save') : t('mail', 'Edit') }}
-					</NcActionButton>
+		</div>
 
-					<!-- Delete Button (only in view mode) -->
-					<NcActionButton v-if="!editing" @click="$emit('delete', mailbox)">
-						<template #icon>
-							<IconDelete :size="20" />
-						</template>
-						{{ t('mail', 'Delete') }}
-					</NcActionButton>
-				</NcActions>
-			</div>
-		</td>
-	</tr>
+		<!-- Actions -->
+		<div class="row__cell row__cell--actions"
+			data-cy-mailbox-list-cell-actions>
+			<NcActions :inline="1">
+				<!-- Edit/Save Button (only if user exists) -->
+				<NcActionButton v-if="mailbox.userExists"
+					:disabled="loading"
+					@click="toggleEdit">
+					<template #icon>
+						<NcLoadingIcon v-if="loading" :size="20" />
+						<IconCheck v-else-if="editing" :size="20" />
+						<IconPencil v-else :size="20" />
+					</template>
+					{{ editing ? t('mail', 'Save') : t('mail', 'Edit') }}
+				</NcActionButton>
+
+				<!-- Delete Button (only in view mode) -->
+				<NcActionButton v-if="!editing" @click="$emit('delete', mailbox)">
+					<template #icon>
+						<IconDelete :size="20" />
+					</template>
+					{{ t('mail', 'Delete') }}
+				</NcActionButton>
+			</NcActions>
+		</div>
+	</div>
 </template>
 
 <script>
-import { NcAvatar, NcActions, NcActionButton, NcTextField } from '@nextcloud/vue'
+import { NcAvatar, NcActions, NcActionButton, NcTextField, NcLoadingIcon } from '@nextcloud/vue'
 import { showError, showSuccess } from '@nextcloud/dialogs'
 import IconPencil from 'vue-material-design-icons/Pencil.vue'
 import IconDelete from 'vue-material-design-icons/Delete.vue'
@@ -121,7 +136,6 @@ import IconCheckCircle from 'vue-material-design-icons/CheckCircle.vue'
 import IconAlertCircle from 'vue-material-design-icons/AlertCircle.vue'
 import IconAccountOff from 'vue-material-design-icons/AccountOff.vue'
 import IconEmailOff from 'vue-material-design-icons/EmailOff.vue'
-import IconLoading from 'vue-material-design-icons/Loading.vue'
 import { updateMailbox } from '../../../service/ProviderMailboxService.js'
 
 export default {
@@ -130,6 +144,7 @@ export default {
 		NcAvatar,
 		NcActions,
 		NcActionButton,
+		NcLoadingIcon,
 		NcTextField,
 		IconPencil,
 		IconDelete,
@@ -138,7 +153,6 @@ export default {
 		IconAlertCircle,
 		IconAccountOff,
 		IconEmailOff,
-		IconLoading,
 	},
 	props: {
 		mailbox: {
@@ -148,10 +162,6 @@ export default {
 		providerId: {
 			type: String,
 			required: true,
-		},
-		debug: {
-			type: Boolean,
-			default: false,
 		},
 	},
 	emits: ['delete', 'update'],
@@ -303,132 +313,121 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.mailbox-list-item {
-	td {
-		padding: 12px;
-		vertical-align: middle;
+@use './shared/styles' as styles;
+
+.row {
+	border-bottom: 1px solid var(--color-border);
+	transition: background-color 0.1s ease;
+
+	&:last-child {
+		border-bottom: none;
 	}
 
-	&.editing {
+	&:hover {
 		background-color: var(--color-background-hover);
-	}
 
-	.email-column {
-		.email-address {
-			font-family: monospace;
-			font-size: 14px;
-		}
-
-		.mailbox-field.localpart-field {
-			width: 100%;
-			max-width: 300px;
-
-			:deep(.helper-text) {
-				.domain-hint {
-					color: var(--color-text-lighter);
-					font-size: 12px;
-					font-family: monospace;
-				}
-			}
+		// Keep sticky cells in sync with hover background
+		.row__cell--email,
+		.row__cell--actions {
+			background-color: var(--color-background-hover);
 		}
 	}
 
-	.user-column {
-		.user-info {
-			display: flex;
-			align-items: center;
-			gap: 12px;
+	&--editing {
+		background-color: var(--color-background-hover);
 
-			.user-icon-placeholder {
-				width: 32px;
-				height: 32px;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				color: var(--color-text-lighter);
-			}
-
-			.user-details {
-				.user-display {
-					font-weight: 500;
-					font-size: 14px;
-
-					.user-id-inline {
-						font-weight: normal;
-						color: var(--color-text-lighter);
-						font-size: 13px;
-					}
-				}
-			}
+		.row__cell--email,
+		.row__cell--actions {
+			background-color: var(--color-background-hover);
 		}
 	}
 
-	.displayname-column {
-		.displayname-content {
-			.display-name {
+	@include styles.row;
+	@include styles.cell;
+
+	// Row-specific cell overrides
+	.row__cell {
+		// Allow email cell to overflow for editing fields
+		&--email {
+			.email-address {
+				font-family: monospace;
 				font-size: 14px;
+				font-weight: 600;
 			}
 
-			.mailbox-field.displayname-field {
+			.domain-hint {
+				color: var(--color-text-lighter);
+				font-size: 12px;
+				font-family: monospace;
+			}
+
+			.cell-field {
 				width: 100%;
-				max-width: 300px;
 			}
 		}
 
-		.no-account {
-			// Empty cell when no mail app account exists
-		}
-	}
-
-	.status-column {
-		.status-indicators {
-			display: flex;
-			flex-direction: column;
-			gap: 8px;
-
-			.status-item {
+		&--linked-user {
+			.user-info {
 				display: flex;
 				align-items: center;
-				gap: 6px;
-				font-size: 13px;
+				gap: 10px;
 
-				&.status-ok {
-					color: var(--color-success);
-
-					.status-label {
-						color: var(--color-text-lighter);
-					}
+				.user-icon-placeholder {
+					width: 32px;
+					height: 32px;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					color: var(--color-text-lighter);
+					flex-shrink: 0;
 				}
 
-				&.status-warning {
-					color: var(--color-warning);
+				.user-details {
+					display: flex;
+					flex-direction: column;
+					min-width: 0;
 
-					.status-label {
-						color: var(--color-text-lighter);
+					.user-display {
+						font-weight: 500;
+						font-size: 14px;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
 					}
-				}
-
-				&.status-error {
-					color: var(--color-error);
-
-					.status-label {
-						color: var(--color-text-lighter);
-					}
-				}
-
-				.status-label {
-					font-size: 12px;
 				}
 			}
 		}
-	}
 
-	.actions-column {
-		text-align: end;
+		&--status {
+			.status-indicators {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
 
-		.actions {
-			display: flex;
-			justify-content: flex-end;
+				.status-item {
+					display: flex;
+					align-items: center;
+					gap: 5px;
+					font-size: 12px;
+
+					&.status-ok {
+						color: var(--color-success);
+					}
+
+					&.status-warning {
+						color: var(--color-warning);
+					}
+
+					&.status-error {
+						color: var(--color-error);
+					}
+
+					.status-label {
+						color: var(--color-text-maxcontrast);
+						font-size: 12px;
+					}
+				}
+			}
 		}
 	}
 }
