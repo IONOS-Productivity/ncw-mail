@@ -42,52 +42,34 @@
 			</NcEmptyContent>
 
 			<!-- Mailbox list table -->
-			<div v-else class="mailbox-list">
-				<div class="mailbox-table">
-					<!-- Sticky header -->
-					<thead class="mailbox-table__header">
-						<div class="header">
-							<div class="header__cell header__cell--email"
-								data-cy-mailbox-list-header-email>
-								<strong>{{ t('mail', 'Email Address') }}</strong>
-							</div>
-							<div class="header__cell header__cell--displayname"
-								data-cy-mailbox-list-header-displayname>
-								<span>{{ t('mail', 'Display Name') }}</span>
-							</div>
-							<div class="header__cell header__cell--linked-user"
-								data-cy-mailbox-list-header-linked-user>
-								<span>{{ t('mail', 'Linked User') }}</span>
-							</div>
-							<div class="header__cell header__cell--status"
-								data-cy-mailbox-list-header-status>
-								<span>{{ t('mail', 'Status') }}</span>
-							</div>
-							<div class="header__cell header__cell--actions"
-								data-cy-mailbox-list-header-actions>
-								<span class="hidden-visually">{{ t('mail', 'Actions') }}</span>
-							</div>
-						</div>
-					</thead>
+			<VirtualList v-else
+				:data-component="MailboxListItem"
+				:data-sources="mailboxes"
+				data-key="userId"
+				data-cy-mailbox-list
+				:item-height="rowHeight"
+				:style="style"
+				:extra-props="{
+					providerId: selectedProvider.id,
+					debug,
+				}"
+				@delete="handleDelete"
+				@update="handleUpdate">
+				<template #before>
+					<caption class="hidden-visually">
+						{{ t('mail', 'List of mailboxes. This list is not fully rendered for performance reasons. The mailboxes will be rendered as you navigate through the list.') }}
+					</caption>
+				</template>
 
-					<!-- Body rows -->
-					<div class="mailbox-table__body">
-						<ProviderMailboxListItem v-for="mailbox in mailboxes"
-							:key="mailbox.userId"
-							:mailbox="mailbox"
-							:provider-id="selectedProvider.id"
-							@delete="handleDelete"
-							@update="handleUpdate" />
-					</div>
+				<template #header>
+					<MailboxListHeader :debug="debug" />
+				</template>
 
-					<!-- Footer: entry count -->
-					<tfoot class="mailbox-table__footer">
-						<span class="mailbox-count">
-							{{ n('mail', '%n mailbox', '%n mailboxes', mailboxes.length) }}
-						</span>
-					</tfoot>
-				</div>
-			</div>
+				<template #footer>
+					<MailboxListFooter :loading="loading"
+						:mailboxes="mailboxes" />
+				</template>
+			</VirtualList>
 
 			<!-- Deletion modal -->
 			<ProviderMailboxDeletionModal v-if="showDeleteModal"
@@ -103,6 +85,9 @@ import { NcEmptyContent, NcLoadingIcon, NcNoteCard, NcSelect, NcSettingsSection 
 import { n } from '@nextcloud/l10n'
 import IconMail from 'vue-material-design-icons/Email.vue'
 
+import VirtualList from './shared/VirtualList.vue'
+import MailboxListHeader from './shared/MailboxListHeader.vue'
+import MailboxListFooter from './shared/MailboxListFooter.vue'
 import ProviderMailboxListItem from './ProviderMailboxListItem.vue'
 import ProviderMailboxDeletionModal from './ProviderMailboxDeletionModal.vue'
 import { getMailboxes, getEnabledProviders, deleteMailbox } from '../../../service/ProviderMailboxService.js'
@@ -117,9 +102,21 @@ export default {
 		NcNoteCard,
 		NcSelect,
 		IconMail,
+		VirtualList,
+		MailboxListHeader,
+		MailboxListFooter,
 		ProviderMailboxListItem,
 		ProviderMailboxDeletionModal,
 	},
+
+	setup() {
+		// non reactive properties
+		return {
+			rowHeight: 55,
+			MailboxListItem: ProviderMailboxListItem,
+		}
+	},
+
 	data() {
 		return {
 			loading: true,
@@ -129,8 +126,18 @@ export default {
 			selectedProvider: null,
 			showDeleteModal: false,
 			selectedMailbox: null,
+			debug: false,
 		}
 	},
+
+	computed: {
+		style() {
+			return {
+				'--row-height': `${this.rowHeight}px`,
+			}
+		},
+	},
+
 	async mounted() {
 		await this.loadProviders()
 		await this.loadMailboxes()
@@ -165,6 +172,7 @@ export default {
 				const providerId = this.selectedProvider.id
 				const response = await getMailboxes(providerId)
 				this.mailboxes = response.data?.mailboxes || []
+				this.debug = response.data?.debug || false
 			} catch (error) {
 				console.error('Failed to load mailboxes', error)
 				this.error = this.t('mail', 'Failed to load mailboxes')
@@ -219,9 +227,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
-@use './shared/styles' as styles;
-
 .mailbox-administration {
+	display: flex;
+	flex-direction: column;
+
 	.provider-selector {
 		margin-bottom: 20px;
 		max-width: 400px;
@@ -240,70 +249,10 @@ export default {
 			color: var(--color-text-lighter);
 		}
 	}
-}
 
-.mailbox-list {
-	margin-top: 8px;
-}
-
-.mailbox-table {
-	--row-height: 55px;
-	--cell-padding: 7px;
-	--cell-width: 200px;
-	--cell-width-large: 300px;
-	--sticky-column-z-index: 1;
-
-	// Block display + overflow: auto enables horizontal scroll
-	// while keeping sticky columns pinned
-	display: block;
-	overflow: auto;
-	border: 1px solid var(--color-border);
-	border-radius: var(--border-radius-large);
-
-	&__header {
-		position: sticky;
-		top: 0;
-		z-index: calc(var(--sticky-column-z-index) + 1);
-		display: block;
-
-		.header {
-			border-bottom: 1px solid var(--color-border);
-			background-color: var(--color-background-dark);
-
-			@include styles.row;
-			@include styles.cell;
-		}
-
-		// Header-specific overrides
-		.header__cell {
-			font-weight: 600;
-
-			span {
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
-			}
-		}
-	}
-
-	&__body {
-		display: flex;
-		flex-direction: column;
-		width: 100%;
-	}
-
-	&__footer {
-		display: block;
-		position: sticky;
-		inset-inline-start: 0;
-
-		.mailbox-count {
-			display: block;
-			padding: 8px var(--cell-padding);
-			color: var(--color-text-maxcontrast);
-			font-size: 13px;
-			border-top: 1px solid var(--color-border);
-		}
+	:deep(.mailbox-list) {
+		flex: 1;
+		min-height: 0;
 	}
 }
 </style>
