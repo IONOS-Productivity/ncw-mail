@@ -7,8 +7,6 @@
 	<SettingsSection :name="t('mail', 'Email Administration')"
 		:description="t('mail', 'Manage email accounts for your users')">
 		<div class="mailbox-administration">
-			<h3>{{ t('mail', 'Manage Emails') }}</h3>
-
 			<!-- Provider Selection (if multiple providers available) -->
 			<NcSelect v-if="providers.length > 1"
 				v-model="selectedProvider"
@@ -43,33 +41,35 @@
 				</template>
 			</NcEmptyContent>
 
-			<!-- Mailbox list -->
-			<div v-else class="mailbox-list">
-				<table class="mailbox-table">
-					<thead>
-						<tr>
-							<th>{{ t('mail', 'Email Address') }}</th>
-							<th>{{ t('mail', 'Display Name') }}</th>
-							<th>{{ t('mail', 'Linked User') }}</th>
-							<th v-if="debug">
-								{{ t('mail', 'Status') }}
-							</th>
-							<th class="actions-column">
-								{{ t('mail', 'Actions') }}
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						<ProviderMailboxListItem v-for="mailbox in mailboxes"
-							:key="mailbox.userId"
-							:mailbox="mailbox"
-							:provider-id="selectedProvider.id"
-							:debug="debug"
-							@delete="handleDelete"
-							@update="handleUpdate" />
-					</tbody>
-				</table>
-			</div>
+			<!-- Mailbox list table -->
+			<VirtualList v-else
+				:data-component="MailboxListItem"
+				:data-sources="mailboxes"
+				data-key="userId"
+				data-cy-mailbox-list
+				:item-height="rowHeight"
+				:style="style"
+				:extra-props="{
+					providerId: selectedProvider.id,
+					debug,
+				}"
+				@delete="handleDelete"
+				@update="handleUpdate">
+				<template #before>
+					<caption class="hidden-visually">
+						{{ t('mail', 'List of mailboxes. This list is not fully rendered for performance reasons. The mailboxes will be rendered as you navigate through the list.') }}
+					</caption>
+				</template>
+
+				<template #header>
+					<MailboxListHeader :debug="debug" />
+				</template>
+
+				<template #footer>
+					<MailboxListFooter :loading="loading"
+						:mailboxes="mailboxes" />
+				</template>
+			</VirtualList>
 
 			<!-- Deletion modal -->
 			<ProviderMailboxDeletionModal v-if="showDeleteModal"
@@ -82,8 +82,12 @@
 
 <script>
 import { NcEmptyContent, NcLoadingIcon, NcNoteCard, NcSelect, NcSettingsSection as SettingsSection } from '@nextcloud/vue'
+import { n } from '@nextcloud/l10n'
 import IconMail from 'vue-material-design-icons/Email.vue'
 
+import VirtualList from './shared/VirtualList.vue'
+import MailboxListHeader from './shared/MailboxListHeader.vue'
+import MailboxListFooter from './shared/MailboxListFooter.vue'
 import ProviderMailboxListItem from './ProviderMailboxListItem.vue'
 import ProviderMailboxDeletionModal from './ProviderMailboxDeletionModal.vue'
 import { getMailboxes, getEnabledProviders, deleteMailbox } from '../../../service/ProviderMailboxService.js'
@@ -98,9 +102,21 @@ export default {
 		NcNoteCard,
 		NcSelect,
 		IconMail,
+		VirtualList,
+		MailboxListHeader,
+		MailboxListFooter,
 		ProviderMailboxListItem,
 		ProviderMailboxDeletionModal,
 	},
+
+	setup() {
+		// non reactive properties
+		return {
+			rowHeight: 55,
+			MailboxListItem: ProviderMailboxListItem,
+		}
+	},
+
 	data() {
 		return {
 			loading: true,
@@ -113,11 +129,21 @@ export default {
 			debug: false,
 		}
 	},
+
+	computed: {
+		style() {
+			return {
+				'--row-height': `${this.rowHeight}px`,
+			}
+		},
+	},
+
 	async mounted() {
 		await this.loadProviders()
 		await this.loadMailboxes()
 	},
 	methods: {
+		n,
 		async loadProviders() {
 			try {
 				const response = await getEnabledProviders()
@@ -202,13 +228,8 @@ export default {
 
 <style scoped lang="scss">
 .mailbox-administration {
-	padding: 20px 0;
-
-	h3 {
-		margin-bottom: 20px;
-		font-weight: 600;
-		font-size: 18px;
-	}
+	display: flex;
+	flex-direction: column;
 
 	.provider-selector {
 		margin-bottom: 20px;
@@ -229,49 +250,9 @@ export default {
 		}
 	}
 
-	.mailbox-list {
-		margin-top: 20px;
-	}
-
-	.mailbox-table {
-		width: 100%;
-		border-collapse: collapse;
-
-		thead {
-			background-color: var(--color-background-dark);
-
-			th {
-				text-align: start;
-				padding: 12px;
-				font-weight: 600;
-				border-bottom: 2px solid var(--color-border);
-
-				&:nth-child(3) {
-					// Display Name column
-					width: 200px;
-				}
-
-				&:nth-child(4) {
-					// Status column
-					width: 180px;
-				}
-
-				&.actions-column {
-					text-align: end;
-					width: 150px;
-				}
-			}
-		}
-
-		tbody {
-			tr {
-				border-bottom: 1px solid var(--color-border);
-
-				&:hover {
-					background-color: var(--color-background-hover);
-				}
-			}
-		}
+	:deep(.mailbox-list) {
+		flex: 1;
+		min-height: 0;
 	}
 }
 </style>
