@@ -10,11 +10,13 @@ declare(strict_types=1);
 namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core;
 
 use IONOS\MailConfigurationAPI\Client\ApiException;
-use IONOS\MailConfigurationAPI\Client\Model\Imap;
+use IONOS\MailConfigurationAPI\Client\Model\ImapConfig;
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountCreatedResponse;
+use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use IONOS\MailConfigurationAPI\Client\Model\MailAddonErrorMessage;
 use IONOS\MailConfigurationAPI\Client\Model\MailCreateData;
-use IONOS\MailConfigurationAPI\Client\Model\Smtp;
+use IONOS\MailConfigurationAPI\Client\Model\PatchMailRequest;
+use IONOS\MailConfigurationAPI\Client\Model\SmtpConfig;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
@@ -36,6 +38,7 @@ class IonosAccountMutationService {
 		private IonosConfigService $configService,
 		private IUserSession $userSession,
 		private LoggerInterface $logger,
+		private IonosAccountQueryService $queryService,
 	) {
 	}
 
@@ -140,30 +143,85 @@ class IonosAccountMutationService {
 	 * Delete an IONOS email account via API
 	 *
 	 * @param string $userId The Nextcloud user ID
+	 * @param string $email The email address to verify before deletion
 	 * @return bool true if deletion was successful
 	 * @throws ServiceException
 	 */
-	public function deleteEmailAccount(string $userId): bool {
+	public function deleteEmailAccount(string $userId, string $email): bool {
 		$this->logger->info('Attempting to delete IONOS email account', [
 			'userId' => $userId,
+			'email' => $email,
 			'extRef' => $this->configService->getExternalReference(),
 		]);
 
 		try {
 			$apiInstance = $this->createApiInstance();
 
+			// First, verify the email matches the account we're about to delete
+			try {
+				$accountResponse = $apiInstance->getFunctionalAccount(
+					self::BRAND,
+					$this->configService->getExternalReference(),
+					$userId
+				);
+
+				if ($accountResponse instanceof MailAccountResponse) {
+					$currentEmail = $accountResponse->getEmail();
+
+					// Case-insensitive comparison
+					if (strcasecmp($currentEmail, $email) !== 0) {
+						$this->logger->warning('Email mismatch during deletion - refusing to delete', [
+							'userId' => $userId,
+							'requestedEmail' => $email,
+							'currentEmail' => $currentEmail,
+						]);
+						throw new ServiceException(
+							'Email mismatch: Cannot delete account. Requested: ' . $email . ', Found: ' . $currentEmail,
+							400
+						);
+					}
+
+					$this->logger->debug('Email verified before deletion', [
+						'userId' => $userId,
+						'email' => $email,
+					]);
+				}
+			} catch (ApiException $e) {
+				// If account doesn't exist (404), we can proceed to delete (it's already gone)
+				if ($e->getCode() === self::HTTP_NOT_FOUND) {
+					$this->logger->debug('IONOS mailbox does not exist (already deleted or never created)', [
+						'userId' => $userId,
+						'email' => $email,
+						'statusCode' => $e->getCode()
+					]);
+					return true;
+				}
+				// For other errors during verification, log but proceed with deletion attempt
+				$this->logger->warning('Could not verify email before deletion, proceeding anyway', [
+					'userId' => $userId,
+					'email' => $email,
+					'exception' => $e->getMessage(),
+				]);
+			}
+
+			// Proceed with deletion
 			$apiInstance->deleteMailbox(self::BRAND, $this->configService->getExternalReference(), $userId);
 
 			$this->logger->info('Successfully deleted IONOS email account', [
-				'userId' => $userId
+				'userId' => $userId,
+				'email' => $email
 			]);
 
 			return true;
+		} catch (ServiceException $e) {
+			// Re-throw ServiceException without additional logging
+			throw $e;
 		} catch (ApiException $e) {
 			// 404 means the mailbox doesn't exist - treat as success
 			if ($e->getCode() === self::HTTP_NOT_FOUND) {
 				$this->logger->debug('IONOS mailbox does not exist (already deleted or never created)', [
 					'userId' => $userId,
+					'email' => $email,
 					'statusCode' => $e->getCode()
 				]);
 				return true;
@@ -173,14 +231,16 @@ class IonosAccountMutationService {
 				'statusCode' => $e->getCode(),
 				'message' => $e->getMessage(),
 				'responseBody' => $e->getResponseBody(),
-				'userId' => $userId
+				'userId' => $userId,
+				'email' => $email
 			]);
 
 			throw new ServiceException('Failed to delete IONOS mail: ' . $e->getMessage(), $e->getCode(), $e);
 		} catch (\Exception $e) {
 			$this->logger->error('Exception when calling MailConfigurationAPIApi->deleteMailbox', [
 				'exception' => $e,
-				'userId' => $userId
+				'userId' => $userId,
+				'email' => $email
 			]);
 
 			throw new ServiceException('Failed to delete IONOS mail', self::HTTP_INTERNAL_SERVER_ERROR, $e);
@@ -196,23 +256,26 @@ class IonosAccountMutationService {
 	 * interrupt the flow.
 	 *
 	 * @param string $userId The Nextcloud user ID
+	 * @param string $email The email address to verify before deletion
 	 * @return void
 	 */
-	public function tryDeleteEmailAccount(string $userId): void {
+	public function tryDeleteEmailAccount(string $userId, string $email): void {
 		// Check if IONOS integration is enabled
 		if (!$this->configService->isIonosIntegrationEnabled()) {
 			$this->logger->debug('IONOS integration is not enabled, skipping email account deletion', [
-				'userId' => $userId
+				'userId' => $userId,
+				'email' => $email
 			]);
 			return;
 		}
 
 		try {
-			$this->deleteEmailAccount($userId);
+			$this->deleteEmailAccount($userId, $email);
 			// Success is already logged by deleteEmailAccount
 		} catch (ServiceException $e) {
 			$this->logger->error('Failed to delete IONOS mailbox for user', [
 				'userId' => $userId,
+				'email' => $email,
 				'exception' => $e,
 			]);
 			// Don't throw - this is a fire and forget operation
@@ -276,6 +339,147 @@ class IonosAccountMutationService {
 				'appName' => $appName
 			]);
 			throw new ServiceException('Failed to reset IONOS app password', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
+	}
+
+	/**
+	 * Update the localpart of an IONOS email account
+	 *
+	 * This method updates the email address by changing only the localpart (username before @).
+	 * It verifies that the new email address is not already taken by another user,
+	 * then updates the remote IONOS mailbox.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $newLocalpart The new local part of the email address (before @domain)
+	 * @return string The new email address
+	 * @throws ServiceException If update fails or new email is already taken
+	 */
+	public function updateMailboxLocalpart(string $userId, string $newLocalpart): string {
+		$domain = $this->configService->getMailDomain();
+		$newEmail = $newLocalpart . '@' . $domain;
+
+		$this->logger->info('Updating IONOS mailbox localpart', [
+			'userId' => $userId,
+			'newLocalpart' => $newLocalpart,
+			'newEmail' => $newEmail,
+		]);
+
+		// Check if the new email is already taken by another user
+		if ($this->isEmailTakenByAnotherUser($userId, $newEmail)) {
+			throw new ServiceException(
+				'The email address ' . $newEmail . ' is already taken by another user',
+				409 // Conflict
+			);
+		}
+
+		try {
+			$apiInstance = $this->createApiInstance();
+
+			// Create patch request to update the email address
+			$patchRequest = new PatchMailRequest();
+			$patchRequest->setOp(PatchMailRequest::OP_REPLACE);
+			$patchRequest->setPath(PatchMailRequest::PATH_MAILADDRESS);
+			$patchRequest->setValue($newLocalpart);
+
+			if (!$patchRequest->valid()) {
+				$this->logger->error('Invalid patch request for mailbox update', [
+					'userId' => $userId,
+					'invalidProperties' => $patchRequest->listInvalidProperties(),
+				]);
+				throw new ServiceException('Invalid patch request', self::HTTP_INTERNAL_SERVER_ERROR);
+			}
+
+			// Update the mailbox via API and check response status
+			[, $statusCode] = $apiInstance->patchMailboxWithHttpInfo(
+				self::BRAND,
+				$this->configService->getExternalReference(),
+				$userId,
+				$patchRequest
+			);
+
+			// Verify the update was successful
+			if ($statusCode !== 200) {
+				$this->logger->error('Unexpected status code from patchMailbox API', [
+					'statusCode' => $statusCode,
+					'userId' => $userId,
+					'newEmail' => $newEmail,
+				]);
+				throw new ServiceException('Failed to update IONOS mailbox: unexpected status code ' . $statusCode, $statusCode);
+			}
+
+			$this->logger->info('Successfully updated IONOS mailbox email address', [
+				'userId' => $userId,
+				'newEmail' => $newEmail,
+				'statusCode' => $statusCode,
+			]);
+
+			return $newEmail;
+		} catch (ServiceException $e) {
+			throw $e;
+		} catch (ApiException $e) {
+			$this->logger->error('API Exception when updating mailbox localpart', [
+				'statusCode' => $e->getCode(),
+				'message' => $e->getMessage(),
+				'responseBody' => $e->getResponseBody(),
+				'userId' => $userId,
+				'newEmail' => $newEmail,
+			]);
+			throw new ServiceException('Failed to update IONOS mailbox: ' . $e->getMessage(), $e->getCode(), $e);
+		} catch (\Exception $e) {
+			$this->logger->error('Exception when updating mailbox localpart', [
+				'exception' => $e,
+				'userId' => $userId,
+				'newEmail' => $newEmail,
+			]);
+			throw new ServiceException('Failed to update IONOS mailbox', self::HTTP_INTERNAL_SERVER_ERROR, $e);
+		}
+	}
+
+	/**
+	 * Check if an email address is already taken by another user
+	 *
+	 * @param string $currentUserId The current user ID (to exclude from check)
+	 * @param string $email The email address to check
+	 * @return bool True if the email is taken by another user
+	 * @throws ServiceException If the check fails
+	 */
+	private function isEmailTakenByAnotherUser(string $currentUserId, string $email): bool {
+		try {
+			// Reuse existing query service to get all accounts
+			$allAccounts = $this->queryService->getAllMailAccountResponses();
+
+			foreach ($allAccounts as $account) {
+				if ($account instanceof MailAccountResponse) {
+					$accountEmail = $account->getEmail();
+					$accountUserId = $account->getNextcloudUserId();
+
+					// Check if email matches and belongs to a different user
+					if (strcasecmp($accountEmail, $email) === 0 && $accountUserId !== $currentUserId) {
+						$this->logger->warning('Email already taken by another user', [
+							'email' => $email,
+							'takenByUserId' => $accountUserId,
+							'requestedByUserId' => $currentUserId,
+						]);
+						return true;
+					}
+				}
+			}
+
+			return false;
+		} catch (ServiceException $e) {
+			// Re-throw to fail closed (safer than silently allowing operation)
+			throw $e;
+		} catch (\Exception $e) {
+			$this->logger->error('Error checking if email is taken', [
+				'email' => $email,
+				'exception' => $e,
+			]);
+			// Fail closed for security: prevent operation if we can't verify uniqueness
+			throw new ServiceException(
+				'Unable to verify email uniqueness: ' . $e->getMessage(),
+				self::HTTP_INTERNAL_SERVER_ERROR,
+				$e
+			);
 		}
 	}
 
@@ -356,13 +560,13 @@ class IonosAccountMutationService {
 	 * Creates a complete MailAccountConfig object by combining IMAP and SMTP server
 	 * configurations with email credentials. SSL modes are normalized to standard format.
 	 *
-	 * @param Imap $imapServer IMAP server configuration object
-	 * @param Smtp $smtpServer SMTP server configuration object
+	 * @param ImapConfig $imapServer IMAP server configuration object
+	 * @param SmtpConfig $smtpServer SMTP server configuration object
 	 * @param string $email Email address
 	 * @param string $password Account password
 	 * @return MailAccountConfig Complete mail account configuration
 	 */
-	private function buildMailAccountConfig(Imap $imapServer, Smtp $smtpServer, string $email, string $password): MailAccountConfig {
+	private function buildMailAccountConfig(ImapConfig $imapServer, SmtpConfig $smtpServer, string $email, string $password): MailAccountConfig {
 		$imapConfig = new MailServerConfig(
 			host: $imapServer->getHost(),
 			port: $imapServer->getPort(),

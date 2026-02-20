@@ -1,0 +1,28 @@
+phrase:
+  project_id: '11f4ff266e26229522bb663ca5779c2c'
+  push:
+      sources:
+        # mail app - template
+        - file: './translationfiles/templates/mail.pot'
+          params: { file_format: gettext, locale_id: "en_GB", tags: "app-mail,pot-file", translation_key_prefix: "translations." }
+        # mail app - translations
+        - file: './l10n/de_DE.json'
+          params: { file_format: nested_json, locale_id: "de_DE", tags: "app-mail,json" }
+        - file: './l10n/it.json'
+          params: { file_format: nested_json, locale_id: "it", tags: "app-mail,json" }
+        - file: './l10n/en_GB.json'
+          params: { file_format: nested_json, locale_id: "en_GB", tags: "app-mail,json" }
+        - file: './l10n/sv.json'
+          params: { file_format: nested_json, locale_id: "sv", tags: "app-mail,json" }
+        - file: './l10n/es.json'
+          params: { file_format: nested_json, locale_id: "es", tags: "app-mail,json" }
+        - file: './l10n/nl.json'
+          params: { file_format: nested_json, locale_id: "nl", tags: "app-mail,json" }
+        - file: './l10n/fr.json'
+          params: { file_format: nested_json, locale_id: "fr", tags: "app-mail,json" }
+
+  pull:
+    targets:
+      # mail app
+      - file: './translationfiles/<locale_name>/mail.po'
+        params: { file_format: gettext, tags: "app-mail", translation_key_prefix: "translations." }

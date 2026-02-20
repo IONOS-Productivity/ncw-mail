@@ -12,6 +12,7 @@ namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations;
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Account;
 use OCA\Mail\Db\MailAccount;
+use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\IonosProviderFacade;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\IonosProvider;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -239,7 +240,7 @@ class IonosProviderTest extends TestCase {
 	public function testDeleteAccount(): void {
 		$this->facade->expects($this->once())
 			->method('deleteAccount')
-			->with('testuser')
+			->with('testuser', 'user@example.com')
 			->willReturn(true);
 
 		$result = $this->provider->deleteAccount('testuser', 'user@example.com');
@@ -250,7 +251,7 @@ class IonosProviderTest extends TestCase {
 	public function testDeleteAccountReturnsFalse(): void {
 		$this->facade->expects($this->once())
 			->method('deleteAccount')
-			->with('testuser')
+			->with('testuser', 'user@example.com')
 			->willReturn(false);
 
 		$result = $this->provider->deleteAccount('testuser', 'user@example.com');
@@ -370,5 +371,34 @@ class IonosProviderTest extends TestCase {
 		$this->expectExceptionMessage('IONOS provider does not support app password generation');
 
 		$this->provider->generateAppPassword($userId);
+	}
+
+	public function testGetMailboxes(): void {
+		$expectedMailboxes = [
+			new MailboxInfo(
+				userId: 'user1',
+				email: 'user1@example.com',
+				userExists: true,
+				mailAppAccountId: 1,
+				mailAppAccountName: 'User 1 Mail',
+				mailAppAccountExists: true,
+			),
+			new MailboxInfo(
+				userId: 'user2',
+				email: 'user2@example.com',
+				userExists: false,
+				mailAppAccountId: null,
+				mailAppAccountName: null,
+				mailAppAccountExists: false,
+			),
+		];
+
+		$this->facade->expects($this->once())
+			->method('getMailboxes')
+			->willReturn($expectedMailboxes);
+
+		$result = $this->provider->getMailboxes();
+
+		$this->assertSame($expectedMailboxes, $result);
 	}
 }

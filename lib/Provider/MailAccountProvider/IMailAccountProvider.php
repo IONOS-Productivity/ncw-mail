@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\Mail\Provider\MailAccountProvider;
 
 use OCA\Mail\Account;
+use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 
 /**
  * Interface for external mail account providers
@@ -82,8 +83,9 @@ interface IMailAccountProvider {
 	 * Delete a mail account from the external provider
 	 *
 	 * @param string $userId The Nextcloud user ID
-	 * @param string $email The email address to delete
+	 * @param string $email The email address to identify the mailbox
 	 * @return bool True if deletion was successful
+	 * @throws \OCA\Mail\Exception\ServiceException If deletion fails
 	 */
 	public function deleteAccount(string $userId, string $email): bool;
 
@@ -128,4 +130,36 @@ interface IMailAccountProvider {
 	 * @throws \InvalidArgumentException If provider doesn't support app passwords
 	 */
 	public function generateAppPassword(string $userId): string;
+
+	/**
+	 * Get all mailboxes managed by this provider
+	 *
+	 * Returns a list of all mailboxes (email accounts) managed by this provider
+	 * across all users. Used for administration/overview purposes.
+	 *
+	 * The returned data includes status information to help identify configuration issues:
+	 * - userExists: Whether the Nextcloud user still exists
+	 * - mailAppAccountExists: Whether a mail app account is configured for this email
+	 * - mailAppAccountId/Name: Details of the configured mail app account (if exists)
+	 *
+	 * @return array<int, MailboxInfo> List of enriched mailbox information
+	 * @throws \OCA\Mail\Exception\ServiceException If fetching mailboxes fails
+	 */
+	public function getMailboxes(): array;
+
+	/**
+	 * Update a mailbox (e.g., change localpart/username)
+	 *
+	 * Returns the same enriched payload structure as getMailboxes() to enable
+	 * proper UI updates.
+	 *
+	 * @param string $userId The Nextcloud user ID
+	 * @param string $currentEmail The current email address of the mailbox
+	 * @param string $newLocalpart The new local part of the email address (empty string if no update)
+	 * @return MailboxInfo Enriched mailbox information
+	 * @throws \InvalidArgumentException If required data is missing or invalid
+	 * @throws \OCA\Mail\Exception\AccountAlreadyExistsException If email is already taken
+	 * @throws \OCA\Mail\Exception\ServiceException If update fails
+	 */
+	public function updateMailbox(string $userId, string $currentEmail, string $newLocalpart): MailboxInfo;
 }

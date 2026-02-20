@@ -305,6 +305,8 @@ export default {
 		/**
 		 * Try to fetch mailboxes with exponential backoff retry logic
 		 * Returns true if successful, false if all retries failed
+		 * @param account
+		 * @param maxAttempts
 		 */
 		async tryFetchMailboxesWithRetry(account, maxAttempts = 3) {
 			for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -359,6 +361,7 @@ export default {
 
 		/**
 		 * Helper to delay execution
+		 * @param ms
 		 */
 		delay(ms) {
 			return new Promise(resolve => setTimeout(resolve, ms))
@@ -385,7 +388,7 @@ export default {
 			const existingEmail = errorData.existingEmail || ''
 
 			// Provider-specific error handling
-			if (errorData.error === 'SERVICE_ERROR' || errorData.error === 'IONOS_API_ERROR') {
+			if (errorData.error === 'SERVICE_ERROR') {
 				switch (statusCode) {
 				case 400:
 					this.feedback = t('mail', 'Invalid email address or account data provided')
