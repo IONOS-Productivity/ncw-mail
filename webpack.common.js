@@ -8,6 +8,7 @@
 /* global require */
 
 const BabelLoaderExcludeNodeModulesExcept = require('babel-loader-exclude-node-modules-except')
+const CKEditorWebpackPlugin = require('@ckeditor/ckeditor5-dev-webpack-plugin')
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const { VueLoaderPlugin } = require('vue-loader')
@@ -18,6 +19,13 @@ const appName = 'mail'
 const appVersion = require('./package.json').version
 
 const plugins = [
+	// CKEditor needs its own plugin to be built using webpack.
+	new CKEditorWebpackPlugin({
+		// See https://ckeditor.com/docs/ckeditor5/latest/features/ui-language.html
+		language: 'en',
+		// Multiple JS entry points require specifying which asset receives translations
+		translationsOutputFile: /^mail\.js$/,
+	}),
 	new VueLoaderPlugin(),
 
 	// Make sure we auto-inject node polyfills on demand
