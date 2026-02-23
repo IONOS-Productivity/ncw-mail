@@ -26,6 +26,8 @@ const plugins = [
 	new CKEditorWebpackPlugin({
 		// See https://ckeditor.com/docs/ckeditor5/latest/features/ui-language.html
 		language: 'en',
+		// Multiple JS entry points require specifying which asset receives translations
+		translationsOutputFile: /^mail\.js$/,
 	}),
 	new VueLoaderPlugin(),
 
