@@ -11,6 +11,8 @@
     "postinstall": "patch-package",
     "lint": "eslint --ext .js,.ts,.vue .",
     "lint:fix": "eslint --ext .js,.ts,.vue --fix .",
+    "lint:l10n": "eslint --no-ignore 'l10n/*.json'",
+    "lint:l10n:fix": "eslint --no-ignore --fix 'l10n/*.json'",
     "stylelint": "stylelint \"css/*.css\" \"css/*.scss\" \"src/**/*.scss\" \"src/**/*.vue\"",
     "stylelint:fix": "stylelint \"css/*.css\" \"css/*.scss\" \"src/**/*.scss\" \"src/**/*.vue\" --fix",
     "test:e2e": "playwright test",
