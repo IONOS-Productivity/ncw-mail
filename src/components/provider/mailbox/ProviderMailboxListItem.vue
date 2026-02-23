@@ -65,19 +65,15 @@
 					class="user-icon"
 					:user="mailbox.userId"
 					:size="32"
-					:display-name="mailbox.userName || mailbox.userId"
-					disable-menu
-					:show-user-status="false" />
+					:display-name="mailbox.userName || mailbox.userId" />
 				<div v-else class="user-icon-placeholder">
 					<IconAccountOff :size="32" />
 				</div>
 
-				<div class="user-details">
-					<span v-if="mailbox.userName" class="user-display">
-						{{ mailbox.userName }}
-					</span>
-					<span class="row__subtitle">{{ mailbox.userId }}</span>
-				</div>
+				<span class="user-label">
+					<span v-if="mailbox.userName" class="user-display">{{ mailbox.userName }}</span>
+					<span class="row__subtitle">({{ mailbox.userId }})</span>
+				</span>
 			</div>
 		</td>
 
@@ -325,7 +321,6 @@ export default {
 // Apply row layout to the <tr> element (same pattern as UserRow.vue)
 .mailbox-list__row {
 	@include styles.row;
-
 	border-bottom: 1px solid var(--color-border);
 	transition: background-color 0.1s ease;
 
@@ -401,17 +396,18 @@ export default {
 					flex-shrink: 0;
 				}
 
-				.user-details {
-					display: flex;
-					flex-direction: column;
+				.user-label {
 					min-width: 0;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
 
 					.user-display {
 						font-weight: 500;
-						font-size: 14px;
-						overflow: hidden;
-						text-overflow: ellipsis;
-						white-space: nowrap;
+					}
+
+					.row__subtitle {
+						margin-inline-start: 0.25em;
 					}
 				}
 			}
