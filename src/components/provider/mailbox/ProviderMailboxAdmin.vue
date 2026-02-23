@@ -228,6 +228,9 @@ export default {
 .mailbox-administration {
 	display: flex;
 	flex-direction: column;
+	// NcSettingsSection forces max-width: 900px on all direct children on NC≥30
+	// (forceLimitWidth ignores the :limit-width prop). Override it here.
+	max-width: none !important;
 
 	.provider-selector {
 		margin-bottom: 20px;
