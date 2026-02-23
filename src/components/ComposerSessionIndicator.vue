@@ -105,15 +105,15 @@ export default {
 	// Retain border radius from outer body container for visual consistency
 	border-radius: var(--body-container-radius);
 
+	// Conditional hover and pointer styles
+	background-color: var(--color-primary-element-light);
+
 	// Mobile
 	@media (max-width: 1024px) {
 		width: calc(100% - 2 * var(--default-grid-baseline));
 		height: 44px;
 		border-radius: var(--border-radius-pill);
 	}
-
-	// Conditional hover and pointer styles
-	background-color: var(--color-primary-element-light);
 	&:not(&--disabled) {
 		&:hover {
 			background-color: var(--color-primary-element-light-hover);
