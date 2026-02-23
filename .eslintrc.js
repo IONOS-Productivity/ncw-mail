@@ -9,6 +9,21 @@ module.exports = {
 	plugins: [
 		'perfectionist'
 	],
+	overrides: [
+		{
+			files: ['l10n/*.json'],
+			parser: 'jsonc-eslint-parser',
+			plugins: ['jsonc'],
+			rules: {
+				// Catch trailing commas (the class of bug that broke translations in commit 48cc7ad)
+				'jsonc/comma-dangle': ['error', 'never'],
+				// Disable JS-style rules inherited from @nextcloud that produce noise on auto-generated files
+				'comma-spacing': 'off',
+				'eol-last': 'off',
+				'no-irregular-whitespace': 'off',
+			},
+		},
+	],
 	globals: {
 		expect: true,
 		OC: true,
