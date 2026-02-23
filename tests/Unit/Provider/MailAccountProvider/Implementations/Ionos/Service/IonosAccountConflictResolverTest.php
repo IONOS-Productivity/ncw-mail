@@ -126,6 +126,68 @@ class IonosAccountConflictResolverTest extends TestCase {
 		$this->assertEquals($newPassword, $resultConfig->getSmtp()->getPassword());
 	}
 
+	public function testResolveConflictWithMatchingEmailCaseInsensitive(): void {
+		$userId = 'testuser';
+		$emailUser = 'test';
+		$domain = 'example.com';
+		$newPassword = 'new-app-password-123';
+		// API returns email with different casing than the requested one
+		$emailAddressFromApi = 'TEST@EXAMPLE.COM';
+
+		$imapConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1143,
+			security: 'none',
+			username: $emailAddressFromApi,
+			password: '',
+		);
+
+		$smtpConfig = new MailServerConfig(
+			host: 'mail.localhost',
+			port: 1587,
+			security: 'none',
+			username: $emailAddressFromApi,
+			password: '',
+		);
+
+		$mailAccountConfig = new MailAccountConfig(
+			email: $emailAddressFromApi,
+			imap: $imapConfig,
+			smtp: $smtpConfig,
+		);
+
+		$this->ionosMailService->method('getAccountConfigForUser')
+			->with($userId)
+			->willReturn($mailAccountConfig);
+
+		$this->ionosConfigService->method('getMailDomain')
+			->willReturn($domain);
+
+		$this->ionosMailService
+			->expects($this->once())
+			->method('resetAppPassword')
+			->with($userId, 'NEXTCLOUD_WORKSPACE')
+			->willReturn($newPassword);
+
+		$this->logger
+			->expects($this->once())
+			->method('info')
+			->with(
+				'IONOS account already exists, retrieving new password for retry',
+				['emailAddress' => $emailAddressFromApi, 'userId' => $userId]
+			);
+
+		$result = $this->resolver->resolveConflict($userId, $emailUser);
+
+		$this->assertTrue($result->canRetry());
+		$this->assertNotNull($result->getAccountConfig());
+		$this->assertFalse($result->hasEmailMismatch());
+
+		$resultConfig = $result->getAccountConfig();
+		$this->assertEquals($newPassword, $resultConfig->getImap()->getPassword());
+		$this->assertEquals($newPassword, $resultConfig->getSmtp()->getPassword());
+	}
+
 	public function testResolveConflictWithEmailMismatch(): void {
 		$userId = 'testuser';
 		$emailUser = 'test';
