@@ -46,8 +46,8 @@ class IonosAccountConflictResolver {
 		$domain = $this->ionosConfigService->getMailDomain();
 		$expectedEmail = $emailUser . '@' . $domain;
 
-		// Ensure the retrieved email matches the requested email
-		if ($ionosConfig->getEmail() === $expectedEmail) {
+		// Ensure the retrieved email matches the requested email (case-insensitive)
+		if (strcasecmp($ionosConfig->getEmail(), $expectedEmail) === 0) {
 			$this->logger->info('IONOS account already exists, retrieving new password for retry', [
 				'emailAddress' => $ionosConfig->getEmail(),
 				'userId' => $userId
