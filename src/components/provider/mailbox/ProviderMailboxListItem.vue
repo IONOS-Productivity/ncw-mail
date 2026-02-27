@@ -62,6 +62,7 @@
 			<div class="user-info">
 				<!-- Avatar if user exists, placeholder icon if deleted -->
 				<NcAvatar v-if="mailbox.userExists"
+					class="user-icon"
 					:user="mailbox.userId"
 					:size="32"
 					:display-name="mailbox.userName || mailbox.userId"
@@ -385,6 +386,10 @@ export default {
 				display: flex;
 				align-items: center;
 				gap: 10px;
+
+				.user-icon {
+					overflow: initial;
+				}
 
 				.user-icon-placeholder {
 					width: 32px;
