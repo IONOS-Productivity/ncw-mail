@@ -187,7 +187,7 @@ export default {
 		},
 		// User status
 		userStatusIcon() {
-			return this.mailbox.userExists ? 'IconCheckCircle' : 'IconAccountOff'
+			return this.mailbox.userExists ? IconCheckCircle : IconAccountOff
 		},
 		userStatusClass() {
 			return this.mailbox.userExists ? 'status-ok' : 'status-error'
@@ -199,7 +199,7 @@ export default {
 		},
 		// Mail app account status
 		accountStatusIcon() {
-			return this.mailbox.mailAppAccountExists ? 'IconCheckCircle' : 'IconEmailOff'
+			return this.mailbox.mailAppAccountExists ? IconCheckCircle : IconEmailOff
 		},
 		accountStatusClass() {
 			return this.mailbox.mailAppAccountExists ? 'status-ok' : 'status-warning'
