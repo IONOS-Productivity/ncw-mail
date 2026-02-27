@@ -11,6 +11,7 @@ namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos;
 
 use IONOS\MailConfigurationAPI\Client\Model\MailAccountResponse;
 use OCA\Mail\Account;
+use OCA\Mail\Exception\AccountAlreadyExistsException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountMutationService;
@@ -363,7 +364,7 @@ class IonosProviderFacade {
 			} catch (ServiceException $e) {
 				// Convert 409 conflicts to AccountAlreadyExistsException
 				if ($e->getCode() === 409) {
-					throw new \OCA\Mail\Exception\AccountAlreadyExistsException(
+					throw new AccountAlreadyExistsException(
 						$e->getMessage(),
 						$e->getCode(),
 						[],
