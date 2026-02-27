@@ -354,8 +354,6 @@ export default {
 	@include styles.cell;
 
 	&__cell {
-		border-bottom: 1px solid var(--color-border);
-
 		// Email cell
 		&--email {
 			.email-address {
