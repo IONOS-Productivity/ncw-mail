@@ -114,7 +114,7 @@
 				</NcActionButton>
 
 				<!-- Delete Button (only in view mode) -->
-				<NcActionButton v-if="!editing" @click="$emit('delete', mailbox)">
+				<NcActionButton v-if="!editing" :close-after-click="true" @click="$emit('delete', mailbox)">
 					<template #icon>
 						<IconDelete :size="20" />
 					</template>
