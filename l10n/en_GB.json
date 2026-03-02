@@ -271,6 +271,8 @@
     "email" : "email",
     "Email address" : "Email address",
     "Email address template" : "Email address template",
+    "Email Administration" : "Manage email",
+    "Email Provider Accounts" : "Email management",
     "Email was not able to be opened" : "Email cannot be opened",
     "Email: {email}" : "Email: {email}",
     "Embedded message" : "Embedded message",
