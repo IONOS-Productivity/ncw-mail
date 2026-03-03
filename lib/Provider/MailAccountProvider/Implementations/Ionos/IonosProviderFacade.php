@@ -390,16 +390,13 @@ class IonosProviderFacade {
 
 		if ($userExists) {
 			try {
-				// Get the IONOS mail domain to identify IONOS accounts
-				$ionosDomain = $this->configService->getMailDomain();
-
-				// Get all accounts for this user and find the IONOS one by domain
+				// Get all accounts for this user and find the one matching the current email
 				$existingAccounts = $this->accountService->findByUserId($userId);
 
 				foreach ($existingAccounts as $account) {
 					$email = $account->getEmail();
-					// Check if this account's email matches the IONOS domain
-					if (str_ends_with(strtolower($email), '@' . strtolower($ionosDomain))) {
+					// Check if this account's email matches the current (pre-update) email
+					if (strcasecmp($email, $currentEmail) === 0) {
 						$mailAccount = $account->getMailAccount();
 
 						// Update the local account with new email and usernames (if email changed)
