@@ -10,7 +10,7 @@
 		</th>
 		<td class="footer__cell footer__cell--loading">
 			<NcLoadingIcon v-if="loading"
-				:title="t('mail', 'Loading mailboxes …')"
+				:title="t('mail', 'Loading mailboxes...')"
 				:size="32" />
 		</td>
 		<td class="footer__cell footer__cell--count">

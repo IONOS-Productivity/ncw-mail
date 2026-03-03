@@ -453,7 +453,6 @@ OC.L10N.register(
     "Load more other messages" : "Weitere andere Nachrichten laden",
     "Loading …" : "Lade …",
     "Loading account" : "Lade Konto",
-    "Loading mailboxes …" : "Postfächer werden geladen …",
     "Loading mailboxes..." : "Postfächer werden geladen...",
     "Loading messages …" : "Lade Nachrichten …",
     "Loading providers..." : "E-Mail-Anbieter werden geladen...",

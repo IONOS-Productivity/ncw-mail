@@ -454,7 +454,6 @@ OC.L10N.register(
     "Load more other messages" : "Charger plus d'autres messages",
     "Loading …" : "Chargement …",
     "Loading account" : "Chargement du compte",
-    "Loading mailboxes …" : "Chargement des boîtes aux lettres…",
     "Loading mailboxes..." : "Chargement des boîtes aux lettres...",
     "Loading messages …" : "Chargement des messages ...",
     "Loading providers..." : "Chargement des fournisseurs de messagerie...",
