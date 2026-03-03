@@ -58,11 +58,11 @@ class MailProviderAccountsSectionTest extends TestCase {
 	public function testGetIcon(): void {
 		$this->urlGenerator->expects($this->once())
 			->method('imagePath')
-			->with('mail', 'mail.svg')
-			->willReturn('/apps/mail/img/mail.svg');
+			->with('mail', 'mail-dark.svg')
+			->willReturn('/apps/mail/img/mail-dark.svg');
 
 		$result = $this->section->getIcon();
 
-		$this->assertEquals('/apps/mail/img/mail.svg', $result);
+		$this->assertEquals('/apps/mail/img/mail-dark.svg', $result);
 	}
 }
