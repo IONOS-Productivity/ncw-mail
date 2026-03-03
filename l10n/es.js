@@ -452,7 +452,6 @@ OC.L10N.register(
     "Load more other messages" : "Cargar más otros mensajes",
     "Loading …" : "Cargando …",
     "Loading account" : "Cargando cuenta",
-    "Loading mailboxes …" : "Cargando buzones de correo...",
     "Loading mailboxes..." : "Cargando buzones...",
     "Loading messages …" : "Cargando mensajes …",
     "Loading providers..." : "Cargando proveedores de correo...",
