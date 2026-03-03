@@ -195,7 +195,7 @@ class IonosProviderFacadeTest extends TestCase {
 			]);
 
 		$this->mutationService->expects($this->once())
-			->method('tryDeleteEmailAccount')
+			->method('deleteEmailAccount')
 			->with($userId, $email);
 
 		$result = $this->facade->deleteAccount($userId, $email);
@@ -203,7 +203,7 @@ class IonosProviderFacadeTest extends TestCase {
 		$this->assertTrue($result);
 	}
 
-	public function testDeleteAccountHandlesException(): void {
+	public function testDeleteAccountHandlesServiceException(): void {
 		$userId = 'user123';
 		$email = 'user123@example.com';
 
@@ -215,17 +215,42 @@ class IonosProviderFacadeTest extends TestCase {
 			]);
 
 		$this->mutationService->expects($this->once())
-			->method('tryDeleteEmailAccount')
+			->method('deleteEmailAccount')
 			->with($userId, $email)
-			->willThrowException(new \Exception('Deletion failed'));
+			->willThrowException(new ServiceException('Deletion failed'));
 
 		$this->logger->expects($this->once())
 			->method('error')
 			->with('Error deleting IONOS account via facade', $this->anything());
 
-		$result = $this->facade->deleteAccount($userId, $email);
+		$this->expectException(ServiceException::class);
 
-		$this->assertFalse($result);
+		$this->facade->deleteAccount($userId, $email);
+	}
+
+	public function testDeleteAccountHandlesUnexpectedException(): void {
+		$userId = 'user123';
+		$email = 'user123@example.com';
+
+		$this->logger->expects($this->once())
+			->method('info')
+			->with('Deleting IONOS account via facade', [
+				'userId' => $userId,
+				'email' => $email,
+			]);
+
+		$this->mutationService->expects($this->once())
+			->method('deleteEmailAccount')
+			->with($userId, $email)
+			->willThrowException(new \RuntimeException('Unexpected failure'));
+
+		$this->logger->expects($this->once())
+			->method('error')
+			->with('Unexpected error deleting IONOS account via facade', $this->anything());
+
+		$this->expectException(ServiceException::class);
+
+		$this->facade->deleteAccount($userId, $email);
 	}
 
 	public function testGetProvisionedEmailSuccess(): void {

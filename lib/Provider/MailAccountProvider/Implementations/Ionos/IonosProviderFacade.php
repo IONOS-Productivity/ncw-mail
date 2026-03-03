@@ -158,15 +158,22 @@ class IonosProviderFacade {
 		]);
 
 		try {
-			$this->mutationService->tryDeleteEmailAccount($userId, $email);
+			$this->mutationService->deleteEmailAccount($userId, $email);
 			return true;
-		} catch (\Exception $e) {
+		} catch (ServiceException $e) {
 			$this->logger->error('Error deleting IONOS account via facade', [
 				'userId' => $userId,
 				'email' => $email,
 				'exception' => $e,
 			]);
-			return false;
+			throw $e;
+		} catch (\Throwable $e) {
+			$this->logger->error('Unexpected error deleting IONOS account via facade', [
+				'userId' => $userId,
+				'email' => $email,
+				'exception' => $e,
+			]);
+			throw new ServiceException('Failed to delete IONOS account', 0, $e);
 		}
 	}
 
