@@ -396,7 +396,7 @@ class IonosProviderFacade {
 				foreach ($existingAccounts as $account) {
 					$email = $account->getEmail();
 					// Check if this account's email matches the current (pre-update) email
-					if (strtolower($email) === strtolower($currentEmail)) {
+					if (strcasecmp($email, $currentEmail) === 0) {
 						$mailAccount = $account->getMailAccount();
 
 						// Update the local account with new email and usernames (if email changed)

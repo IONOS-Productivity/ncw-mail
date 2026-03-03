@@ -11,6 +11,8 @@ namespace OCA\Mail\Tests\Unit\Provider\MailAccountProvider\Implementations\Ionos
 
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use OCA\Mail\Account;
+use OCA\Mail\Exception\AccountAlreadyExistsException;
+use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\Provider\MailAccountProvider\Dto\MailboxInfo;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\IonosProviderFacade;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\Core\IonosAccountMutationService;
@@ -647,4 +649,265 @@ class IonosProviderFacadeTest extends TestCase {
 		$this->assertIsArray($result);
 		$this->assertEmpty($result);
 	}
+
+	public function testUpdateMailboxSuccess(): void {
+		$userId = 'user1';
+		$currentEmail = 'old@example.com';
+		$newLocalpart = 'new';
+		$newEmail = 'new@example.com';
+
+		$this->mutationService->expects($this->once())
+			->method('updateMailboxLocalpart')
+			->with($userId, $newLocalpart)
+			->willReturn($newEmail);
+
+		$mockUser = $this->createMock(\OCP\IUser::class);
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with($userId)
+			->willReturn($mockUser);
+
+		$mockMailAccount = $this->getMockBuilder(\OCA\Mail\Db\MailAccount::class)
+			->disableOriginalConstructor()
+			->addMethods(['getId', 'getName', 'getEmail', 'setEmail', 'setInboundUser', 'setOutboundUser'])
+			->getMock();
+		$mockMailAccount->method('getId')->willReturn(1);
+		$mockMailAccount->method('getName')->willReturn('User Mail');
+
+		$mockAccount = $this->createMock(Account::class);
+		$mockAccount->method('getEmail')->willReturn($currentEmail);
+		$mockAccount->method('getMailAccount')->willReturn($mockMailAccount);
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with($userId)
+			->willReturn([$mockAccount]);
+
+		$this->accountService->expects($this->once())
+			->method('update')
+			->with($mockMailAccount)
+			->willReturn($mockMailAccount);
+
+		$result = $this->facade->updateMailbox($userId, $currentEmail, $newLocalpart);
+
+		$this->assertInstanceOf(MailboxInfo::class, $result);
+		$this->assertEquals($userId, $result->userId);
+		$this->assertEquals($newEmail, $result->email);
+		$this->assertTrue($result->userExists);
+		$this->assertTrue($result->mailAppAccountExists);
+	}
+
+	public function testUpdateMailboxSelectsCorrectAccountWhenMultipleExist(): void {
+		$userId = 'user1';
+		$currentEmail = 'target@example.com';
+		$newLocalpart = 'updated';
+		$newEmail = 'updated@example.com';
+
+		$this->mutationService->expects($this->once())
+			->method('updateMailboxLocalpart')
+			->with($userId, $newLocalpart)
+			->willReturn($newEmail);
+
+		$mockUser = $this->createMock(\OCP\IUser::class);
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with($userId)
+			->willReturn($mockUser);
+
+		$mockMailAccountOther = $this->getMockBuilder(\OCA\Mail\Db\MailAccount::class)
+			->disableOriginalConstructor()
+			->addMethods(['getId', 'getName'])
+			->getMock();
+		$mockMailAccountOther->method('getId')->willReturn(2);
+		$mockMailAccountOther->method('getName')->willReturn('Other Account');
+
+		$mockAccountOther = $this->createMock(Account::class);
+		$mockAccountOther->method('getEmail')->willReturn('other@example.com');
+		$mockAccountOther->method('getMailAccount')->willReturn($mockMailAccountOther);
+
+		$mockMailAccountTarget = $this->getMockBuilder(\OCA\Mail\Db\MailAccount::class)
+			->disableOriginalConstructor()
+			->addMethods(['getId', 'getName', 'setEmail', 'setInboundUser', 'setOutboundUser'])
+			->getMock();
+		$mockMailAccountTarget->method('getId')->willReturn(3);
+		$mockMailAccountTarget->method('getName')->willReturn('Target Account');
+
+		$mockAccountTarget = $this->createMock(Account::class);
+		$mockAccountTarget->method('getEmail')->willReturn($currentEmail);
+		$mockAccountTarget->method('getMailAccount')->willReturn($mockMailAccountTarget);
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with($userId)
+			->willReturn([$mockAccountOther, $mockAccountTarget]);
+
+		$this->accountService->expects($this->once())
+			->method('update')
+			->with($mockMailAccountTarget)
+			->willReturn($mockMailAccountTarget);
+
+		$result = $this->facade->updateMailbox($userId, $currentEmail, $newLocalpart);
+
+		$this->assertInstanceOf(MailboxInfo::class, $result);
+		$this->assertEquals(3, $result->mailAppAccountId);
+		$this->assertTrue($result->mailAppAccountExists);
+	}
+
+	public function testUpdateMailboxMatchesCaseInsensitively(): void {
+		$userId = 'user1';
+		$currentEmail = 'User@Example.COM';
+		$newLocalpart = '';
+
+		$mockUser = $this->createMock(\OCP\IUser::class);
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with($userId)
+			->willReturn($mockUser);
+
+		$mockMailAccount = $this->getMockBuilder(\OCA\Mail\Db\MailAccount::class)
+			->disableOriginalConstructor()
+			->addMethods(['getId', 'getName'])
+			->getMock();
+		$mockMailAccount->method('getId')->willReturn(1);
+		$mockMailAccount->method('getName')->willReturn('User Mail');
+
+		$mockAccount = $this->createMock(Account::class);
+		$mockAccount->method('getEmail')->willReturn('user@example.com');
+		$mockAccount->method('getMailAccount')->willReturn($mockMailAccount);
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with($userId)
+			->willReturn([$mockAccount]);
+
+		$this->accountService->expects($this->once())
+			->method('update')
+			->with($mockMailAccount)
+			->willReturn($mockMailAccount);
+
+		$result = $this->facade->updateMailbox($userId, $currentEmail, $newLocalpart);
+
+		$this->assertInstanceOf(MailboxInfo::class, $result);
+		$this->assertTrue($result->mailAppAccountExists);
+	}
+
+	public function testUpdateMailboxWithNonExistentUser(): void {
+		$userId = 'nonexistent';
+		$currentEmail = 'user@example.com';
+		$newLocalpart = 'newlocal';
+		$newEmail = 'newlocal@example.com';
+
+		$this->mutationService->expects($this->once())
+			->method('updateMailboxLocalpart')
+			->with($userId, $newLocalpart)
+			->willReturn($newEmail);
+
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with($userId)
+			->willReturn(null);
+
+		$this->accountService->expects($this->never())
+			->method('findByUserId');
+
+		$result = $this->facade->updateMailbox($userId, $currentEmail, $newLocalpart);
+
+		$this->assertInstanceOf(MailboxInfo::class, $result);
+		$this->assertEquals($newEmail, $result->email);
+		$this->assertFalse($result->userExists);
+		$this->assertFalse($result->mailAppAccountExists);
+	}
+
+	public function testUpdateMailboxWithNoMatchingAccount(): void {
+		$userId = 'user1';
+		$currentEmail = 'current@example.com';
+		$newLocalpart = '';
+
+		$mockUser = $this->createMock(\OCP\IUser::class);
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with($userId)
+			->willReturn($mockUser);
+
+		$mockAccount = $this->createMock(Account::class);
+		$mockAccount->method('getEmail')->willReturn('other@example.com');
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with($userId)
+			->willReturn([$mockAccount]);
+
+		$this->accountService->expects($this->never())
+			->method('update');
+
+		$result = $this->facade->updateMailbox($userId, $currentEmail, $newLocalpart);
+
+		$this->assertInstanceOf(MailboxInfo::class, $result);
+		$this->assertFalse($result->mailAppAccountExists);
+		$this->assertNull($result->mailAppAccountId);
+	}
+
+	public function testUpdateMailboxHandlesAccountServiceException(): void {
+		$userId = 'user1';
+		$currentEmail = 'user@example.com';
+		$newLocalpart = '';
+
+		$mockUser = $this->createMock(\OCP\IUser::class);
+		$this->userManager->expects($this->once())
+			->method('get')
+			->with($userId)
+			->willReturn($mockUser);
+
+		$this->accountService->expects($this->once())
+			->method('findByUserId')
+			->with($userId)
+			->willThrowException(new \Exception('DB error'));
+
+		$this->logger->expects($this->once())
+			->method('warning')
+			->with('Could not update local mail account', $this->anything());
+
+		$result = $this->facade->updateMailbox($userId, $currentEmail, $newLocalpart);
+
+		$this->assertInstanceOf(MailboxInfo::class, $result);
+		$this->assertTrue($result->userExists);
+		$this->assertFalse($result->mailAppAccountExists);
+	}
+
+	public function testUpdateMailboxThrowsAccountAlreadyExistsExceptionOn409(): void {
+		$userId = 'user1';
+		$currentEmail = 'user@example.com';
+		$newLocalpart = 'existing';
+
+		$serviceException = new ServiceException('Conflict', 409);
+
+		$this->mutationService->expects($this->once())
+			->method('updateMailboxLocalpart')
+			->with($userId, $newLocalpart)
+			->willThrowException($serviceException);
+
+		$this->expectException(AccountAlreadyExistsException::class);
+
+		$this->facade->updateMailbox($userId, $currentEmail, $newLocalpart);
+	}
+
+	public function testUpdateMailboxRethrowsOtherServiceExceptions(): void {
+		$userId = 'user1';
+		$currentEmail = 'user@example.com';
+		$newLocalpart = 'failing';
+
+		$serviceException = new ServiceException('Server error', 500);
+
+		$this->mutationService->expects($this->once())
+			->method('updateMailboxLocalpart')
+			->with($userId, $newLocalpart)
+			->willThrowException($serviceException);
+
+		$this->expectException(ServiceException::class);
+		$this->expectExceptionCode(500);
+
+		$this->facade->updateMailbox($userId, $currentEmail, $newLocalpart);
+	}
+
 }
+
