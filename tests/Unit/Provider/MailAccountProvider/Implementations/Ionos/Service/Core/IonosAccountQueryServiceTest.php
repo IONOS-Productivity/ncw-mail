@@ -514,6 +514,31 @@ class IonosAccountQueryServiceTest extends TestCase {
 		$this->service->getAllMailAccountResponses();
 	}
 
+	public function testGetAllMailAccountResponsesCachesResult(): void {
+		$this->configService->method('getExternalReference')->willReturn('ext-ref');
+		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
+		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
+		$this->configService->method('getAllowInsecure')->willReturn(false);
+		$this->configService->method('getApiBaseUrl')->willReturn('https://api.example.com');
+
+		$response1 = $this->createMailAccountResponse('user1@example.com');
+		$expectedResponses = [$response1];
+
+		$apiInstance = $this->createMock(MailConfigurationAPIApi::class);
+		$apiInstance->expects($this->once())
+			->method('getAllFunctionalAccounts')
+			->willReturn($expectedResponses);
+
+		$client = $this->createMock(Client::class);
+		$this->apiClientService->method('newClient')->willReturn($client);
+		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
+
+		$firstResult = $this->service->getAllMailAccountResponses();
+		$secondResult = $this->service->getAllMailAccountResponses();
+
+		$this->assertSame($firstResult, $secondResult);
+	}
+
 	public function testGetAllMailAccountResponsesWithGenericException(): void {
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
