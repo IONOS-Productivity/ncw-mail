@@ -304,7 +304,6 @@ OC.L10N.register(
     "Load more" : "Carica altro",
     "Loading …" : "Caricamento in corso...",
     "Loading account" : "Caricamento account",
-    "Loading mailboxes …" : "Caricamento delle caselle di posta in corso...",
     "Loading mailboxes..." : "Caricamento delle caselle di posta in corso...",
     "Loading messages …" : "Caricamento messaggi...",
     "Loading providers..." : "Caricamento dei provider di posta...",
