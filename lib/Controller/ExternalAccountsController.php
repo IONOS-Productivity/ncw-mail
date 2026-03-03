@@ -420,14 +420,11 @@ class ExternalAccountsController extends Controller {
 		try {
 			$currentUserId = $this->getUserIdOrFail();
 
-			// Get email from query parameters and decode it
+			// Get email from query parameters
 			$email = $this->request->getParam('email');
 			if (empty($email)) {
 				return $this->createValidationErrorResponse('Email parameter is required');
 			}
-
-			// URL decode the email parameter (handles encoded @ and other special chars)
-			$email = urldecode($email);
 
 			// Validate email format
 			if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
