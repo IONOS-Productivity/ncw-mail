@@ -27,6 +27,9 @@ class IonosAccountQueryService {
 	private const HTTP_NOT_FOUND = 404;
 	private const HTTP_INTERNAL_SERVER_ERROR = 500;
 
+	/** @var array<int, MailAccountResponse>|null */
+	private ?array $allAccountsCache = null;
+
 	public function __construct(
 		private ApiMailConfigClientService $apiClientService,
 		private IonosConfigService $configService,
@@ -191,6 +194,10 @@ class IonosAccountQueryService {
 	 * @throws ServiceException If API call fails
 	 */
 	public function getAllMailAccountResponses(): array {
+		if ($this->allAccountsCache !== null) {
+			return $this->allAccountsCache;
+		}
+
 		try {
 			$this->logger->debug('Getting all IONOS mail accounts', [
 				'extRef' => $this->configService->getExternalReference(),
@@ -206,7 +213,8 @@ class IonosAccountQueryService {
 				$this->logger->debug('Retrieved IONOS mail accounts', [
 					'count' => count($result),
 				]);
-				return $result;
+				$this->allAccountsCache = $result;
+				return $this->allAccountsCache;
 			}
 
 			$this->logger->error('Unexpected response type getting all IONOS mail accounts', [
