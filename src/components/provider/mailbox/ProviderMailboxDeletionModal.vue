@@ -30,7 +30,7 @@
 				</div>
 				<div class="detail-row">
 					<span class="label">{{ t('mail', 'User:') }}</span>
-					<span class="value">{{ mailbox?.userName }} ({{ mailbox?.userId }})</span>
+					<span class="value">{{ mailbox?.userName ? `${mailbox.userName} (${mailbox.userId})` : mailbox?.userId }}</span>
 				</div>
 			</div>
 		</div>
