@@ -212,7 +212,6 @@
     "List of mailboxes. This list is not fully rendered for performance reasons. The mailboxes will be rendered as you navigate through the list." : "Lista över postlådor. Denna lista visas inte fullständigt av prestandaskäl. Postlådorna visas när du navigerar genom listan.",
     "Load more" : "Ladda mer",
     "Loading …" : "Läser in ...",
-    "Loading mailboxes …" : "Laddar postlådor …",
     "Loading mailboxes..." : "Laddar postlådor...",
     "Loading messages …" : "Läser in meddelanden …",
     "Loading providers..." : "Laddar e-postleverantörer...",

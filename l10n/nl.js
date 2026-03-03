@@ -246,7 +246,6 @@ OC.L10N.register(
     "Load more" : "Laad meer",
     "Loading …" : "Aan het laden ...",
     "Loading account" : "Account laden",
-    "Loading mailboxes …" : "Mailboxen worden geladen …",
     "Loading mailboxes..." : "Mailboxen worden geladen...",
     "Loading messages …" : "Laden berichten ...",
     "Loading providers..." : "Mailproviders worden geladen...",
