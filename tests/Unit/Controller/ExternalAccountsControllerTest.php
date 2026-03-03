@@ -1741,16 +1741,15 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->userSession->method('getUser')
 			->willReturn($user);
 
-		// Email with URL-encoded @ symbol
 		$this->request->method('getParam')
 			->with('email')
-			->willReturn('test%40example.com');
+			->willReturn('test@example.com');
 
 		$provider = $this->createMock(IMailAccountProvider::class);
 		$provider->method('isEnabled')
 			->willReturn(true);
 		$provider->method('deleteAccount')
-			->with('testuser', 'test@example.com')  // Should be decoded
+			->with('testuser', 'test@example.com')
 			->willReturn(true);
 
 		$this->providerRegistry->method('getProvider')
@@ -1758,7 +1757,7 @@ class ExternalAccountsControllerTest extends TestCase {
 			->willReturn($provider);
 
 		$this->accountService->method('findByUserIdAndAddress')
-			->with('testuser', 'test@example.com')  // Should be decoded
+			->with('testuser', 'test@example.com')
 			->willReturn([]);
 
 		$response = $this->controller->destroyMailbox('test-provider', 'testuser');

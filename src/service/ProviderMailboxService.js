@@ -31,7 +31,7 @@ export const deleteMailbox = (providerId, userId, email) => {
 	const url = generateUrl('/apps/mail/api/admin/providers/{providerId}/mailboxes/{userId}?email={email}', {
 		providerId,
 		userId,
-		email: encodeURIComponent(email),
+		email,
 	})
 	return axios.delete(url).then((resp) => resp.data)
 }
