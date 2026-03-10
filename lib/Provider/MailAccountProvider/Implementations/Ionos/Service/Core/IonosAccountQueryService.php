@@ -23,7 +23,6 @@ use Psr\Log\LoggerInterface;
  * Service for querying IONOS mail account information (read-only operations)
  */
 class IonosAccountQueryService {
-	private const BRAND = 'IONOS';
 	private const HTTP_NOT_FOUND = 404;
 	private const HTTP_INTERNAL_SERVER_ERROR = 500;
 
@@ -83,7 +82,7 @@ class IonosAccountQueryService {
 
 			$apiInstance = $this->createApiInstance();
 			$result = $apiInstance->getFunctionalAccount(
-				self::BRAND,
+				$this->configService->getBrand(),
 				$this->configService->getExternalReference(),
 				$userId
 			);
@@ -205,7 +204,7 @@ class IonosAccountQueryService {
 
 			$apiInstance = $this->createApiInstance();
 			$result = $apiInstance->getAllFunctionalAccounts(
-				self::BRAND,
+				$this->configService->getBrand(),
 				$this->configService->getExternalReference()
 			);
 
