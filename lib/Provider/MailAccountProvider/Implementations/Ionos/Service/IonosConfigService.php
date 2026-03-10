@@ -56,6 +56,22 @@ class IonosConfigService {
 	}
 
 	/**
+	 * Get the brand from system config
+	 *
+	 * @throws AppConfigException
+	 */
+	public function getBrand(): string {
+		$brand = $this->config->getSystemValue('ncw.brand');
+
+		if (empty($brand)) {
+			$this->logger->error('No brand is configured');
+			throw new AppConfigException('No brand configured');
+		}
+
+		return $brand;
+	}
+
+	/**
 	 * Get the API base URL
 	 *
 	 * @throws AppConfigException
@@ -126,11 +142,12 @@ class IonosConfigService {
 	/**
 	 * Validate and retrieve all API configuration
 	 *
-	 * @return array{extRef: string, apiBaseUrl: string, allowInsecure: bool, basicAuthUser: string, basicAuthPass: string}
+	 * @return array{brand: string, extRef: string, apiBaseUrl: string, allowInsecure: bool, basicAuthUser: string, basicAuthPass: string}
 	 * @throws AppConfigException
 	 */
 	public function getApiConfig(): array {
 		return [
+			'brand' => $this->getBrand(),
 			'extRef' => $this->getExternalReference(),
 			'apiBaseUrl' => $this->getApiBaseUrl(),
 			'allowInsecure' => $this->getAllowInsecure(),

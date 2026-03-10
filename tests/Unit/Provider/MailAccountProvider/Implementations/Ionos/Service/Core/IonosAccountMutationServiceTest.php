@@ -68,6 +68,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 			->willReturn($user);
 
 		$this->configService->method('getMailDomain')->willReturn($domain);
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -109,6 +110,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$email = 'john@example.com';
 
 		$this->configService->method('getMailDomain')->willReturn($domain);
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -134,6 +136,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$domain = 'example.com';
 
 		$this->configService->method('getMailDomain')->willReturn($domain);
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -160,6 +163,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$domain = 'example.com';
 
 		$this->configService->method('getMailDomain')->willReturn($domain);
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -186,6 +190,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$domain = 'example.com';
 
 		$this->configService->method('getMailDomain')->willReturn($domain);
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -210,6 +215,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$userId = 'testuser';
 		$email = 'testuser@example.com';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -234,6 +240,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$userId = 'testuser';
 		$email = 'testuser@example.com';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -259,6 +266,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$userId = 'testuser';
 		$email = 'testuser@example.com';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -285,6 +293,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$userId = 'testuser';
 		$email = 'testuser@example.com';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -315,6 +324,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$userId = 'testuser';
 		$email = 'testuser@example.com';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -345,6 +355,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -388,6 +399,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$email = 'testuser@example.com';
 
 		$this->configService->method('isIonosIntegrationEnabled')->willReturn(true);
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -415,6 +427,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$appName = 'TestApp';
 		$newPassword = 'new-password-123';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -440,6 +453,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$userId = 'testuser';
 		$appName = 'TestApp';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -465,6 +479,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$userId = 'testuser';
 		$appName = 'TestApp';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -491,6 +506,7 @@ class IonosAccountMutationServiceTest extends TestCase {
 		$userId = 'testuser';
 		$appName = 'TestApp';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');

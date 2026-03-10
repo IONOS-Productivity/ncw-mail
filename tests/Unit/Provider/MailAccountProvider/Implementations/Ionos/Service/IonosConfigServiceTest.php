@@ -153,8 +153,13 @@ class IonosConfigServiceTest extends TestCase {
 
 	public function testGetApiConfigSuccess(): void {
 		$this->config->method('getSystemValue')
-			->with('ncw.ext_ref')
-			->willReturn('test-ext-ref');
+			->willReturnCallback(function ($key, $default = '') {
+				return match ($key) {
+					'ncw.brand' => 'test-brand',
+					'ncw.ext_ref' => 'test-ext-ref',
+					default => $default,
+				};
+			});
 
 		$this->appConfig->method('getValueString')
 			->willReturnCallback(function ($appId, $key) {
@@ -173,6 +178,7 @@ class IonosConfigServiceTest extends TestCase {
 		$result = $this->service->getApiConfig();
 
 		$this->assertEquals([
+			'brand' => 'test-brand',
 			'extRef' => 'test-ext-ref',
 			'apiBaseUrl' => 'https://api.example.com',
 			'allowInsecure' => false,
@@ -250,8 +256,13 @@ class IonosConfigServiceTest extends TestCase {
 			->willReturn('yes');
 
 		$this->config->method('getSystemValue')
-			->with('ncw.ext_ref')
-			->willReturn('test-ext-ref');
+			->willReturnCallback(function ($key, $default = '') {
+				return match ($key) {
+					'ncw.brand' => 'test-brand',
+					'ncw.ext_ref' => 'test-ext-ref',
+					default => $default,
+				};
+			});
 
 		$this->appConfig->method('getValueString')
 			->willReturnCallback(function ($appId, $key) {
@@ -286,8 +297,9 @@ class IonosConfigServiceTest extends TestCase {
 			->willReturn('yes');
 
 		$this->config->method('getSystemValue')
-			->with('ncw.ext_ref')
-			->willReturn('');
+			->willReturnCallback(function ($key, $default = '') {
+				return '';
+			});
 
 		$this->logger->expects($this->once())
 			->method('debug')
