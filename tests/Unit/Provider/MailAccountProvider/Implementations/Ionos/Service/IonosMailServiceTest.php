@@ -34,6 +34,7 @@ class IonosMailServiceTest extends TestCase {
 	private const TEST_DOMAIN = 'example.com';
 	private const TEST_EMAIL = self::TEST_USER_NAME . '@' . self::TEST_DOMAIN;
 	private const TEST_PASSWORD = 'test-password';
+	private const TEST_BRAND = 'IONOS';
 	private const TEST_EXT_REF = 'test-ext-ref';
 	private const TEST_API_BASE_URL = 'https://api.example.com';
 	private const TEST_BASIC_AUTH_USER = 'testuser';
@@ -69,6 +70,7 @@ class IonosMailServiceTest extends TestCase {
 	 * Setup standard config mocks with default values
 	 */
 	private function setupConfigMocks(
+		string $brand = self::TEST_BRAND,
 		string $externalReference = self::TEST_EXT_REF,
 		string $apiBaseUrl = self::TEST_API_BASE_URL,
 		bool $allowInsecure = false,
@@ -76,6 +78,7 @@ class IonosMailServiceTest extends TestCase {
 		string $basicAuthPassword = self::TEST_BASIC_AUTH_PASSWORD,
 		string $mailDomain = self::TEST_DOMAIN,
 	): void {
+		$this->configService->method('getBrand')->willReturn($brand);
 		$this->configService->method('getExternalReference')->willReturn($externalReference);
 		$this->configService->method('getApiBaseUrl')->willReturn($apiBaseUrl);
 		$this->configService->method('getAllowInsecure')->willReturn($allowInsecure);
@@ -443,7 +446,7 @@ class IonosMailServiceTest extends TestCase {
 		$mailAccountResponse->method('getEmail')->willReturn(self::TEST_EMAIL);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willReturn($mailAccountResponse);
 
 		$this->logger->expects($this->exactly(2))->method('debug');
@@ -471,7 +474,7 @@ class IonosMailServiceTest extends TestCase {
 		);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
 		$this->logger->expects($this->exactly(2))->method('debug');
@@ -499,7 +502,7 @@ class IonosMailServiceTest extends TestCase {
 		);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
 		$this->logger->expects($this->once())->method('debug');
@@ -526,7 +529,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException(new \Exception('Unexpected error'));
 
 		$this->logger->expects($this->once())->method('debug');
@@ -549,7 +552,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID);
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID);
 
 		$callCount = 0;
 		$this->logger->expects($this->exactly(2))
@@ -589,7 +592,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
 		$this->logger->expects($this->once())
@@ -629,7 +632,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
 		$this->logger->expects($this->once())
@@ -667,7 +670,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($generalException);
 
 		$this->logger->expects($this->once())
@@ -697,7 +700,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID);
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID);
 
 		$this->logger->expects($this->exactly(2))->method('info');
 
@@ -735,7 +738,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID);
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID);
 
 		$this->logger->expects($this->exactly(2))
 			->method('info')
@@ -776,7 +779,7 @@ class IonosMailServiceTest extends TestCase {
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException('API Error', 500);
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
 		$this->logger->expects($this->exactly(2))
@@ -819,7 +822,7 @@ class IonosMailServiceTest extends TestCase {
 		$apiException = new \IONOS\MailConfigurationAPI\Client\ApiException('Not Found', 404);
 		$apiInstance->expects($this->once())
 			->method('deleteMailbox')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
 		$this->logger->expects($this->once())
@@ -863,7 +866,7 @@ class IonosMailServiceTest extends TestCase {
 		$mailAccountResponse->method('getEmail')->willReturn(self::TEST_EMAIL);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willReturn($mailAccountResponse);
 
 		$this->logger->expects($this->exactly(2))->method('debug');
@@ -890,7 +893,7 @@ class IonosMailServiceTest extends TestCase {
 		);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
 		$this->logger->expects($this->exactly(2))->method('debug');
@@ -917,7 +920,7 @@ class IonosMailServiceTest extends TestCase {
 		);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
 		$this->logger->expects($this->once())->method('debug');
@@ -943,7 +946,7 @@ class IonosMailServiceTest extends TestCase {
 		$this->apiClientService->method('newMailConfigurationAPIApi')->willReturn($apiInstance);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException(new \Exception('Unexpected error'));
 
 		$this->logger->expects($this->once())->method('debug');
@@ -987,7 +990,7 @@ class IonosMailServiceTest extends TestCase {
 		$mailAccountResponse->method('getServer')->willReturn($mailServer);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willReturn($mailAccountResponse);
 
 		$result = $this->service->getAccountConfigForUser(self::TEST_USER_ID);
@@ -1023,7 +1026,7 @@ class IonosMailServiceTest extends TestCase {
 		);
 
 		$apiInstance->method('getFunctionalAccount')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID)
 			->willThrowException($apiException);
 
 		$result = $this->service->getAccountConfigForUser(self::TEST_USER_ID);
@@ -1039,7 +1042,7 @@ class IonosMailServiceTest extends TestCase {
 
 		$apiInstance->expects($this->once())
 			->method('setAppPassword')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
 			->willReturn($expectedPassword);
 
 		$result = $this->service->resetAppPassword(self::TEST_USER_ID, $appName);
@@ -1066,7 +1069,7 @@ class IonosMailServiceTest extends TestCase {
 		);
 
 		$apiInstance->method('setAppPassword')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
 			->willThrowException($apiException);
 
 		$this->expectException(ServiceException::class);
@@ -1083,7 +1086,7 @@ class IonosMailServiceTest extends TestCase {
 
 		// API returns unexpected response type (not a string)
 		$apiInstance->method('setAppPassword')
-			->with('IONOS', self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
+			->with(self::TEST_BRAND, self::TEST_EXT_REF, self::TEST_USER_ID, $appName)
 			->willReturn(['unexpected' => 'response']);
 
 		$this->expectException(ServiceException::class);
