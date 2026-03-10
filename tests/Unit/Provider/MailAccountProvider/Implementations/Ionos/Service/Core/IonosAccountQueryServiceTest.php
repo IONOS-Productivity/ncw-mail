@@ -54,6 +54,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 			->method('getUser')
 			->willReturn($user);
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -86,6 +87,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	public function testMailAccountExistsForUserIdTrue(): void {
 		$userId = 'testuser';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -107,6 +109,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	public function testMailAccountExistsForUserIdFalse(): void {
 		$userId = 'testuser';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -128,6 +131,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 		$userId = 'testuser';
 		$email = 'test@example.com';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -150,6 +154,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	public function testGetMailAccountResponseNotFound(): void {
 		$userId = 'testuser';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -174,6 +179,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	public function testGetMailAccountResponseApiError(): void {
 		$userId = 'testuser';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -199,6 +205,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	public function testGetMailAccountResponseUnexpectedError(): void {
 		$userId = 'testuser';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -225,6 +232,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 		$userId = 'testuser';
 		$email = 'test@example.com';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -249,6 +257,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	public function testGetAccountConfigForUserNotFound(): void {
 		$userId = 'testuser';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -277,6 +286,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 			->method('getUser')
 			->willReturn($user);
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -300,6 +310,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 		$userId = 'testuser';
 		$email = 'test@example.com';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -321,6 +332,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	public function testGetIonosEmailForUserNotFound(): void {
 		$userId = 'testuser';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -341,6 +353,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	public function testGetIonosEmailForUserError(): void {
 		$userId = 'testuser';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -374,6 +387,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	public function testCreateApiInstanceWithInsecureConnection(): void {
 		$userId = 'testuser';
 
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -400,6 +414,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	}
 
 	public function testGetAllMailAccountResponsesSuccess(): void {
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -431,6 +446,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	}
 
 	public function testGetAllMailAccountResponsesEmpty(): void {
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -457,6 +473,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	}
 
 	public function testGetAllMailAccountResponsesWithUnexpectedType(): void {
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -485,6 +502,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	}
 
 	public function testGetAllMailAccountResponsesWithApiException(): void {
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -515,6 +533,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	}
 
 	public function testGetAllMailAccountResponsesCachesResult(): void {
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
@@ -540,6 +559,7 @@ class IonosAccountQueryServiceTest extends TestCase {
 	}
 
 	public function testGetAllMailAccountResponsesWithGenericException(): void {
+		$this->configService->method('getBrand')->willReturn('IONOS');
 		$this->configService->method('getExternalReference')->willReturn('ext-ref');
 		$this->configService->method('getBasicAuthUser')->willReturn('auth-user');
 		$this->configService->method('getBasicAuthPassword')->willReturn('auth-pass');
