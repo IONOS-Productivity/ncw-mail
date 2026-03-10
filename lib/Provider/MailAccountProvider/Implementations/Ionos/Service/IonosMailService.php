@@ -28,7 +28,6 @@ use Psr\Log\LoggerInterface;
  * Service for managing IONOS email account creation
  */
 class IonosMailService {
-	private const BRAND = 'IONOS';
 	private const HTTP_NOT_FOUND = 404;
 	public const STATUS__409_CONFLICT = 409;
 	private const HTTP_INTERNAL_SERVER_ERROR = 500;
@@ -86,7 +85,7 @@ class IonosMailService {
 
 			$apiInstance = $this->createApiInstance();
 			$result = $apiInstance->getFunctionalAccount(
-				self::BRAND,
+				$this->configService->getBrand(),
 				$this->configService->getExternalReference(),
 				$userId
 			);
@@ -175,7 +174,7 @@ class IonosMailService {
 
 		try {
 			$this->logger->debug('Send message to mailconfig service', ['data' => $mailCreateData]);
-			$result = $apiInstance->createMailbox(self::BRAND, $this->configService->getExternalReference(), $mailCreateData);
+			$result = $apiInstance->createMailbox($this->configService->getBrand(), $this->configService->getExternalReference(), $mailCreateData);
 
 			if ($result instanceof MailAddonErrorMessage) {
 				$this->logger->error('Failed to create ionos mail', [
@@ -397,7 +396,7 @@ class IonosMailService {
 		try {
 			$apiInstance = $this->createApiInstance();
 
-			$apiInstance->deleteMailbox(self::BRAND, $this->configService->getExternalReference(), $userId);
+			$apiInstance->deleteMailbox($this->configService->getBrand(), $this->configService->getExternalReference(), $userId);
 
 			$this->logger->info('Successfully deleted IONOS email account', [
 				'userId' => $userId
@@ -503,7 +502,7 @@ class IonosMailService {
 		try {
 			$apiInstance = $this->createApiInstance();
 			$result = $apiInstance->setAppPassword(
-				self::BRAND,
+				$this->configService->getBrand(),
 				$this->configService->getExternalReference(),
 				$userId,
 				$appName
