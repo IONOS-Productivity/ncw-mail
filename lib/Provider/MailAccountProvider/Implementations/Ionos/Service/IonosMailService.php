@@ -172,9 +172,10 @@ class IonosMailService {
 			throw new ServiceException('Invalid mail configuration', self::HTTP_INTERNAL_SERVER_ERROR);
 		}
 
+		$brand = $this->configService->getBrand();
 		try {
 			$this->logger->debug('Send message to mailconfig service', ['data' => $mailCreateData]);
-			$result = $apiInstance->createMailbox($this->configService->getBrand(), $this->configService->getExternalReference(), $mailCreateData);
+			$result = $apiInstance->createMailbox($brand, $this->configService->getExternalReference(), $mailCreateData);
 
 			if ($result instanceof MailAddonErrorMessage) {
 				$this->logger->error('Failed to create ionos mail', [
@@ -386,8 +387,10 @@ class IonosMailService {
 	 * @param string $userId The Nextcloud user ID
 	 * @return bool true if deletion was successful, false otherwise
 	 * @throws ServiceException
+	 * @throws AppConfigException
 	 */
 	public function deleteEmailAccount(string $userId): bool {
+		$brand = $this->configService->getBrand();
 		$this->logger->info('Attempting to delete IONOS email account', [
 			'userId' => $userId,
 			'extRef' => $this->configService->getExternalReference(),
@@ -396,7 +399,7 @@ class IonosMailService {
 		try {
 			$apiInstance = $this->createApiInstance();
 
-			$apiInstance->deleteMailbox($this->configService->getBrand(), $this->configService->getExternalReference(), $userId);
+			$apiInstance->deleteMailbox($brand, $this->configService->getExternalReference(), $userId);
 
 			$this->logger->info('Successfully deleted IONOS email account', [
 				'userId' => $userId
@@ -491,8 +494,10 @@ class IonosMailService {
 	 * @param string $appName The application name for the password
 	 * @return string The new password
 	 * @throws ServiceException
+	 * @throws AppConfigException
 	 */
 	public function resetAppPassword(string $userId, string $appName): string {
+		$brand = $this->configService->getBrand();
 		$this->logger->debug('Resetting IONOS app password', [
 			'userId' => $userId,
 			'appName' => $appName,
@@ -502,7 +507,7 @@ class IonosMailService {
 		try {
 			$apiInstance = $this->createApiInstance();
 			$result = $apiInstance->setAppPassword(
-				$this->configService->getBrand(),
+				$brand,
 				$this->configService->getExternalReference(),
 				$userId,
 				$appName
