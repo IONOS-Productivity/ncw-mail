@@ -22,6 +22,7 @@ use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ApiMailConfigClientService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
+use OCP\Exceptions\AppConfigException;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
@@ -63,9 +64,11 @@ class IonosAccountMutationService {
 	 * @param string $userName The local part of the email address (before @domain)
 	 * @return MailAccountConfig Mail account configuration
 	 * @throws ServiceException
+	 * @throws AppConfigException
 	 */
 	public function createEmailAccountForUser(string $userId, string $userName): MailAccountConfig {
 		$domain = $this->configService->getMailDomain();
+		$brand = $this->configService->getBrand();
 
 		$this->logger->debug('Sending request to mailconfig service', [
 			'extRef' => $this->configService->getExternalReference(),
@@ -92,7 +95,7 @@ class IonosAccountMutationService {
 
 		try {
 			$this->logger->debug('Send message to mailconfig service', ['data' => $mailCreateData]);
-			$result = $apiInstance->createMailbox($this->configService->getBrand(), $this->configService->getExternalReference(), $mailCreateData);
+			$result = $apiInstance->createMailbox($brand, $this->configService->getExternalReference(), $mailCreateData);
 
 			if ($result instanceof MailAddonErrorMessage) {
 				$this->logger->error('Failed to create ionos mail', [
@@ -145,8 +148,10 @@ class IonosAccountMutationService {
 	 * @param string $email The email address to verify before deletion
 	 * @return bool true if deletion was successful
 	 * @throws ServiceException
+	 * @throws AppConfigException
 	 */
 	public function deleteEmailAccount(string $userId, string $email): bool {
+		$brand = $this->configService->getBrand();
 		$this->logger->info('Attempting to delete IONOS email account', [
 			'userId' => $userId,
 			'email' => $email,
@@ -159,7 +164,7 @@ class IonosAccountMutationService {
 			// First, verify the email matches the account we're about to delete
 			try {
 				$accountResponse = $apiInstance->getFunctionalAccount(
-					$this->configService->getBrand(),
+					$brand,
 					$this->configService->getExternalReference(),
 					$userId
 				);
@@ -204,7 +209,7 @@ class IonosAccountMutationService {
 			}
 
 			// Proceed with deletion
-			$apiInstance->deleteMailbox($this->configService->getBrand(), $this->configService->getExternalReference(), $userId);
+			$apiInstance->deleteMailbox($brand, $this->configService->getExternalReference(), $userId);
 
 			$this->logger->info('Successfully deleted IONOS email account', [
 				'userId' => $userId,
@@ -288,8 +293,10 @@ class IonosAccountMutationService {
 	 * @param string $appName The application name for the password
 	 * @return string The new password
 	 * @throws ServiceException
+	 * @throws AppConfigException
 	 */
 	public function resetAppPassword(string $userId, string $appName): string {
+		$brand = $this->configService->getBrand();
 		$this->logger->debug('Resetting IONOS app password', [
 			'userId' => $userId,
 			'appName' => $appName,
@@ -299,7 +306,7 @@ class IonosAccountMutationService {
 		try {
 			$apiInstance = $this->createApiInstance();
 			$result = $apiInstance->setAppPassword(
-				$this->configService->getBrand(),
+				$brand,
 				$this->configService->getExternalReference(),
 				$userId,
 				$appName
@@ -352,9 +359,11 @@ class IonosAccountMutationService {
 	 * @param string $newLocalpart The new local part of the email address (before @domain)
 	 * @return string The new email address
 	 * @throws ServiceException If update fails or new email is already taken
+	 * @throws AppConfigException
 	 */
 	public function updateMailboxLocalpart(string $userId, string $newLocalpart): string {
 		$domain = $this->configService->getMailDomain();
+		$brand = $this->configService->getBrand();
 		$newEmail = $newLocalpart . '@' . $domain;
 
 		$this->logger->info('Updating IONOS mailbox localpart', [
@@ -390,7 +399,7 @@ class IonosAccountMutationService {
 
 			// Update the mailbox via API and check response status
 			[, $statusCode] = $apiInstance->patchMailboxWithHttpInfo(
-				$this->configService->getBrand(),
+				$brand,
 				$this->configService->getExternalReference(),
 				$userId,
 				$patchRequest
