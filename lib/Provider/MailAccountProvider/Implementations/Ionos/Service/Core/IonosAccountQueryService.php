@@ -16,6 +16,7 @@ use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailAccountConfig;
 use OCA\Mail\Provider\MailAccountProvider\Common\Dto\MailServerConfig;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\ApiMailConfigClientService;
 use OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service\IonosConfigService;
+use OCP\Exceptions\AppConfigException;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 
@@ -23,7 +24,6 @@ use Psr\Log\LoggerInterface;
  * Service for querying IONOS mail account information (read-only operations)
  */
 class IonosAccountQueryService {
-	private const BRAND = 'IONOS';
 	private const HTTP_NOT_FOUND = 404;
 	private const HTTP_INTERNAL_SERVER_ERROR = 500;
 
@@ -83,7 +83,7 @@ class IonosAccountQueryService {
 
 			$apiInstance = $this->createApiInstance();
 			$result = $apiInstance->getFunctionalAccount(
-				self::BRAND,
+				$this->configService->getBrand(),
 				$this->configService->getExternalReference(),
 				$userId
 			);
@@ -192,11 +192,14 @@ class IonosAccountQueryService {
 	 *
 	 * @return array<int, MailAccountResponse> List of mail account responses
 	 * @throws ServiceException If API call fails
+	 * @throws AppConfigException
 	 */
 	public function getAllMailAccountResponses(): array {
 		if ($this->allAccountsCache !== null) {
 			return $this->allAccountsCache;
 		}
+
+		$brand = $this->configService->getBrand();
 
 		try {
 			$this->logger->debug('Getting all IONOS mail accounts', [
@@ -205,7 +208,7 @@ class IonosAccountQueryService {
 
 			$apiInstance = $this->createApiInstance();
 			$result = $apiInstance->getAllFunctionalAccounts(
-				self::BRAND,
+				$brand,
 				$this->configService->getExternalReference()
 			);
 
