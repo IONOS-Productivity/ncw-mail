@@ -63,19 +63,18 @@ class FolderMapper {
 			// This is a special folder that must not be shown
 			return !in_array($mailbox['mailbox']->utf8, self::DOVECOT_SIEVE_FOLDERS, true);
 		});
-		return array_map(static function (array $mailbox) use ($account) {
-			return new Folder(
-				$mailbox['mailbox'],
-				$mailbox['attributes'],
-				$mailbox['delimiter'],
-				null,
-			);
-		}, $toPersist);
+		return array_map(static fn (array $mailbox) => new Folder(
+			$mailbox['mailbox'],
+			$mailbox['attributes'],
+			$mailbox['delimiter'],
+			null,
+		), $toPersist);
 	}
 
-	public function createFolder(Horde_Imap_Client_Socket $client,
-		string $name): Folder {
-		$client->createMailbox($name);
+	public function createFolder(Horde_Imap_Client_Socket $client, string $name, array $specialUse = []): Folder {
+		$client->createMailbox($name, [
+			'special_use' => $specialUse,
+		]);
 
 		$list = $client->listMailboxes($name, Horde_Imap_Client::MBOX_ALL_SUBSCRIBED, [
 			'delimiter' => true,
@@ -129,10 +128,9 @@ class FolderMapper {
 	 */
 	public function getFoldersStatusAsObject(Horde_Imap_Client_Socket $client,
 		array $mailboxes): array {
-		$multiStatus = $client->status($mailboxes);
-
 		$statuses = [];
-		foreach ($multiStatus as $mailbox => $status) {
+		foreach ($mailboxes as $mailbox) {
+			$status = $client->status($mailbox);
 			try {
 				if (!isset($status['messages'], $status['unseen'])) {
 					throw new ServiceException('Could not fetch stats of mailbox: ' . $mailbox);
@@ -142,7 +140,11 @@ class FolderMapper {
 					$status['unseen'],
 				);
 			} catch (ServiceException $e) {
-				$this->logger->warning($e->getMessage());
+				$this->logger->warning($e->getMessage(), [
+					'exception' => $e,
+					'mailboxes' => $mailboxes,
+					'status' => $status,
+				]);
 			}
 		}
 		return $statuses;
@@ -201,9 +203,7 @@ class FolderMapper {
 			strtolower(Horde_Imap_Client::SPECIALUSE_TRASH)
 		];
 
-		$attributes = array_map(static function ($n) {
-			return strtolower($n);
-		}, $folder->getAttributes());
+		$attributes = array_map(static fn ($n) => strtolower($n), $folder->getAttributes());
 
 		foreach ($specialUseAttributes as $attr) {
 			if (in_array($attr, $attributes)) {

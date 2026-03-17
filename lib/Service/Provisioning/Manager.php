@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\Mail\Service\Provisioning;
 
 use Horde_Mail_Rfc822_Address;
+use OCA\Mail\AppInfo\Application;
 use OCA\Mail\Db\Alias;
 use OCA\Mail\Db\AliasMapper;
 use OCA\Mail\Db\MailAccount;
@@ -19,18 +20,22 @@ use OCA\Mail\Db\ProvisioningMapper;
 use OCA\Mail\Db\TagMapper;
 use OCA\Mail\Exception\ValidationException;
 use OCA\Mail\Service\AccountService;
+use OCP\App\IAppManager;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\MultipleObjectsReturnedException;
+use OCP\DB\Exception;
 use OCP\ICacheFactory;
 use OCP\IUser;
 use OCP\IUserManager;
-use OCP\LDAP\ILDAPProvider;
 use OCP\LDAP\ILDAPProviderFactory;
 use OCP\Security\ICrypto;
 use Psr\Log\LoggerInterface;
 
 class Manager {
 	public const MAIL_PROVISIONINGS = 'mail_provisionings';
+	/** @var IAppManager */
+	private $appManager;
+
 	/** @var IUserManager */
 	private $userManager;
 
@@ -59,6 +64,7 @@ class Manager {
 	private $cacheFactory;
 
 	public function __construct(
+		IAppManager $appManager,
 		IUserManager $userManager,
 		ProvisioningMapper $provisioningMapper,
 		MailAccountMapper $mailAccountMapper,
@@ -70,6 +76,7 @@ class Manager {
 		ICacheFactory $cacheFactory,
 		private AccountService $accountService,
 	) {
+		$this->appManager = $appManager;
 		$this->userManager = $userManager;
 		$this->provisioningMapper = $provisioningMapper;
 		$this->mailAccountMapper = $mailAccountMapper;
@@ -184,9 +191,34 @@ class Manager {
 	}
 
 	/**
+	 * Delete all provisioned aliases and accounts for
+	 * a specific user UID.
+	 *
+	 * @param string $userUid
+	 * @return void
+	 */
+	public function unprovisionSingleUser(string $userUid) : void {
+		try {
+			$this->aliasMapper->deleteProvisionedAliasesByUid($userUid);
+			$this->mailAccountMapper->deleteProvisionedAccountsByUid($userUid);
+		} catch (Exception $e) {
+			$this->logger->warning(
+				"Error during deletion of mail provisioning profile for user with UID {$userUid}",
+				['exception' => $e]
+			);
+		}
+	}
+
+	/**
 	 * @param Provisioning[] $provisionings
 	 */
 	public function provisionSingleUser(array $provisionings, IUser $user): bool {
+		if (!$this->appManager->isEnabledForUser(Application::APP_ID, $user)) {
+			$this->unprovisionSingleUser($user->getUID());
+
+			return false;
+		}
+
 		$provisioning = $this->findMatchingConfig($provisionings, $user);
 
 		if ($provisioning === null) {
@@ -204,8 +236,7 @@ class Manager {
 			if ($e instanceof MultipleObjectsReturnedException) {
 				// This is unlikely to happen but not impossible.
 				// Let's wipe any existing accounts and start fresh
-				$this->aliasMapper->deleteProvisionedAliasesByUid($user->getUID());
-				$this->mailAccountMapper->deleteProvisionedAccountsByUid($user->getUID());
+				$this->unprovisionSingleUser($user->getUID());
 			}
 
 			// Fine, then we create a new one
@@ -220,27 +251,24 @@ class Manager {
 			$this->tagMapper->createDefaultTags($mailAccount);
 		}
 
-		// @TODO: Remove method_exists once Mail requires Nextcloud 22 or above
-		if (method_exists(ILDAPProvider::class, 'getMultiValueUserAttribute')) {
-			try {
-				$provisioning = $this->ldapAliasesIntegration($provisioning, $user);
-			} catch (\Throwable $e) {
-				$this->logger->warning('Request to provision mail aliases failed', ['exception' => $e]);
-				// return here to avoid provisioning of aliases.
-				return true;
-			}
+		try {
+			$provisioning = $this->ldapAliasesIntegration($provisioning, $user);
+		} catch (\Throwable $e) {
+			$this->logger->warning('Request to provision mail aliases failed', ['exception' => $e]);
+			// return here to avoid provisioning of aliases.
+			return true;
+		}
 
-			try {
-				$this->deleteOrphanedAliases($user->getUID(), $mailAccount->getId(), $provisioning->getAliases());
-			} catch (\Throwable $e) {
-				$this->logger->warning('Deleting orphaned aliases failed', ['exception' => $e]);
-			}
+		try {
+			$this->deleteOrphanedAliases($user->getUID(), $mailAccount->getId(), $provisioning->getAliases());
+		} catch (\Throwable $e) {
+			$this->logger->warning('Deleting orphaned aliases failed', ['exception' => $e]);
+		}
 
-			try {
-				$this->createNewAliases($user->getUID(), $mailAccount->getId(), $provisioning->getAliases(), $this->userManager->getDisplayName($user->getUID()), $mailAccount->getEmail());
-			} catch (\Throwable $e) {
-				$this->logger->warning('Creating new aliases failed', ['exception' => $e]);
-			}
+		try {
+			$this->createNewAliases($user->getUID(), $mailAccount->getId(), $provisioning->getAliases(), $this->userManager->getDisplayName($user->getUID()), $mailAccount->getEmail());
+		} catch (\Throwable $e) {
+			$this->logger->warning('Creating new aliases failed', ['exception' => $e]);
 		}
 
 		return true;

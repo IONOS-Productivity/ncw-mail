@@ -6,17 +6,20 @@
 	<NcContent app-name="mail">
 		<Navigation v-if="hasAccounts" />
 		<AppContent>
-			<div class="setup"
-				:class="{ 'setup--themed': isThemed, }"
-				:style="{ 'backgroundImage': isThemed ? undefined: backgroundImgSrc, }">
-				<EmptyContent v-if="allowNewMailAccounts"
+			<div
+				class="setup"
+				:class="{ 'setup--themed': isThemed }"
+				:style="{ backgroundImage: isThemed ? undefined : backgroundImgSrc }">
+				<EmptyContent
+					v-if="allowNewMailAccounts"
 					class="setup__form-content"
 					:name="t('mail', 'Connect your mail account')">
 					<template #icon>
 						<div class="setup__form-content__svg-wrapper" v-html="FluidMail" />
 					</template>
 					<template #action>
-						<AccountForm :display-name="displayName"
+						<AccountForm
+							:display-name="displayName"
 							:email="email"
 							:error.sync="error"
 							class="setup__form-content__form"
@@ -34,15 +37,14 @@
 </template>
 
 <script>
-import { generateFilePath } from '@nextcloud/router'
-import { NcContent, NcAppContent as AppContent, NcEmptyContent as EmptyContent } from '@nextcloud/vue'
 import { loadState } from '@nextcloud/initial-state'
-
-import AccountForm from '../components/AccountForm.vue'
-import FluidMail from '../../img/mail.svg'
-import Navigation from '../components/Navigation.vue'
-import logger from '../logger.js'
+import { generateFilePath } from '@nextcloud/router'
+import { NcAppContent as AppContent, NcEmptyContent as EmptyContent, NcContent } from '@nextcloud/vue'
 import { mapStores } from 'pinia'
+import AccountForm from '../components/AccountForm.vue'
+import Navigation from '../components/Navigation.vue'
+import FluidMail from '../../img/mail-fluid.svg'
+import logger from '../logger.js'
 import useMainStore from '../store/mainStore.js'
 
 export default {
@@ -54,6 +56,7 @@ export default {
 		EmptyContent,
 		Navigation,
 	},
+
 	data() {
 		return {
 			displayName: loadState('mail', 'prefill_displayName'),
@@ -64,20 +67,23 @@ export default {
 			backgroundImgSrc: this.isDarkTheme
 				? 'url("' + generateFilePath('mail', 'img', 'welcome-connection-dark.png') + '")'
 				: 'url("' + generateFilePath('mail', 'img', 'welcome-connection-light.png') + '")',
+
 			isThemed: this.isDarkTheme
 				? window.getComputedStyle(document.body).getPropertyValue('--color-primary-element') !== '#0091f2'
 				: window.getComputedStyle(document.body).getPropertyValue('--color-primary-element') !== '#00679e',
 		}
 	},
+
 	computed: {
 		...mapStores(useMainStore),
 		hasAccounts() {
 			return this.mainStore.getAccounts.length > 1
 		},
 	},
+
 	methods: {
 		onAccountCreated() {
-			logger.info('account successfully created, redirecting …')
+			logger.info('account successfully created, redirecting …')
 			this.$router.push({
 				name: 'home',
 			})
@@ -110,9 +116,10 @@ export default {
 		/** make it as narrow as possible */
 		flex-grow: 0;
 
-		background-color: var(--ion-surface-secondary);
-		padding: calc(5 * var(--default-grid-baseline));
+		background-color: var(--color-main-background-blur);
+		padding: calc(3 * var(--default-grid-baseline));
 		border-radius: var(--border-radius-container);
+		box-shadow: 0 0 10px var(--color-box-shadow);
 
 		/* overrides for custom icon size and full opacity */
 		:deep(.empty-content__icon) {

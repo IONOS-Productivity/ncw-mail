@@ -19,6 +19,9 @@ use OCA\Mail\Model\IMAPMessage;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\Calendar\IManager;
 use Psr\Log\LoggerInterface;
+use Throwable;
+
+use function array_filter;
 
 class IMipService {
 	private AccountService $accountService;
@@ -56,9 +59,7 @@ class IMipService {
 		// and JOIN with accounts table
 		// although this might not make much of a difference
 		// since there are very few messages to process
-		$mailboxIds = array_unique(array_map(static function (Message $message) {
-			return $message->getMailboxId();
-		}, $messages));
+		$mailboxIds = array_unique(array_map(static fn (Message $message) => $message->getMailboxId(), $messages));
 
 		$mailboxes = array_map(function (int $mailboxId) {
 			try {
@@ -67,11 +68,10 @@ class IMipService {
 				return null;
 			}
 		}, $mailboxIds);
+		$existingMailboxes = array_filter($mailboxes);
 
 		// Collect all accounts in memory
-		$accountIds = array_unique(array_map(static function (Mailbox $mailbox) {
-			return $mailbox->getAccountId();
-		}, $mailboxes));
+		$accountIds = array_unique(array_map(static fn (Mailbox $mailbox) => $mailbox->getAccountId(), $existingMailboxes));
 
 		$accounts = array_combine($accountIds, array_map(function (int $accountId) {
 			try {
@@ -81,13 +81,10 @@ class IMipService {
 			}
 		}, $accountIds));
 
-		/** @var Mailbox $mailbox */
-		foreach ($mailboxes as $mailbox) {
+		foreach ($existingMailboxes as $mailbox) {
 			/** @var Account $account */
 			$account = $accounts[$mailbox->getAccountId()];
-			$filteredMessages = array_filter($messages, static function ($message) use ($mailbox) {
-				return $message->getMailboxId() === $mailbox->getId();
-			});
+			$filteredMessages = array_filter($messages, static fn ($message) => $message->getMailboxId() === $mailbox->getId());
 
 			if ($filteredMessages === []) {
 				continue;
@@ -112,9 +109,7 @@ class IMipService {
 			}
 
 			try {
-				$imapMessages = $this->mailManager->getImapMessagesForScheduleProcessing($account, $mailbox, array_map(static function ($message) {
-					return $message->getUid();
-				}, $filteredMessages));
+				$imapMessages = $this->mailManager->getImapMessagesForScheduleProcessing($account, $mailbox, array_map(static fn ($message) => $message->getUid(), $filteredMessages));
 			} catch (ServiceException $e) {
 				$this->logger->error('Could not get IMAP messages form IMAP server', ['exception' => $e]);
 				continue;
@@ -125,36 +120,47 @@ class IMipService {
 
 			foreach ($filteredMessages as $message) {
 				/** @var IMAPMessage $imapMessage */
-				$imapMessage = current(array_filter($imapMessages, static function (IMAPMessage $imapMessage) use ($message) {
-					return $message->getUid() === $imapMessage->getUid();
-				}));
+				$imapMessage = current(array_filter($imapMessages, static fn (IMAPMessage $imapMessage) => $message->getUid() === $imapMessage->getUid()));
 				if (empty($imapMessage->scheduling)) {
 					// No scheduling info, maybe the DB is wrong
+					$message->setImipProcessed(true);
 					$message->setImipError(true);
 					continue;
 				}
 
 				$sender = $imapMessage->getFrom()->first()?->getEmail();
 				if ($sender === null) {
+					$message->setImipProcessed(true);
 					$message->setImipError(true);
 					continue;
 				}
 
-				foreach ($imapMessage->scheduling as $schedulingInfo) { // an IMAP message could contain more than one iMIP object
-					if ($schedulingInfo['method'] === 'REQUEST' && method_exists($this->calendarManager, 'handleIMipRequest')) {
-						$processed = $this->calendarManager->handleIMipRequest($principalUri, $sender, $recipient, $schedulingInfo['contents']);
-						$message->setImipProcessed($processed);
-						$message->setImipError(!$processed);
-					} elseif ($schedulingInfo['method'] === 'REPLY') {
-						$processed = $this->calendarManager->handleIMipReply($principalUri, $sender, $recipient, $schedulingInfo['contents']);
-						$message->setImipProcessed($processed);
-						$message->setImipError(!$processed);
-					} elseif ($schedulingInfo['method'] === 'CANCEL') {
-						$replyTo = $imapMessage->getReplyTo()->first()?->getEmail();
-						$processed = $this->calendarManager->handleIMipCancel($principalUri, $sender, $replyTo, $recipient, $schedulingInfo['contents']);
-						$message->setImipProcessed($processed);
-						$message->setImipError(!$processed);
+				try {
+					// an IMAP message could contain more than one iMIP object
+					foreach ($imapMessage->scheduling as $schedulingInfo) {
+						if ($schedulingInfo['method'] === 'REQUEST') {
+							$processed = $this->calendarManager->handleIMipRequest($principalUri, $sender, $recipient, $schedulingInfo['contents']);
+							$message->setImipProcessed($processed);
+							$message->setImipError(!$processed);
+						} elseif ($schedulingInfo['method'] === 'REPLY') {
+							$processed = $this->calendarManager->handleIMipReply($principalUri, $sender, $recipient, $schedulingInfo['contents']);
+							$message->setImipProcessed($processed);
+							$message->setImipError(!$processed);
+						} elseif ($schedulingInfo['method'] === 'CANCEL') {
+							$replyTo = $imapMessage->getReplyTo()->first()?->getEmail();
+							$processed = $this->calendarManager->handleIMipCancel($principalUri, $sender, $replyTo, $recipient, $schedulingInfo['contents']);
+							$message->setImipProcessed($processed);
+							$message->setImipError(!$processed);
+						}
 					}
+				} catch (Throwable $e) {
+					$this->logger->error('iMIP message processing failed', [
+						'exception' => $e,
+						'messageId' => $message->getId(),
+						'mailboxId' => $mailbox->getId(),
+					]);
+					$message->setImipProcessed(true);
+					$message->setImipError(true);
 				}
 			}
 			$this->messageMapper->updateImipData(...$filteredMessages);

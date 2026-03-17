@@ -35,13 +35,15 @@
 				<NcTextField :value.sync="localAction.name" :label="t('mail', 'Quick action name')" />
 				<h3>{{ t('mail', 'Do the following actions') }}</h3>
 				<Container @onDrop="onDrop">
-					<Draggable v-for="item in actions"
+					<Draggable
+						v-for="item in actions"
 						:key="item.id"
 						class="modal-content__action"
 						:drag-not-allowed="item.name === 'deleteThread' || item.name === 'moveThread'">
-						<Action :action="item"
+						<Action
+							:action="item"
 							:account="account"
-							@update="(payload) => updateAction(payload,item)"
+							@update="(payload) => updateAction(payload, item)"
 							@delete="deleteAction(item)" />
 					</Draggable>
 				</Container>
@@ -49,7 +51,7 @@
 					<template #icon>
 						<PlusIcon :size="20" />
 					</template>
-					<NcActionButton :close-after-click="true" @click="addQuickAction('markAsSpam')">
+					<NcActionButton v-if="!deletionAndMovingDisabled" :close-after-click="true" @click="addQuickAction('markAsSpam')">
 						<template #icon>
 							<AlertOctagonIcon :size="20" />
 						</template>
@@ -59,7 +61,7 @@
 						<template #icon>
 							<TagIcon :size="20" />
 						</template>
-						{{ t('mail','Tag') }}
+						{{ t('mail', 'Tag') }}
 					</NcActionButton>
 					<NcActionButton v-if="!deletionAndMovingDisabled" :close-after-click="true" @click="addQuickAction('moveThread')">
 						<template #icon>
@@ -98,7 +100,8 @@
 						{{ t('mail', 'Mark as favorite') }}
 					</NcActionButton>
 				</NcActions>
-				<NcButton :disabled="!canSave || loading"
+				<NcButton
+					:disabled="!canSave || loading"
 					class="modal-content__save"
 					variant="primary"
 					@click="saveQuickAction">
@@ -113,24 +116,24 @@
 </template>
 
 <script>
-import { NcModal, NcListItem, NcActionButton, NcActions, NcButton, NcTextField, NcLoadingIcon } from '@nextcloud/vue'
-import { Container, Draggable } from 'vue-dndrop'
-import Action from './Action.vue'
-import useMainStore from '../../store/mainStore.js'
-import IconDelete from 'vue-material-design-icons/TrashCanOutline.vue'
-import IconEdit from 'vue-material-design-icons/PencilOutline.vue'
-import IconEmailFast from 'vue-material-design-icons/EmailFastOutline.vue'
-import EmailUnread from 'vue-material-design-icons/EmailOutline.vue'
-import AlertOctagonIcon from 'vue-material-design-icons/AlertOctagonOutline.vue'
-import ImportantIcon from 'vue-material-design-icons/LabelVariant.vue'
-import EmailRead from 'vue-material-design-icons/EmailOpenOutline.vue'
-import TagIcon from 'vue-material-design-icons/TagOutline.vue'
-import IconFavorite from 'vue-material-design-icons/Star.vue'
-import OpenInNewIcon from 'vue-material-design-icons/OpenInNew.vue'
-import PlusIcon from 'vue-material-design-icons/Plus.vue'
-import { findAllStepsForAction, createActionStep, updateActionStep, deleteActionStep } from '../../service/QuickActionsService.js'
 import { showError, showSuccess } from '@nextcloud/dialogs'
+import { NcActionButton, NcActions, NcButton, NcListItem, NcLoadingIcon, NcModal, NcTextField } from '@nextcloud/vue'
+import { Container, Draggable } from 'vue-dndrop'
+import AlertOctagonIcon from 'vue-material-design-icons/AlertOctagonOutline.vue'
+import IconEmailFast from 'vue-material-design-icons/EmailFastOutline.vue'
+import EmailRead from 'vue-material-design-icons/EmailOpenOutline.vue'
+import EmailUnread from 'vue-material-design-icons/EmailOutline.vue'
+import ImportantIcon from 'vue-material-design-icons/LabelVariant.vue'
+import OpenInNewIcon from 'vue-material-design-icons/OpenInNew.vue'
+import IconEdit from 'vue-material-design-icons/PencilOutline.vue'
+import PlusIcon from 'vue-material-design-icons/Plus.vue'
+import IconFavorite from 'vue-material-design-icons/Star.vue'
+import TagIcon from 'vue-material-design-icons/TagOutline.vue'
+import IconDelete from 'vue-material-design-icons/TrashCanOutline.vue'
+import Action from './Action.vue'
 import logger from '../../logger.js'
+import { createActionStep, deleteActionStep, updateActionStep } from '../../service/QuickActionsService.js'
+import useMainStore from '../../store/mainStore.js'
 
 export default {
 	name: 'Settings',
@@ -157,12 +160,14 @@ export default {
 		PlusIcon,
 		NcLoadingIcon,
 	},
+
 	props: {
 		account: {
 			type: Object,
 			required: true,
 		},
 	},
+
 	data() {
 		return {
 			editModal: false,
@@ -173,21 +178,26 @@ export default {
 			loading: false,
 		}
 	},
+
 	computed: {
 		mainStore() {
 			return useMainStore()
 		},
+
 		quickActions() {
-			return this.mainStore.getQuickActions().filter(action => action.accountId === this.account.id)
+			return this.mainStore.getQuickActions().filter((action) => action.accountId === this.account.id)
 		},
+
 		modalName() {
 			return this.editMode ? this.t('mail', 'Edit quick action') : this.t('mail', 'Add quick action')
 		},
+
 		deletionAndMovingDisabled() {
-			return this.actions.some(action => ['deleteThread', 'moveThread'].includes(action.name))
+			return this.actions.some((action) => ['deleteThread', 'moveThread', 'markAsSpam'].includes(action.name))
 		},
+
 		canSave() {
-			return this.actions.length > 0 && this.localAction.name.trim().length > 0 && this.actions.every(action => {
+			return this.actions.length > 0 && this.localAction.name.trim().length > 0 && this.actions.every((action) => {
 				if (action.name === 'moveThread' && (!action.mailboxId || action.mailboxId === null)) {
 					return false
 				}
@@ -198,17 +208,20 @@ export default {
 			})
 		},
 	},
+
 	methods: {
 		async deleteQuickAction(id) {
-			await this.mainStore.deleteQuickAction(id).then(() => {
+			try {
+				await this.mainStore.deleteQuickAction(id)
 				showSuccess(t('mail', 'Quick action deleted'))
-			}).catch((error) => {
+			} catch (error) {
 				logger.error('Could not delete quick action', {
 					error,
 				})
 				showError(t('mail', 'Failed to delete quick action'))
-			})
+			}
 		},
+
 		async openEditModal(action) {
 			if (!action) {
 				this.editMode = false
@@ -216,12 +229,14 @@ export default {
 				this.actions = []
 			} else {
 				this.localAction = { ...action }
-				this.actions = await findAllStepsForAction(action.id)
-				this.highestOrder = Math.max(...this.actions.map(a => a.order), 0)
+				delete this.localAction.actionSteps
+				this.actions = action.actionSteps
+				this.highestOrder = Math.max(...this.actions.map((a) => a.order), 0)
 				this.editMode = true
 			}
 			this.editModal = true
 		},
+
 		closeEditModal() {
 			this.loading = false
 			this.editModal = false
@@ -229,6 +244,7 @@ export default {
 			this.actions = []
 			this.highestOrder = 0
 		},
+
 		async saveQuickAction() {
 			this.loading = true
 			if (this.editMode) {
@@ -244,22 +260,26 @@ export default {
 				}
 				for (const [index, action] of this.actions.entries()) {
 					if (action?.id !== null && action?.id !== undefined) {
-						await updateActionStep(action.id, action.name, action.order, action?.tagId, action?.mailboxId).catch((error) => {
+						try {
+							this.actions[index] = await updateActionStep(action.id, action.name, action.order, action?.tagId, action?.mailboxId)
+						} catch (error) {
 							logger.error('Could not update quick action step', {
 								error,
 							})
 							showError(t('mail', 'Failed to update step in quick action'))
-						})
+						}
 					} else {
 						const createdStep = await createActionStep(action.name, action.order, quickAction.id, action?.tagId, action?.mailboxId)
 						if (createdStep) {
 							this.actions[index] = createdStep
 						}
 					}
+					this.localAction = quickAction
 				}
 				showSuccess(t('mail', 'Quick action updated'))
 			} else {
 				let quickAction
+				const createdSteps = []
 				try {
 					quickAction = await this.mainStore.createQuickAction(this.localAction.name, this.account.id)
 				} catch (error) {
@@ -271,8 +291,12 @@ export default {
 				}
 				try {
 					for (const action of this.actions) {
-						await createActionStep(action.name, action.order, quickAction.id, action?.tagId, action?.mailboxId)
+						const createdStep = await createActionStep(action.name, action.order, quickAction.id, action?.tagId, action?.mailboxId)
+						if (createdStep) {
+							createdSteps.push(createdStep)
+						}
 					}
+					this.actions = createdSteps
 				} catch (error) {
 					logger.error('Could not add step to quick action', {
 						error,
@@ -280,10 +304,13 @@ export default {
 					showError(t('mail', 'Failed to add steps to quick action'))
 					this.closeEditModal()
 				}
+				this.localAction = quickAction
 				showSuccess(t('mail', 'Quick action created'))
 			}
+			this.mainStore.patchActionStepsLocally(this.localAction.id, this.actions)
 			this.closeEditModal()
 		},
+
 		addQuickAction(name) {
 			if (this.deletionAndMovingDisabled) {
 				this.actions[this.actions.length - 1].order = ++this.highestOrder
@@ -293,6 +320,7 @@ export default {
 			}
 			this.actions.sort((a, b) => a.order - b.order)
 		},
+
 		updateAction({ id, type }, item) {
 			const index = this.actions.findIndex((action) => action.order === item.order)
 			if (index === -1) {
@@ -306,9 +334,10 @@ export default {
 			}
 			this.actions.splice(index, 1, updated)
 		},
+
 		onDrop(e) {
 			const { removedIndex, addedIndex } = e
-			if (this.deletionAndMovingDisabled && addedIndex === this.actions.length - 1) {
+			if (this.deletionAndMovingDisabled && (addedIndex === this.actions.length - 1 || removedIndex === this.actions.length - 1)) {
 				return
 			}
 			const movedItem = this.actions[removedIndex]
@@ -316,10 +345,15 @@ export default {
 			this.actions.splice(addedIndex, 0, movedItem)
 			this.actions = this.actions.map((action, index) => ({ ...action, order: index + 1 }))
 		},
+
 		async deleteAction(item) {
+			this.actions = this.actions.filter((action) => action.order !== item.order).map((action, index) => ({ ...action, order: index + 1 }))
+			this.highestOrder = Math.max(...this.actions.map((a) => a.order), 0)
 			if (item.id) {
 				try {
 					await deleteActionStep(item.id)
+					const actions = this.actions.filter((action) => action.id)
+					this.mainStore.patchActionStepsLocally(this.localAction.id, actions)
 				} catch (error) {
 					logger.error('Could not delete action step', {
 						error,
@@ -328,12 +362,11 @@ export default {
 					return
 				}
 			}
-			this.actions = this.actions.filter(action => action.order !== item.order).map((action, index) => ({ ...action, order: index + 1 }))
-			this.highestOrder = Math.max(...this.actions.map(a => a.order), 0)
 		},
 	},
 }
 </script>
+
 <style lang="scss" scoped>
 
 .modal-content{

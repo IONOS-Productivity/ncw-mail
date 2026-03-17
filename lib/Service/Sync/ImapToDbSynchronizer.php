@@ -258,7 +258,7 @@ class ImapToDbSynchronizer {
 				$this->runInitialSync($client, $account, $mailbox, $logger);
 			} else {
 				try {
-					$logger->debug('Running partial sync for ' . $mailbox->getId());
+					$logger->debug('Running partial sync for ' . $mailbox->getId() . ' with criteria ' . $criteria);
 					// Only rebuild threads if there were new or vanished messages
 					$rebuildThreads = $this->runPartialSync($client, $account, $mailbox, $logger, $hasQresync, $criteria, $knownUids);
 				} catch (UidValidityChangedException $e) {
@@ -343,9 +343,7 @@ class ImapToDbSynchronizer {
 		}
 
 		foreach (array_chunk($imapMessages['messages'], 500) as $chunk) {
-			$messages = array_map(static function (IMAPMessage $imapMessage) use ($mailbox, $account) {
-				return $imapMessage->toDbMessage($mailbox->getId(), $account->getMailAccount());
-			}, $chunk);
+			$messages = array_map(static fn (IMAPMessage $imapMessage) => $imapMessage->toDbMessage($mailbox->getId(), $account->getMailAccount()), $chunk);
 			$this->dbMapper->insertBulk($account, ...$messages);
 			$perf->step(sprintf('persist %d messages in database', count($chunk)));
 			// Free the memory
@@ -363,9 +361,10 @@ class ImapToDbSynchronizer {
 			throw new IncompleteSyncException("Initial sync is not complete for $loggingMailboxId ($cached of $total messages cached).");
 		}
 
-		$mailbox->setSyncNewToken($client->getSyncToken($mailbox->getName()));
-		$mailbox->setSyncChangedToken($client->getSyncToken($mailbox->getName()));
-		$mailbox->setSyncVanishedToken($client->getSyncToken($mailbox->getName()));
+		$syncToken = $client->getSyncToken($mailbox->getName());
+		$mailbox->setSyncNewToken($syncToken);
+		$mailbox->setSyncChangedToken($syncToken);
+		$mailbox->setSyncVanishedToken($syncToken);
 		$this->mailboxMapper->update($mailbox);
 
 		$perf->end();
@@ -420,9 +419,7 @@ class ImapToDbSynchronizer {
 				// Filter out anything that is already in the DB. Ideally this never happens, but if there is an error
 				// during a consecutive chunk INSERT, the sync token won't be updated. In that case the same message(s)
 				// will be seen as *new* and therefore cause conflicts.
-				$newMessages = array_filter($response->getNewMessages(), static function (IMAPMessage $imapMessage) use ($highestKnownUid) {
-					return $imapMessage->getUid() > $highestKnownUid;
-				});
+				$newMessages = array_filter($response->getNewMessages(), static fn (IMAPMessage $imapMessage) => $imapMessage->getUid() > $highestKnownUid);
 			}
 
 			$importantTag = null;
@@ -435,9 +432,7 @@ class ImapToDbSynchronizer {
 			}
 
 			foreach (array_chunk($newMessages, 500) as $chunk) {
-				$dbMessages = array_map(static function (IMAPMessage $imapMessage) use ($mailbox, $account) {
-					return $imapMessage->toDbMessage($mailbox->getId(), $account->getMailAccount());
-				}, $chunk);
+				$dbMessages = array_map(static fn (IMAPMessage $imapMessage) => $imapMessage->toDbMessage($mailbox->getId(), $account->getMailAccount()), $chunk);
 
 				$this->dbMapper->insertBulk($account, ...$dbMessages);
 
@@ -479,9 +474,7 @@ class ImapToDbSynchronizer {
 			$permflagsEnabled = $this->mailManager->isPermflagsEnabled($client, $account, $mailbox->getName());
 
 			foreach (array_chunk($response->getChangedMessages(), 500) as $chunk) {
-				$this->dbMapper->updateBulk($account, $permflagsEnabled, ...array_map(static function (IMAPMessage $imapMessage) use ($mailbox, $account) {
-					return $imapMessage->toDbMessage($mailbox->getId(), $account->getMailAccount());
-				}, $chunk));
+				$this->dbMapper->updateBulk($account, $permflagsEnabled, ...array_map(static fn (IMAPMessage $imapMessage) => $imapMessage->toDbMessage($mailbox->getId(), $account->getMailAccount()), $chunk));
 			}
 			$perf->step('persist changed messages');
 

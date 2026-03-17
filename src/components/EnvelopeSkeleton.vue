@@ -5,14 +5,17 @@
 
 <template>
 	<!-- This wrapper can be either a router link or a `<li>` -->
-	<component :is="to ? 'router-link' : 'NcVNodes'"
+	<component
+		:is="to ? 'router-link' : 'NcVNodes'"
 		v-slot="{ href: routerLinkHref, navigate, isActive }"
 		:custom="to ? true : null"
 		:to="to"
 		:exact="to ? exact : null">
-		<li class="list-item__wrapper"
-			:class="{ 'list-item__wrapper--active' : isActive || active }">
-			<div ref="list-item"
+		<li
+			class="list-item__wrapper"
+			:class="{ 'list-item__wrapper--active': isActive || active }">
+			<div
+				ref="list-item"
 				class="list-item"
 				:class="{
 					'list-item--compact': compact,
@@ -21,7 +24,8 @@
 				}"
 				@mouseover="handleMouseover"
 				@mouseleave="handleMouseleave">
-				<a :id="anchorId || undefined"
+				<a
+					:id="anchorId || undefined"
 					:aria-label="linkAriaLabel"
 					class="list-item__anchor"
 					:href="routerLinkHref || href"
@@ -44,9 +48,10 @@
 						</div>
 						<div class="list-item-content__inner">
 							<div class="list-item-content__inner__main">
-								<div v-if="hasSubname"
+								<div
+									v-if="hasSubname"
 									class="list-item-content__inner__subname"
-									:class="{'list-item-content__inner__subname--bold': bold}">
+									:class="{ 'list-item-content__inner__subname--bold': bold }">
 									<!-- @slot Slot for the second line of the component -->
 									<slot name="subname" />
 								</div>
@@ -57,16 +62,18 @@
 							</div>
 
 							<div class="list-item-content__inner__details">
-								<div v-if="showDetails" class="list-item-content__inner__details__details">
+								<div class="list-item-content__inner__details__details" :class="[{ 'list-item-content__inner__details__details--hidden': showDetails }]">
 									<!-- @slot This slot is used for some details in form of icon (prop `details` as a fallback) -->
 									<slot name="details">{{ details }}</slot>
 								</div>
 
 								<!-- Counter and indicator -->
-								<div v-if="counterNumber || hasIndicator"
+								<div
+									v-if="counterNumber || hasIndicator"
 									v-show="showAdditionalElements"
 									class="list-item-content__inner__details__extra">
-									<NcCounterBubble v-if="counterNumber"
+									<NcCounterBubble
+										v-if="counterNumber"
 										:active="isActive || active"
 										class="list-item-content__inner__details__extra__counter"
 										:type="counterType">
@@ -98,7 +105,10 @@
 							:primary="isActive || active"
 							:aria-label="computedActionsAriaLabel"
 							variant="tertiary"
-							@update:open="handleActionsUpdateOpen">
+							variant="tertiary"@update:open="handleActionsUpdateOpen">
+							<template #icon>
+								<DotsHorizontal :size="20" />
+							</template>
 							<template #icon>
 								<DotsHorizontal :size="20" />
 							</template>
@@ -114,6 +124,7 @@
 
 <script>
 import { NcActions, NcCounterBubble, NcVNodes } from '@nextcloud/vue'
+import DotsHorizontal from 'vue-material-design-icons/DotsHorizontal.vue'
 import EnvelopeSingleClickActions from './EnvelopeSingleClickActions.vue'
 import DotsHorizontal from 'vue-material-design-icons/DotsHorizontal.vue'
 
@@ -250,6 +261,7 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+
 		/**
 		 * Show the list component layout
 		 */
@@ -257,10 +269,12 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+
 		isRead: {
 			type: Boolean,
 			default: false,
 		},
+
 		isImportant: {
 			type: Boolean,
 			default: false,
@@ -453,6 +467,10 @@ export default {
 		margin-inline-end: auto;
 		overflow: hidden;
 		text-overflow: ellipsis;
+
+		&--hidden {
+			visibility: hidden;
+		}
 	}
 }
 
@@ -483,10 +501,6 @@ export default {
 	&:has(:active),
 	&:has(:focus-visible) {
 		background-color: var(--color-background-hover);
-
-		a {
-			max-width: calc(100% - var(--default-clickable-area));
-		}
 	}
 
 	&:has(&__anchor:focus-visible) {
