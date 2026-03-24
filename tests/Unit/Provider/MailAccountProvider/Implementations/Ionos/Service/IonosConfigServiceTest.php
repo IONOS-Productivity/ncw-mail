@@ -232,6 +232,33 @@ class IonosConfigServiceTest extends TestCase {
 		$this->assertEquals('example.com', $result);
 	}
 
+	public function testIsMailboxPossibleWhenTrue(): void {
+		$this->config->method('getSystemValue')
+			->with('ncw.mailboxPossible', '')
+			->willReturn('true');
+
+		$result = $this->service->isMailboxPossible();
+		$this->assertTrue($result);
+	}
+
+	public function testIsMailboxPossibleWhenFalse(): void {
+		$this->config->method('getSystemValue')
+			->with('ncw.mailboxPossible', '')
+			->willReturn('false');
+
+		$result = $this->service->isMailboxPossible();
+		$this->assertFalse($result);
+	}
+
+	public function testIsMailboxPossibleWhenEmpty(): void {
+		$this->config->method('getSystemValue')
+			->with('ncw.mailboxPossible', '')
+			->willReturn('');
+
+		$result = $this->service->isMailboxPossible();
+		$this->assertFalse($result);
+	}
+
 	public function testIsMailConfigEnabledWhenEnabled(): void {
 		$this->config->method('getAppValue')
 			->with('mail', 'ionos-mailconfig-enabled', 'no')

@@ -44,6 +44,15 @@ class IonosMailConfigService {
 				return false;
 			}
 
+			// Check if mailbox creation is possible for this instance.
+			// This flag is set by the operator (via IONOS_MAILBOX_POSSIBLE env var) and reflects
+			// whether a customer domain is connected. Without a customer domain, mailbox creation
+			// must not be offered.
+			if (!$this->ionosConfigService->isMailboxPossible()) {
+				$this->logger->debug('IONOS mail config not available - mailbox creation not possible for this instance');
+				return false;
+			}
+
 			// Get user ID - either from parameter or from session
 			if ($userId === null) {
 				$user = $this->userSession->getUser();

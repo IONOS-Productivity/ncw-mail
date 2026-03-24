@@ -45,6 +45,27 @@ class IonosMailConfigServiceTest extends TestCase {
 		);
 	}
 
+	public function testIsMailConfigAvailableReturnsFalseWhenMailboxNotPossible(): void {
+		$this->ionosConfigService->expects($this->once())
+			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailboxPossible')
+			->willReturn(false);
+
+		$this->logger->expects($this->once())
+			->method('debug')
+			->with('IONOS mail config not available - mailbox creation not possible for this instance');
+
+		$this->userSession->expects($this->never())
+			->method('getUser');
+
+		$result = $this->service->isMailConfigAvailable();
+
+		$this->assertFalse($result);
+	}
+
 	public function testIsMailConfigAvailableReturnsFalseWhenFeatureDisabled(): void {
 		$this->ionosConfigService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
@@ -61,6 +82,10 @@ class IonosMailConfigServiceTest extends TestCase {
 	public function testIsMailConfigAvailableReturnsFalseWhenNoUserSession(): void {
 		$this->ionosConfigService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailboxPossible')
 			->willReturn(true);
 
 		$this->userSession->expects($this->once())
@@ -82,6 +107,10 @@ class IonosMailConfigServiceTest extends TestCase {
 
 		$this->ionosConfigService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailboxPossible')
 			->willReturn(true);
 
 		$this->userSession->expects($this->once())
@@ -106,6 +135,10 @@ class IonosMailConfigServiceTest extends TestCase {
 
 		$this->ionosConfigService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailboxPossible')
 			->willReturn(true);
 
 		$this->userSession->expects($this->once())
@@ -147,6 +180,10 @@ class IonosMailConfigServiceTest extends TestCase {
 			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailboxPossible')
+			->willReturn(true);
+
 		$this->userSession->expects($this->once())
 			->method('getUser')
 			->willReturn($user);
@@ -184,6 +221,10 @@ class IonosMailConfigServiceTest extends TestCase {
 			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailboxPossible')
+			->willReturn(true);
+
 		$this->userSession->expects($this->once())
 			->method('getUser')
 			->willReturn($user);
@@ -214,6 +255,10 @@ class IonosMailConfigServiceTest extends TestCase {
 			->method('isIonosIntegrationEnabled')
 			->willReturn(true);
 
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailboxPossible')
+			->willReturn(true);
+
 		// When userId is provided, userSession should NOT be called
 		$this->userSession->expects($this->never())
 			->method('getUser');
@@ -233,6 +278,10 @@ class IonosMailConfigServiceTest extends TestCase {
 	public function testIsMailConfigAvailableWithExplicitUserIdReturnsTrueWhenUserHasRemoteAccountButNotLocal(): void {
 		$this->ionosConfigService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailboxPossible')
 			->willReturn(true);
 
 		// When userId is provided, userSession should NOT be called
@@ -267,6 +316,10 @@ class IonosMailConfigServiceTest extends TestCase {
 	public function testIsMailConfigAvailableReturnsFalseOnException(): void {
 		$this->ionosConfigService->expects($this->once())
 			->method('isIonosIntegrationEnabled')
+			->willReturn(true);
+
+		$this->ionosConfigService->expects($this->once())
+			->method('isMailboxPossible')
 			->willReturn(true);
 
 		$exception = new \Exception('Test exception');
