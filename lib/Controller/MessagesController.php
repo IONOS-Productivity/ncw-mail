@@ -45,6 +45,8 @@ use OCP\Files\Folder;
 use OCP\Files\GenericFileException;
 use OCP\Files\IMimeTypeDetector;
 use OCP\Files\NotPermittedException;
+use OCP\ICache;
+use OCP\ICacheFactory;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
@@ -74,7 +76,8 @@ class MessagesController extends Controller {
 	private SnoozeService $snoozeService;
 	private AiIntegrationsService $aiIntegrationService;
 
-	public function __construct(string $appName,
+	public function __construct(
+		string $appName,
 		IRequest $request,
 		AccountService $accountService,
 		IMailManager $mailManager,
@@ -94,7 +97,9 @@ class MessagesController extends Controller {
 		IDkimService $dkimService,
 		IUserPreferences $preferences,
 		SnoozeService $snoozeService,
-		AiIntegrationsService $aiIntegrationService) {
+		AiIntegrationsService $aiIntegrationService,
+		private ICacheFactory $cacheFactory,
+	) {
 		parent::__construct($appName, $request);
 		$this->accountService = $accountService;
 		$this->mailManager = $mailManager;
@@ -139,6 +144,8 @@ class MessagesController extends Controller {
 		?int $limit = null,
 		?string $view = null,
 		?string $v = null): JSONResponse {
+		$limit = min(100, max(1, $limit));
+
 		try {
 			$mailbox = $this->mailManager->getMailbox($this->currentUserId, $mailboxId);
 			$account = $this->accountService->find($this->currentUserId, $mailbox->getAccountId());
@@ -218,6 +225,9 @@ class MessagesController extends Controller {
 			return new JSONResponse([], Http::STATUS_FORBIDDEN);
 		}
 
+		$cacheInstance = $this->getCacheForAccount($account->getId());
+		$imapMessageCacheKey = 'message_' . $id;
+
 		$client = $this->clientFactory->getClient($account);
 		try {
 			$imapMessage = $this->mailManager->getImapMessage(
@@ -226,6 +236,11 @@ class MessagesController extends Controller {
 				$mailbox,
 				$message->getUid(), true
 			);
+
+			if ($imapMessage->hasHtmlMessage()) {
+				$cacheInstance->set($imapMessageCacheKey, $imapMessage->getHtmlBody($id), 600);
+			}
+
 			$json = $imapMessage->getFullMessage($id);
 		} finally {
 			$client->logout();
@@ -235,12 +250,10 @@ class MessagesController extends Controller {
 		if ($itineraries) {
 			$json['itineraries'] = $itineraries;
 		}
-		$json['attachments'] = array_map(function ($a) use ($id) {
-			return $this->enrichDownloadUrl(
-				$id,
-				$a
-			);
-		}, $json['attachments']);
+		$json['attachments'] = array_map(fn ($a) => $this->enrichDownloadUrl(
+			$id,
+			$a
+		), $json['attachments']);
 		$json['accountId'] = $account->getId();
 		$json['mailboxId'] = $mailbox->getId();
 		$json['databaseId'] = $message->getId();
@@ -461,7 +474,7 @@ class MessagesController extends Controller {
 
 		try {
 			$this->mailTransmission->sendMdn($account, $mailbox, $message);
-			$this->mailManager->flagMessage($account, $mailbox->getName(), $message->getUid(), 'mdnsent', true);
+			$this->mailManager->flagMessage($account, $mailbox->getName(), $message->getUid(), '$mdnsent', true);
 		} catch (ServiceException $ex) {
 			$this->logger->error('Sending mdn failed: ' . $ex->getMessage());
 			throw $ex;
@@ -564,29 +577,37 @@ class MessagesController extends Controller {
 				$message = $this->mailManager->getMessage($this->currentUserId, $id);
 				$mailbox = $this->mailManager->getMailbox($this->currentUserId, $message->getMailboxId());
 				$account = $this->accountService->find($this->currentUserId, $mailbox->getAccountId());
-			} catch (DoesNotExistException $e) {
+			} catch (DoesNotExistException) {
 				return new TemplateResponse(
 					$this->appName,
 					'error',
 					['message' => 'Not allowed'],
-					'none'
+					TemplateResponse::RENDER_AS_BLANK,
+					Http::STATUS_NOT_FOUND,
 				);
 			}
 
-			$client = $this->clientFactory->getClient($account);
-			try {
-				$html = $this->mailManager->getImapMessage(
-					$client,
-					$account,
-					$mailbox,
-					$message->getUid(),
-					true
-				)->getHtmlBody(
-					$id
-				);
-			} finally {
-				$client->logout();
+			$cacheInstance = $this->getCacheForAccount($account->getId());
+			$imapMessageCacheKey = 'message_' . $id;
+
+			$html = $cacheInstance->get($imapMessageCacheKey);
+			if ($html === null) {
+				$client = $this->clientFactory->getClient($account);
+				try {
+					$html = $this->mailManager->getImapMessage(
+						$client,
+						$account,
+						$mailbox,
+						$message->getUid(),
+						true
+					)->getHtmlBody(
+						$id
+					);
+				} finally {
+					$client->logout();
+				}
 			}
+
 
 			$htmlResponse = $plain
 				? HtmlResponse::plain($html)
@@ -616,7 +637,8 @@ class MessagesController extends Controller {
 				$this->appName,
 				'error',
 				['message' => $ex->getMessage()],
-				'none'
+				TemplateResponse::RENDER_AS_BLANK,
+				Http::STATUS_INTERNAL_SERVER_ERROR
 			);
 		}
 	}
@@ -1002,5 +1024,9 @@ class MessagesController extends Controller {
 	 */
 	private function attachmentIsCalendarEvent(array $attachment): bool {
 		return in_array($attachment['mime'], ['text/calendar', 'application/ics'], true);
+	}
+
+	private function getCacheForAccount(int $accountId): ICache {
+		return $this->cacheFactory->createDistributed('mail_account_' . $accountId);
 	}
 }

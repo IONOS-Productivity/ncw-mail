@@ -26,6 +26,7 @@ use OCA\Mail\Service\MailManager;
 use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
 use OCA\Mail\Service\SmimeService;
+use OCP\App\IAppManager;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
@@ -113,6 +114,7 @@ class PageControllerTest extends TestCase {
 	private QuickActionsService|MockObject $quickActionsService;
 
 	private IAvailabilityCoordinator&MockObject $availabilityCoordinator;
+	private IAppManager $appManager;
 
 	private AccountProviderService&MockObject $accountProviderService;
 
@@ -142,7 +144,9 @@ class PageControllerTest extends TestCase {
 		$this->internalAddressService = $this->createMock(InternalAddressService::class);
 		$this->availabilityCoordinator = $this->createMock(IAvailabilityCoordinator::class);
 		$this->quickActionsService = $this->createMock(QuickActionsService::class);
-		$this->accountProviderService = $this->createMock(AccountProviderService::class);
+$this->accountProviderService = $this->createMock(AccountProviderService::class);
+		$this->appManager = $this->createMock(IAppManager::class);
+		$this->appManager->method('getAppVersion')->willReturn('0.0.1-dev.0');
 
 		$this->controller = new PageController(
 			$this->appName,
@@ -168,7 +172,8 @@ class PageControllerTest extends TestCase {
 			$this->internalAddressService,
 			$this->availabilityCoordinator,
 			$this->quickActionsService,
-			$this->accountProviderService,
+$this->accountProviderService,
+			$this->appManager,
 		);
 	}
 
@@ -340,11 +345,12 @@ class PageControllerTest extends TestCase {
 			->method('findAll')
 			->with($this->userId)
 			->willReturn([]);
-		$this->initialState->expects($this->exactly(24))
+		$this->initialState->expects($this->exactly(25))
 			->method('provideInitialState')
 			->withConsecutive(
 				['debug', true],
 				['ncVersion', '26.0.0'],
+				['mailVersion', '0.0.1-dev.0'],
 				['accounts', $accountsJson],
 				['account-settings', []],
 				['tags', []],

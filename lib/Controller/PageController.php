@@ -26,6 +26,7 @@ use OCA\Mail\Service\OutboxService;
 use OCA\Mail\Service\QuickActionsService;
 use OCA\Mail\Service\SmimeService;
 use OCA\Viewer\Event\LoadViewer;
+use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
@@ -100,6 +101,7 @@ class PageController extends Controller {
 		IAvailabilityCoordinator $availabilityCoordinator,
 		QuickActionsService $quickActionsService,
 		private AccountProviderService $accountProviderService,
+		private IAppManager $appManager,
 	) {
 		parent::__construct($appName, $request);
 
@@ -145,6 +147,11 @@ class PageController extends Controller {
 		$this->initialStateService->provideInitialState(
 			'ncVersion',
 			$this->config->getSystemValue('version', '0.0.0')
+		);
+
+		$this->initialStateService->provideInitialState(
+			'mailVersion',
+			$this->appManager->getAppVersion('mail'),
 		);
 
 		$mailAccounts = $this->accountService->findByUserId($this->currentUserId);
@@ -270,7 +277,6 @@ class PageController extends Controller {
 					'redirect_uri' => $this->urlGenerator->linkToRouteAbsolute('mail.microsoftIntegration.oauthRedirect'),
 					'response_type' => 'code',
 					'response_mode' => 'query',
-					'prompt' => 'consent',
 					'state' => '_accountId_', // Replaced by frontend
 					'scope' => 'offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
 					'access_type' => 'offline',
@@ -319,9 +325,7 @@ class PageController extends Controller {
 		$this->initialStateService->provideInitialState(
 			'smime-certificates',
 			array_map(
-				function (SmimeCertificate $certificate) {
-					return $this->smimeService->enrichCertificate($certificate);
-				},
+				fn (SmimeCertificate $certificate) => $this->smimeService->enrichCertificate($certificate),
 				$this->smimeService->findAllCertificates($user->getUID()),
 			),
 		);

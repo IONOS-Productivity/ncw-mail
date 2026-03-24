@@ -12,6 +12,7 @@ namespace OCA\Mail\Listener;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountService;
+use OCA\Mail\Service\TextBlockService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\User\Events\UserDeletedEvent;
@@ -29,6 +30,7 @@ class UserDeletedListener implements IEventListener {
 
 	public function __construct(
 		AccountService $accountService,
+		private TextBlockService $textBlockService,
 		LoggerInterface $logger,
 		private readonly ProviderRegistryService $providerRegistry,
 	) {
@@ -65,5 +67,8 @@ class UserDeletedListener implements IEventListener {
 				]);
 			}
 		}
+		$this->textBlockService->deleteByUserId(
+			$user->getUID()
+		);
 	}
 }

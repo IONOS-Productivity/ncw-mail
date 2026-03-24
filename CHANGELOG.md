@@ -1,4 +1,5 @@
 ## [5.5.11](https://github.com/nextcloud/mail/compare/v5.5.10...v5.5.11) (2025-10-22)
+## [5.6.14](https://github.com/nextcloud/mail/compare/v5.6.13...v5.6.14) (2026-03-03)
 
 
 ### Bug Fixes
@@ -16,6 +17,30 @@
 
 
 ## [5.5.10](https://github.com/nextcloud/mail/compare/v5.5.9...v5.5.10) (2025-10-16)
+* **contactsIntegration:** avoid incorrect cache results ([a2e4de9](https://github.com/nextcloud/mail/commit/a2e4de91563ed41432b0c2407f07d1fb8cd83032))
+* **contacts:** Use correct default for shareapi_allow_share_dialog_user_enumeration ([71466b2](https://github.com/nextcloud/mail/commit/71466b2a3de5bf73efb3f9320c747bab83939676))
+* **dns:** Update public suffix list ([4b5e7cf](https://github.com/nextcloud/mail/commit/4b5e7cfeb5359fd15e5eb59d3990a6195893063f))
+* Dont hijack mailto links ([1d8f59d](https://github.com/nextcloud/mail/commit/1d8f59dd7a679a0e28ff9f1bccc0f1b86f8a15da))
+* **l10n:** Update translations from Transifex ([a199366](https://github.com/nextcloud/mail/commit/a1993661b7a8f97769e2a183b6158423c350dd0c))
+* **l10n:** Update translations from Transifex ([c449aef](https://github.com/nextcloud/mail/commit/c449aefa5e81d06c46ff0e95eb4c7463285c6163))
+* **l10n:** Update translations from Transifex ([08d9374](https://github.com/nextcloud/mail/commit/08d9374d6a4a553da489d4016ff482cfe79da880))
+* **l10n:** Update translations from Transifex ([af79cc0](https://github.com/nextcloud/mail/commit/af79cc023143a1050450a81a71efa34c5b2ad3a5))
+* **l10n:** Update translations from Transifex ([d871fcd](https://github.com/nextcloud/mail/commit/d871fcd6dbd6eac8d3e0a65a4cd523e5153828a0))
+* **l10n:** Update translations from Transifex ([3d69bcf](https://github.com/nextcloud/mail/commit/3d69bcfcb3ac579c32c52fc6a77c18a76e9a0714))
+* **l10n:** Update translations from Transifex ([c1c3f2f](https://github.com/nextcloud/mail/commit/c1c3f2f6e70d3286e642bf23ec5d2f1a7cfcfb5b))
+* **l10n:** Update translations from Transifex ([38f108f](https://github.com/nextcloud/mail/commit/38f108f6de63c5e44f36827c661d001f7c984942))
+* **l10n:** Update translations from Transifex ([a6ce553](https://github.com/nextcloud/mail/commit/a6ce55330f593be9d99dc3335535e198bb0fc9f9))
+* **l10n:** Update translations from Transifex ([909d8c1](https://github.com/nextcloud/mail/commit/909d8c123727355419fe8b7ea6beac7a7bc35982))
+* **l10n:** Update translations from Transifex ([6d2434a](https://github.com/nextcloud/mail/commit/6d2434af981aa8f50d964558aca36633384b0217))
+* **l10n:** Update translations from Transifex ([9ee728c](https://github.com/nextcloud/mail/commit/9ee728c98ec9d956bb1b2b9ad425bdd9a19cb688))
+* **l10n:** Update translations from Transifex ([93e2f51](https://github.com/nextcloud/mail/commit/93e2f518d788ed619855baa268e00c4e59015a6a))
+* **l10n:** Update translations from Transifex ([9864393](https://github.com/nextcloud/mail/commit/986439341a476b2695b6baa7ca20f215c03b83e3))
+* **oauth:** do not force a Microsoft 365 consent ([41fd81b](https://github.com/nextcloud/mail/commit/41fd81bff7aaa6ed408c4313d221cfd06d88a588))
+* thread scrolling position ([dfd1dc2](https://github.com/nextcloud/mail/commit/dfd1dc246e33330ccff631a69252a7bce136ec69))
+
+
+
+## [5.6.13](https://github.com/nextcloud/mail/compare/v5.6.12...v5.6.13) (2026-02-17)
 
 
 ### Bug Fixes
@@ -30,6 +55,14 @@
 
 
 ## [5.5.9](https://github.com/nextcloud/mail/compare/v5.5.8...v5.5.9) (2025-10-14)
+* **dns:** Update public suffix list ([7e852d1](https://github.com/nextcloud/mail/commit/7e852d1c7a3f55791b667041b6b32d7a005a62e7))
+* **imap:** log partial sync criteria ([701ca0e](https://github.com/nextcloud/mail/commit/701ca0e81985c81b70a6d00f42bf7056dc86b43f))
+* **l10n:** Update translations from Transifex ([0ef64df](https://github.com/nextcloud/mail/commit/0ef64df8e83d1c245606a551b7a28676059c1dc3))
+* **l10n:** Update translations from Transifex ([938b7df](https://github.com/nextcloud/mail/commit/938b7df85c0edb875816afe496d8555630a3ced7))
+
+
+
+## [5.6.12](https://github.com/nextcloud/mail/compare/v5.6.11...v5.6.12) (2026-02-12)
 
 
 ### Bug Fixes
@@ -42,6 +75,13 @@
 
 
 ## [5.5.8](https://github.com/nextcloud/mail/compare/v5.5.7...v5.5.8) (2025-10-13)
+* **l10n:** Update translations from Transifex ([1fa5c99](https://github.com/nextcloud/mail/commit/1fa5c99b95212a61409d6614225d2ad49507d1ba))
+* **l10n:** Update translations from Transifex ([5ab0d5b](https://github.com/nextcloud/mail/commit/5ab0d5be16f0f82bafd469927b0c47acd0cc91c2))
+* Pass actual message body to dompurify ([7913abb](https://github.com/nextcloud/mail/commit/7913abb3e69fd77e04eedfaba9e861ee3c54d59f))
+
+
+
+## [5.6.11](https://github.com/nextcloud/mail/compare/v5.6.10...v5.6.11) (2026-02-10)
 
 
 ### Bug Fixes
@@ -58,6 +98,24 @@
 
 
 ## [5.5.7](https://github.com/nextcloud/mail/compare/v5.5.6...v5.5.7) (2025-10-07)
+* **composer:** drop envelope from store when saving a draft ([1c86447](https://github.com/nextcloud/mail/commit/1c864478dbdc9a056e62719a00288992460d6dfb))
+* **composer:** handle missing message body gracefully ([2c1b4be](https://github.com/nextcloud/mail/commit/2c1b4bef094c5c03b5be2cc202e41a3f5b410479))
+* **Composer:** make initial focus be on to field ([20dce82](https://github.com/nextcloud/mail/commit/20dce820146ef948a7bfa47791249a9e77914fe3))
+* **deps:** bump lodash from 4.17.21 to v4.17.23 ([687b1cb](https://github.com/nextcloud/mail/commit/687b1cbfc0d2b7ec8ff1ab28bf7e413d738c4de9))
+* **deps:** bump webpack from 5.102.1 to v5.104.1 ([a806b4e](https://github.com/nextcloud/mail/commit/a806b4eb961a373d8a338f9f9fc0a5c58ae45d0a))
+* **l10n:** Update translations from Transifex ([e80e86d](https://github.com/nextcloud/mail/commit/e80e86d4d90122bc8a6a83ccfffb93fa41ae8638))
+* **l10n:** Update translations from Transifex ([b344f11](https://github.com/nextcloud/mail/commit/b344f113ab9530f0bb108ca18a889b18553ed12e))
+* **l10n:** Update translations from Transifex ([a4daa43](https://github.com/nextcloud/mail/commit/a4daa4334d7c1db5599b77f7f04defa810ca03fd))
+* **l10n:** Update translations from Transifex ([59a7b07](https://github.com/nextcloud/mail/commit/59a7b078aa24df89f602bcdde7ebb9b44c9fb38b))
+* **l10n:** Update translations from Transifex ([c4281e2](https://github.com/nextcloud/mail/commit/c4281e26b724605437d58e7f62eda55f60dcabd8))
+* **l10n:** Update translations from Transifex ([88a9b12](https://github.com/nextcloud/mail/commit/88a9b12326d225d4dd05d2ec4c586c2ee5fb9d12))
+* **l10n:** Update translations from Transifex ([45148da](https://github.com/nextcloud/mail/commit/45148da09c59c305370589fc5269fbe2f38c750a))
+* **l10n:** Update translations from Transifex ([b308fc1](https://github.com/nextcloud/mail/commit/b308fc12dd350a736200885f9e4d060b1f18849a))
+* **provisioning:** Do not provision users without access to mail app ([37d6d86](https://github.com/nextcloud/mail/commit/37d6d86819f3ab2bcbb6d0044eb6f47dd5bb2b6d))
+
+
+
+## [5.6.10](https://github.com/nextcloud/mail/compare/v5.6.9...v5.6.10) (2026-02-02)
 
 
 ### Bug Fixes
@@ -73,6 +131,27 @@
 
 
 ## [5.5.6](https://github.com/nextcloud/mail/compare/v5.5.5...v5.5.6) (2025-09-29)
+* clean text blocks on user deletion ([8ea1794](https://github.com/nextcloud/mail/commit/8ea17944af3cb7a5dd798e9a4f3ed14652bb533a))
+* **deps:** bump PHPUnit to v9.6.33 ([489c0a0](https://github.com/nextcloud/mail/commit/489c0a0139c9d16c252555441681b2801e089823))
+* **dns:** Update public suffix list ([13980a4](https://github.com/nextcloud/mail/commit/13980a42ce1e9b96d689ab6f72ff64e62cd7c0a8))
+* **imap:** Add support for mail services that enforce a client id ([396221b](https://github.com/nextcloud/mail/commit/396221bd38d21dc2fd570f4de994be098915fcf9))
+* **imap:** Send ID only when capability is announced ([e5bfd72](https://github.com/nextcloud/mail/commit/e5bfd72ad0f8917c99560bf1bc7306b33afdfdd5))
+* **l10n:** Update translations from Transifex ([f1bacc3](https://github.com/nextcloud/mail/commit/f1bacc3463cf52407abc530c13b5a9c85a47a1e6))
+* **l10n:** Update translations from Transifex ([4057632](https://github.com/nextcloud/mail/commit/4057632a53bf610a4a406d63fc8f1c8100f820aa))
+* **l10n:** Update translations from Transifex ([005b406](https://github.com/nextcloud/mail/commit/005b4068ef35c5c817dfbf47acc4f41b48f41cf5))
+* **l10n:** Update translations from Transifex ([f5acd00](https://github.com/nextcloud/mail/commit/f5acd002acf4c23a407e506cfc7d4bffa89b99fc))
+* **l10n:** Update translations from Transifex ([f958923](https://github.com/nextcloud/mail/commit/f958923e320c1893aa41b7ea813d9b8dbb0c150f))
+* **l10n:** Update translations from Transifex ([58abab6](https://github.com/nextcloud/mail/commit/58abab6679c5c7ff47e17db2634ee80be0c36d9e))
+* **ui:** render HTML body error responses as blank pages ([52b7a08](https://github.com/nextcloud/mail/commit/52b7a08d7087ff7b1596a0d729831e172ed7859e))
+
+
+### Performance Improvements
+
+* **sync:** Reuse existing sync token ([b7ebe7c](https://github.com/nextcloud/mail/commit/b7ebe7c86a76c77f30a1aa10a58525ce60e171b7))
+
+
+
+## [5.6.9](https://github.com/nextcloud/mail/compare/v5.6.8...v5.6.9) (2026-01-27)
 
 
 ### Bug Fixes
@@ -85,6 +164,20 @@
 
 
 ## [5.5.5](https://github.com/nextcloud/mail/compare/v5.5.4...v5.5.5) (2025-09-26)
+* **l10n:** Update translations from Transifex ([b23a16a](https://github.com/nextcloud/mail/commit/b23a16a7842053af8bc80875f14438bfb1d13672))
+* **l10n:** Update translations from Transifex ([f79b619](https://github.com/nextcloud/mail/commit/f79b6193b3b910a627187e5e685b0b938290e62c))
+* **l10n:** Update translations from Transifex ([b3f5eeb](https://github.com/nextcloud/mail/commit/b3f5eeb103bea8382e8fa4a9e512078c08bbf73f))
+* **l10n:** Update translations from Transifex ([499ca86](https://github.com/nextcloud/mail/commit/499ca86cdab003881a921cd3ba42c32d4d6ff662))
+* **l10n:** Update translations from Transifex ([3cb8818](https://github.com/nextcloud/mail/commit/3cb88183be347bc3a48e33f9bfa173e294058a07))
+* **l10n:** Update translations from Transifex ([4fbbfff](https://github.com/nextcloud/mail/commit/4fbbfffa72a8631eaae8cad3d2f754dab25b1769))
+* **l10n:** Update translations from Transifex ([e35ce40](https://github.com/nextcloud/mail/commit/e35ce406ea8b4f8a746fee498e2144759d9079e9))
+* **MessageMapper:** Use message headers as fallback when processing MIME content ([01a967d](https://github.com/nextcloud/mail/commit/01a967de12319025dab03b060a359ae07bb0d0a8))
+* **phishing:** compare links using lowercase ([7c5c403](https://github.com/nextcloud/mail/commit/7c5c4036e390705642f9179528777cf064a83efb))
+* **text-block:** revive sharing ([4c7500a](https://github.com/nextcloud/mail/commit/4c7500ade80cda3b87a1786154e3c5a02acac250))
+
+
+
+## [5.6.8](https://github.com/nextcloud/mail/compare/v5.6.7...v5.6.8) (2026-01-20)
 
 
 ### Bug Fixes
@@ -98,6 +191,18 @@
 
 
 ## [5.5.4](https://github.com/nextcloud/mail/compare/v5.5.3...v5.5.4) (2025-09-25)
+* Fix incorrect tag for MDN sent and hide junk flag used by Thunderbird ([6269d18](https://github.com/nextcloud/mail/commit/6269d18f6f62a5d480e5ecf9b69bcca3b0ad6e7c))
+* **l10n:** Update translations from Transifex ([cc38937](https://github.com/nextcloud/mail/commit/cc38937ac8c50ff112a82d1e9c9bee60b2749843))
+* **l10n:** Update translations from Transifex ([c1efe60](https://github.com/nextcloud/mail/commit/c1efe605214750d13f1186b26f0c0bf1997e1ce2))
+* **l10n:** Update translations from Transifex ([3fb983c](https://github.com/nextcloud/mail/commit/3fb983c6d1e75e64bc427b301f025e87009c4e7b))
+* **l10n:** Update translations from Transifex ([3e83dbf](https://github.com/nextcloud/mail/commit/3e83dbf9e39d19674585bd1185bf63c18546cbc5))
+* **l10n:** Update translations from Transifex ([7b103a1](https://github.com/nextcloud/mail/commit/7b103a1e4bc55a5b5d253b55c451d0b57adf9a5f))
+* revive mentioning in composer ([73977b5](https://github.com/nextcloud/mail/commit/73977b5c0e4c0c0ec59d324a1129cb36a97bdfba))
+* **smtp:** log SMTP error code ([cf33487](https://github.com/nextcloud/mail/commit/cf33487b24faa36775734ff5aab8866607abaf0b))
+
+
+
+## [5.6.7](https://github.com/nextcloud/mail/compare/v5.6.6...v5.6.7) (2026-01-15)
 
 
 ### Bug Fixes
@@ -107,6 +212,16 @@
 
 
 ## [5.5.3](https://github.com/nextcloud/mail/compare/v5.5.2...v5.5.3) (2025-09-25)
+* **DKIMValidator:** Add patch from upstream against broken canonical handling ([ea06f22](https://github.com/nextcloud/mail/commit/ea06f22ede7e2ddbeb315facea9d2207c308c130))
+* ensure drafts folder exists ([764249a](https://github.com/nextcloud/mail/commit/764249a56430a1a2a7b818099457609cc9f50574))
+* **l10n:** Update translations from Transifex ([f28e729](https://github.com/nextcloud/mail/commit/f28e7294247776f058614cb6442487f82af8e4e6))
+* outbox icon opacity ([a2844df](https://github.com/nextcloud/mail/commit/a2844df374a1d0474ad46b4f78db2b1e3642d858))
+* **OutOfOfficeParser:** Exclude newsletters and mailing lists from auto responder ([42fc787](https://github.com/nextcloud/mail/commit/42fc78791326b4d4774e02a127f2a391db282a36))
+* safe-guard limit argument ([69484af](https://github.com/nextcloud/mail/commit/69484af37abe0f7bc01317a77f0715437019e293))
+
+
+
+## [5.6.6](https://github.com/nextcloud/mail/compare/v5.6.5...v5.6.6) (2026-01-13)
 
 
 ### Bug Fixes
@@ -123,6 +238,30 @@
 
 
 ## [5.5.2](https://github.com/nextcloud/mail/compare/v5.5.1...v5.5.2) (2025-09-23)
+* **ColorPicker:** Use v-model for injecting selected color to color picker ([eeea524](https://github.com/nextcloud/mail/commit/eeea5244e1081d2595912c5671a458155b67d27c))
+* **l10n:** Update translations from Transifex ([4fb694c](https://github.com/nextcloud/mail/commit/4fb694c5f28a9b4c55ae0daf52626bd6d2e6af12))
+* **l10n:** Update translations from Transifex ([25a21e3](https://github.com/nextcloud/mail/commit/25a21e32053e5da07994d9332909d3b1ca135505))
+* **l10n:** Update translations from Transifex ([aa2bce2](https://github.com/nextcloud/mail/commit/aa2bce2b33df93194f87f291cc8af9fed59fb064))
+* **l10n:** Update translations from Transifex ([5ec7fa2](https://github.com/nextcloud/mail/commit/5ec7fa2fc480cafcedf755c496cad229ad7d0688))
+* **l10n:** Update translations from Transifex ([e90d712](https://github.com/nextcloud/mail/commit/e90d71271757295ffeb425008689c52af7305031))
+* **l10n:** Update translations from Transifex ([542114e](https://github.com/nextcloud/mail/commit/542114e403145510416103e88e96dabecba58e64))
+* **l10n:** Update translations from Transifex ([7ccda1a](https://github.com/nextcloud/mail/commit/7ccda1a0d43a921ddcbac54ead42ed0d54201979))
+* **l10n:** Update translations from Transifex ([8ead219](https://github.com/nextcloud/mail/commit/8ead219c161c6000e6c4088870e6740c75b9fc3d))
+* **l10n:** Update translations from Transifex ([7c5953c](https://github.com/nextcloud/mail/commit/7c5953c788dd75f3bb2277aecc9e341c23d2bdcd))
+* **l10n:** Update translations from Transifex ([34254fd](https://github.com/nextcloud/mail/commit/34254fdf0add7d214e6e76c9dd7e47068cf52cee))
+* **l10n:** Update translations from Transifex ([3f008e0](https://github.com/nextcloud/mail/commit/3f008e0380a49f41cb773a3e1e47ee776a293d35))
+* **l10n:** Update translations from Transifex ([446a2ab](https://github.com/nextcloud/mail/commit/446a2abc5e1bb5367a68a0d785d546d52787d9c0))
+* **l10n:** Update translations from Transifex ([fea1f7c](https://github.com/nextcloud/mail/commit/fea1f7cebe7ba6f887922aaea522a77477b79204))
+* **l10n:** Update translations from Transifex ([8520576](https://github.com/nextcloud/mail/commit/85205764a73cbe691138ad30a7fecf80be842271))
+* **l10n:** Update translations from Transifex ([083b93b](https://github.com/nextcloud/mail/commit/083b93bfbd7221c3c9c737fa59a2ab4ed32a915d))
+* **l10n:** Update translations from Transifex ([16f2113](https://github.com/nextcloud/mail/commit/16f21133fe695d07ad521eafce2b0f53965e6c09))
+* **l10n:** Update translations from Transifex ([63a58f8](https://github.com/nextcloud/mail/commit/63a58f873d1c78cb91afbd144cf7b2d38c458820))
+* **l10n:** Update translations from Transifex ([6ae3543](https://github.com/nextcloud/mail/commit/6ae35434bebd07cdb8f9844d5d3aac43a0c9ac89))
+* **ui:** bind attr to popover trigger ([80a2602](https://github.com/nextcloud/mail/commit/80a2602caaf4a7d93b92f5e63c750de4b05c680b))
+
+
+
+## [5.6.5](https://github.com/nextcloud/mail/compare/v5.6.4...v5.6.5) (2025-12-16)
 
 
 ### Bug Fixes
@@ -148,6 +287,19 @@
 
 
 ## [5.5.1](https://github.com/nextcloud/mail/compare/v5.5.0...v5.5.1) (2025-09-17)
+* **auth:** show more specific error for denied authentication ([66f8900](https://github.com/nextcloud/mail/commit/66f8900912514ab8ca9295d2c2eeab1e06860b0f))
+* **deps:** Fix npm audit ([445299a](https://github.com/nextcloud/mail/commit/445299aa9a321e628a8c0aac4425ca8ee6ea66e6))
+* **l10n:** Update translations from Transifex ([4d8baff](https://github.com/nextcloud/mail/commit/4d8baff285d3297cb18519b24beb15fc90e6fa06))
+* **l10n:** Update translations from Transifex ([53b0be6](https://github.com/nextcloud/mail/commit/53b0be6f816c92f3305381f2f8a7b5ff7f5eab5e))
+* **l10n:** Update translations from Transifex ([f6fbb11](https://github.com/nextcloud/mail/commit/f6fbb116c585d3c714b3817fc4b67c0afc561f54))
+* **l10n:** Update translations from Transifex ([edf4959](https://github.com/nextcloud/mail/commit/edf49598ad718700f531725f7b44f3d654215e45))
+* **l10n:** Update translations from Transifex ([7c51721](https://github.com/nextcloud/mail/commit/7c5172147f6e7e1d852a2d5ca2d296843959e760))
+* lost line breaks ([a72801f](https://github.com/nextcloud/mail/commit/a72801fd73d42b6a2116e863d784b46416135274))
+* **mailto:** populate body from mailto ([032bbb8](https://github.com/nextcloud/mail/commit/032bbb8cf7399318eb9c3aabd8b1d77c538883df))
+
+
+
+## [5.6.4](https://github.com/nextcloud/mail/compare/v5.6.3...v5.6.4) (2025-12-09)
 
 
 ### Bug Fixes
@@ -157,6 +309,13 @@
 
 
 # [5.5.0](https://github.com/nextcloud/mail/compare/v5.5.0-rc.2...v5.5.0) (2025-09-17)
+* **l10n:** Update translations from Transifex ([96b19f1](https://github.com/nextcloud/mail/commit/96b19f1516fb2a372aa9ed8d8a781f660ded23ed))
+* **l10n:** Update translations from Transifex ([542fe70](https://github.com/nextcloud/mail/commit/542fe7082d50909effca651fe7cc430d992891dc))
+* **l10n:** Update translations from Transifex ([5704c47](https://github.com/nextcloud/mail/commit/5704c47c2b102a55f2bb561180f1790ac2ba6988))
+
+
+
+## [5.6.3](https://github.com/nextcloud/mail/compare/v5.6.2...v5.6.3) (2025-12-04)
 
 
 ### Bug Fixes
@@ -168,6 +327,16 @@
 
 
 # [5.5.0-rc.2](https://github.com/nextcloud/mail/compare/v5.5.0-rc.1...v5.5.0-rc.2) (2025-09-16)
+* handle imip failures properly ([09722b7](https://github.com/nextcloud/mail/commit/09722b710ae71969a05c2fd3a2cb43873802a923))
+* **l10n:** Update translations from Transifex ([470db92](https://github.com/nextcloud/mail/commit/470db9289effa78d11e4bdbbf1a66d1bf0f0b0a5))
+* **l10n:** Update translations from Transifex ([ebfda19](https://github.com/nextcloud/mail/commit/ebfda19d66c52fd4368c39cef87a0f20018c04bf))
+* **NewMessageModal:** remove null focus trap selectors ([ceff0d1](https://github.com/nextcloud/mail/commit/ceff0d125afe6ad8eca17166e307952935cb33b9))
+* search input field doesnt extend properly ([5c97b3c](https://github.com/nextcloud/mail/commit/5c97b3c9800760f4a56e700995a7a398ee5f3966))
+* **search:** apply correct search query when fetching envelopes ([fe70ebf](https://github.com/nextcloud/mail/commit/fe70ebff0852e001491c6eb4d20f54e5bf687e1a))
+
+
+
+## [5.6.2](https://github.com/nextcloud/mail/compare/v5.6.1...v5.6.2) (2025-12-02)
 
 
 ### Bug Fixes
@@ -181,6 +350,210 @@
 * **l10n:** Update translations from Transifex ([43a21d7](https://github.com/nextcloud/mail/commit/43a21d72a4a0f5ed15727ca851c7685deacf0bf5))
 * **l10n:** Update translations from Transifex ([bf9ed44](https://github.com/nextcloud/mail/commit/bf9ed446635925ce8b7e3737143ddc0e37e4f8d3))
 * show user avatar in recipient info ([9b175bd](https://github.com/nextcloud/mail/commit/9b175bd480a9e6d3829291d489314c31fc55e73d))
+* **deps:** bump node-forge from 1.3.1 to v1.3.2 ([3b02f7d](https://github.com/nextcloud/mail/commit/3b02f7d5844c9b483b39e0945c43ad199734b8f4))
+* **deps:** Fix npm audit ([5a72037](https://github.com/nextcloud/mail/commit/5a72037bcecd6b6495a55a5ddd83131586dff5f4))
+* **envelope:** apply read/unread for whole thread ([f438568](https://github.com/nextcloud/mail/commit/f4385683a65c539332574163e62a63c94924cd86))
+* **imap:** cache message body ([d8e2288](https://github.com/nextcloud/mail/commit/d8e22881cb7edf950061ba24b0401d61007ca4dc))
+* **l10n:** Update translations from Transifex ([dfb53d7](https://github.com/nextcloud/mail/commit/dfb53d77a3b5b66ed928b5c243e810ae07956fa4))
+* **l10n:** Update translations from Transifex ([aee2a9b](https://github.com/nextcloud/mail/commit/aee2a9bd25fb1a56fbca1cb4f731dddec541a01e))
+* **l10n:** Update translations from Transifex ([27af331](https://github.com/nextcloud/mail/commit/27af331d3c6bd7aea12e80d9a0f850dce0d37b2c))
+* **l10n:** Update translations from Transifex ([2da0f3c](https://github.com/nextcloud/mail/commit/2da0f3cb36cb62895ad352e42d12b1df02d04195))
+* **l10n:** Update translations from Transifex ([25b6084](https://github.com/nextcloud/mail/commit/25b6084210d9a02d7519860fd1d0c2dba758995e))
+* **l10n:** Update translations from Transifex ([4dedd59](https://github.com/nextcloud/mail/commit/4dedd59938e5c8ad61b5117919dd3e8a3d6ce367))
+* **l10n:** Update translations from Transifex ([09e5e5b](https://github.com/nextcloud/mail/commit/09e5e5b511c22e726b1be965e6ee499851114e3f))
+* **oauth:** close popup window in parent window ([f35dae2](https://github.com/nextcloud/mail/commit/f35dae24b74925b6b5a9b3e9e48af8c6799ed655))
+* **setup:** allow setup with ms oauth and no password ([acbd516](https://github.com/nextcloud/mail/commit/acbd516529fde2dfccbf2f79bfff684a735da3db))
+* **sieve:** allow system flags like seen ([3801cf8](https://github.com/nextcloud/mail/commit/3801cf8baed69ba1eaf43c8249c6429ad5994bf0))
+* **sieve:** ensure the stop action is always last ([557e606](https://github.com/nextcloud/mail/commit/557e6065f15585620c55f32d94ad79c5061d94b8))
+
+
+
+## [5.6.1](https://github.com/nextcloud/mail/compare/v5.6.0...v5.6.1) (2025-11-25)
+
+
+### Bug Fixes
+
+* **deps:** Fix npm audit ([75e957c](https://github.com/nextcloud/mail/commit/75e957ceca80d7e387e7db1f8841d872eb4f9fdb))
+* **l10n:** Update translations from Transifex ([6bd8ea3](https://github.com/nextcloud/mail/commit/6bd8ea34576cb4135adabf0711889bb9a15b5357))
+* **l10n:** Update translations from Transifex ([879bf9c](https://github.com/nextcloud/mail/commit/879bf9c1159f9022165de3590be477903609d5b3))
+* **l10n:** Update translations from Transifex ([ed19b1a](https://github.com/nextcloud/mail/commit/ed19b1ad36fd1fb7a69b7f44ad3f2d6c24112c22))
+* **l10n:** Update translations from Transifex ([2ae9aef](https://github.com/nextcloud/mail/commit/2ae9aef9d62f0f3989272effaf1f1a7c154ede53))
+* **l10n:** Update translations from Transifex ([43989e6](https://github.com/nextcloud/mail/commit/43989e6e63c600ce2790edf0703e21b0a217dc35))
+* **text-block:** preserve line breaks on plain text ([6fd704f](https://github.com/nextcloud/mail/commit/6fd704fcd6cc1a0c2025d4f34e97e1cb58da8a5d))
+
+
+
+# [5.6.0](https://github.com/nextcloud/mail/compare/v5.6.0-rc.1...v5.6.0) (2025-11-20)
+
+
+### Bug Fixes
+
+* **Settings:** followup on redesign ([3b094cf](https://github.com/nextcloud/mail/commit/3b094cfd7ea0b12e5c025ab5dab43963b250130e))
+
+
+### Performance Improvements
+
+* **quick-actions:** eliminate dublicate api calld for each envelope ([2fa7d35](https://github.com/nextcloud/mail/commit/2fa7d352bf6ee53feac97733e5859c319c6971cc))
+
+
+
+# [5.6.0-rc.1](https://github.com/nextcloud/mail/compare/v5.5.0-rc.1...v5.6.0-rc.1) (2025-11-18)
+
+
+### Bug Fixes
+
+* **AccountForm:** Allow localhost as valid email domain ([49cd198](https://github.com/nextcloud/mail/commit/49cd198e599eac4c2537efe07b19b56e272a48d1))
+* add jsdom ([c3c31cb](https://github.com/nextcloud/mail/commit/c3c31cb36cfd8ba757d56e448c3abaaf164bca00))
+* add the warning icon when account cannot connect ([ae2f15d](https://github.com/nextcloud/mail/commit/ae2f15d7720c0116e4f5e9a1486a617c56414947))
+* **ai-integration:** get user language for message summary ([431e445](https://github.com/nextcloud/mail/commit/431e445b2808b4f04ac9019a57fe854667ad8242))
+* align quick action settings button properly ([cd7bda7](https://github.com/nextcloud/mail/commit/cd7bda7ba70b3fcc459d73326de07bda26320c7a))
+* allow reloading the INBOX favorites page ([3322b1d](https://github.com/nextcloud/mail/commit/3322b1dd5e8dac3163d23914046452ef0685485f))
+* allow storing longer mailbox names ([9652e1a](https://github.com/nextcloud/mail/commit/9652e1a2e4be0d08ae1d6acb052e04c84a09e6e1))
+* also await onToggleJunk ([d79ccf8](https://github.com/nextcloud/mail/commit/d79ccf8b5cde2c5deb88529d2871b52c224f9963))
+* **AppSettingsMenu:** update text string in preparation for redesign ([66cce37](https://github.com/nextcloud/mail/commit/66cce37650fa93636e15922569ac2f4ae0e832fb))
+* check email in recipient picker ([935c9a4](https://github.com/nextcloud/mail/commit/935c9a44e2b158771227369ffd683452b5c28f10))
+* ckeditor color in darkmode ([50dce08](https://github.com/nextcloud/mail/commit/50dce0864c33946c3be8067275c69f4b80f728a1))
+* ckeditor not loading when no translations are used ([c2b48bf](https://github.com/nextcloud/mail/commit/c2b48bf5f0d2e4236a913784bed170b83ca74a1a))
+* **classification:** break large SQL IN queries into chunks ([61a1457](https://github.com/nextcloud/mail/commit/61a145766c933a2d29525088d785fda436df63e8))
+* contrast fixes for some elements ([4b40509](https://github.com/nextcloud/mail/commit/4b405090af36bd35d9f9e892361fbb7eb7e73307))
+* correct the default sort order value ([2486bf4](https://github.com/nextcloud/mail/commit/2486bf457b79b4f9521c09f6bd28da8969121876))
+* **db:** clean-up old mailboxes account_id+name index ([e77008b](https://github.com/nextcloud/mail/commit/e77008b7468a1785fce59f68c40f41500a75234e))
+* **db:** drop index on mail_mailboxes by columns instead of name ([068954f](https://github.com/nextcloud/mail/commit/068954fbbdd0b72bf55fa9c8c9588d0fa40a31e9))
+* **deps:** bump @iframe-resizer/child from 5.5.5 to ^5.5.6 ([#11702](https://github.com/nextcloud/mail/issues/11702)) ([cef93a2](https://github.com/nextcloud/mail/commit/cef93a236a662c1268fdb7e33e28f93809e1abfb))
+* **deps:** bump @iframe-resizer/child from 5.5.6 to ^5.5.7 ([#11732](https://github.com/nextcloud/mail/issues/11732)) ([6a2567a](https://github.com/nextcloud/mail/commit/6a2567a477019ad1c031c471dca0cfd225045f20))
+* **deps:** bump @iframe-resizer/parent from 5.5.5 to ^5.5.7 ([#11733](https://github.com/nextcloud/mail/issues/11733)) ([9adc913](https://github.com/nextcloud/mail/commit/9adc91368153574b8a76cf35b8a0df1807125921))
+* **deps:** bump @nextcloud/auth from 2.5.2 to ^2.5.3 ([#11894](https://github.com/nextcloud/mail/issues/11894)) ([3c3097c](https://github.com/nextcloud/mail/commit/3c3097c90e264c9d9b0dc621e89bdad5718c7f41))
+* **deps:** bump @nextcloud/axios from 2.5.1 to ^2.5.2 ([#11827](https://github.com/nextcloud/mail/issues/11827)) ([4add112](https://github.com/nextcloud/mail/commit/4add1121fb19d87844848460d2f0742d296004f5))
+* **deps:** bump @nextcloud/dialogs from 6.3.2 to ^6.3.2 ([#11834](https://github.com/nextcloud/mail/issues/11834)) ([8d3bba7](https://github.com/nextcloud/mail/commit/8d3bba7044a3580bf45946f425dd6b5b9e7c2aa5))
+* **deps:** bump @nextcloud/sharing from 0.2.5 to ^0.3.0 ([feb565d](https://github.com/nextcloud/mail/commit/feb565d833b35f0ae82c434573e8a96aa43005dc))
+* **deps:** bump @nextcloud/vue from 8.33.0 to ^8.33.0 ([cbce84e](https://github.com/nextcloud/mail/commit/cbce84e7f5926c1817f992c831f39f36f03497a0))
+* **deps:** bump @nextcloud/vue to ^8.31.0 ([1104e90](https://github.com/nextcloud/mail/commit/1104e90832fc6f88a168ef09b266c0ef4dacc3a0))
+* **deps:** bump @vue/babel-preset-app from 5.0.8 to ^5.0.9 ([#11842](https://github.com/nextcloud/mail/issues/11842)) ([84b8524](https://github.com/nextcloud/mail/commit/84b85248420a50c660657f061d3b44a50f9f743b))
+* **deps:** bump core-js from 3.45.0 to ^3.45.1 ([#11849](https://github.com/nextcloud/mail/issues/11849)) ([a43410e](https://github.com/nextcloud/mail/commit/a43410e99bfe4787aaba6febba630f1a5c4b0cda))
+* **deps:** bump dompurify from 3.2.6 to ^3.3.0 ([#11858](https://github.com/nextcloud/mail/issues/11858)) ([b913e68](https://github.com/nextcloud/mail/commit/b913e68d82390cd6c11a383339adbe902595361e))
+* **deps:** bump nextcloud/openapi-extractor from 1.8.1 to ^1.8.6 ([#11978](https://github.com/nextcloud/mail/issues/11978)) ([0e1617b](https://github.com/nextcloud/mail/commit/0e1617bd1d49e88ee94a556c2a3f6ec8fb4ec292))
+* **deps:** bump phpmailer/dkimvalidator from 0.3 to ^0.3.1 ([8648561](https://github.com/nextcloud/mail/commit/86485615579de92dbc16b3192fc622828a4c19b3))
+* **deps:** bump rubix/ml from 2.5.2 to v2.5.3 ([#11872](https://github.com/nextcloud/mail/issues/11872)) ([5427895](https://github.com/nextcloud/mail/commit/5427895a664362b93805f98a1d71bbe56602cc0f))
+* **deps:** bump stylelint from 16.23.1 to ^16.25.0 ([#11887](https://github.com/nextcloud/mail/issues/11887)) ([3159ca1](https://github.com/nextcloud/mail/commit/3159ca129b98d0c31a574b447ec47b2731952eeb))
+* **deps:** drop Nextcloud 30 support (EOL) ([4c1b2e2](https://github.com/nextcloud/mail/commit/4c1b2e284673ae9985e14a9c84d68262077f8400))
+* **deps:** Fix npm audit ([f841390](https://github.com/nextcloud/mail/commit/f8413906aae4bf3cc1eb602369db0e8b9ec0906a))
+* **deps:** update @nextcloud/dialogs ([a6cd9ec](https://github.com/nextcloud/mail/commit/a6cd9ecbd8343832c3f90193968cd4e5abb8702f))
+* **deps:** update axios ([f063106](https://github.com/nextcloud/mail/commit/f063106eb4116736214f9570d5d0689fb73cbdd8))
+* **deps:** update axios ([f7d36de](https://github.com/nextcloud/mail/commit/f7d36de29d0764044a23a6f744d0849c513946fb))
+* **deps:** update ckeditor to 45 (unified package) ([819c221](https://github.com/nextcloud/mail/commit/819c221524fb9550eee750f3f2863a80c6da4bc4))
+* display tooltip correctly ([fb4ab1c](https://github.com/nextcloud/mail/commit/fb4ab1c629623b1369f4862f7d88ed520a5f36d8))
+* **dns:** Update public suffix list ([9943f2a](https://github.com/nextcloud/mail/commit/9943f2aeb4e229999bf0fca0c739df5002bd5753))
+* **dns:** Update public suffix list ([1f676bb](https://github.com/nextcloud/mail/commit/1f676bbfb99413b7006fc5ebb829d12f152e0d88))
+* **dns:** Update public suffix list ([1db4751](https://github.com/nextcloud/mail/commit/1db4751c3b8ebe44b65ba501a42b88e3a7617273))
+* **dns:** Update public suffix list ([9a92557](https://github.com/nextcloud/mail/commit/9a92557326a281d1991df72bf52698e6404c39a7))
+* **emoji-picker:** ignore if first character is a space ([da0e2bc](https://github.com/nextcloud/mail/commit/da0e2bc922301fffa4bfaa8741f0288fb22bddde))
+* **EnvelopeSkeleton:** text shifting on hover ([7561a7c](https://github.com/nextcloud/mail/commit/7561a7c8bb2760b8f85f15232c2d0db453878c4a))
+* error in mounted hook ([0055669](https://github.com/nextcloud/mail/commit/0055669f84fd903370d3b502ebc9b8fb3bc9a9fc))
+* external address color ([b476bb6](https://github.com/nextcloud/mail/commit/b476bb6828586c52b49c694ffdf56b8cc50b2e4e))
+* flip email open and email icon in evelope actions ([fc59623](https://github.com/nextcloud/mail/commit/fc59623ed5998474b466dea0f8fb98e7593475d5))
+* **i18n:** improve l10n strings ([#12004](https://github.com/nextcloud/mail/issues/12004)) ([a2c5043](https://github.com/nextcloud/mail/commit/a2c5043b15bdc02c9223a67a9e6c088cf4e382dc))
+* **imap:** avoid Horde's LIST-STATUS optimization for STATUS ([da3b3fa](https://github.com/nextcloud/mail/commit/da3b3fa109d949a7e111b70fd683118ca604a7d2))
+* **imap:** make mailbox status errors debuggable ([faa70d4](https://github.com/nextcloud/mail/commit/faa70d40d6489a686844710472b3b0745b3caf46))
+* imip aliases and capitalization ([aebfa65](https://github.com/nextcloud/mail/commit/aebfa657b79bda16fb6020099a23ab405559fa1f))
+* **l10n:** Update translations from Transifex ([6a71cc9](https://github.com/nextcloud/mail/commit/6a71cc923280a2dec8f9a27d0d5756e54f653d43))
+* **l10n:** Update translations from Transifex ([4ed1117](https://github.com/nextcloud/mail/commit/4ed1117dc8dd934153f69ecf5ae05d465e98a28c))
+* **l10n:** Update translations from Transifex ([cd0053f](https://github.com/nextcloud/mail/commit/cd0053f6e8eb1e14ee4410b49555d46fbab21144))
+* **l10n:** Update translations from Transifex ([3706c56](https://github.com/nextcloud/mail/commit/3706c56db751841ea10ea5724f28fddd97d4a0de))
+* **l10n:** Update translations from Transifex ([ce5372c](https://github.com/nextcloud/mail/commit/ce5372c14b742b62a444af5c0f057126a9b7fd92))
+* **l10n:** Update translations from Transifex ([f36788d](https://github.com/nextcloud/mail/commit/f36788d0d7ee59b3911c81200f6a788c26a64c59))
+* **l10n:** Update translations from Transifex ([4972130](https://github.com/nextcloud/mail/commit/49721300d8b6c7e8bfe500eac98bb8832f2f9dda))
+* **l10n:** Update translations from Transifex ([33c0cd2](https://github.com/nextcloud/mail/commit/33c0cd26f19a919c78e2e9ecac9c2cd58c1b3ce5))
+* **l10n:** Update translations from Transifex ([d5925f1](https://github.com/nextcloud/mail/commit/d5925f1196e3c33238b4f209a5c55badd1a5a9bb))
+* **l10n:** Update translations from Transifex ([10a5069](https://github.com/nextcloud/mail/commit/10a5069f73f817cb0dff0a634b442639408d68b5))
+* **l10n:** Update translations from Transifex ([585d834](https://github.com/nextcloud/mail/commit/585d8341ebc2da215201521be0d306e234aecf68))
+* **l10n:** Update translations from Transifex ([170a047](https://github.com/nextcloud/mail/commit/170a0474eb3675045adf5904c3520e212fe15896))
+* **l10n:** Update translations from Transifex ([14a58b3](https://github.com/nextcloud/mail/commit/14a58b3dcfb35acbb8acbe3844af43ef16c37b75))
+* **l10n:** Update translations from Transifex ([922f463](https://github.com/nextcloud/mail/commit/922f463dea059458903632cc4cf2df4c361c2287))
+* **l10n:** Update translations from Transifex ([3a7078f](https://github.com/nextcloud/mail/commit/3a7078ffefecab15e789802ece4e81479f3abd6b))
+* **l10n:** Update translations from Transifex ([decd56d](https://github.com/nextcloud/mail/commit/decd56d201ee09bed9f49601d799e7fa6f00f34c))
+* **l10n:** Update translations from Transifex ([75705fc](https://github.com/nextcloud/mail/commit/75705fc3b1eb966fcf8eb0554595dd1dbffa3835))
+* **l10n:** Update translations from Transifex ([39ba202](https://github.com/nextcloud/mail/commit/39ba20204b4b36ef96ecdaaa439c5824c9c6b465))
+* **l10n:** Update translations from Transifex ([e3b0fa8](https://github.com/nextcloud/mail/commit/e3b0fa801195720c00f4a5e1d3c68dde55a23407))
+* **l10n:** Update translations from Transifex ([9d80c02](https://github.com/nextcloud/mail/commit/9d80c0282898167f34681d89e808933214c32a39))
+* **l10n:** Update translations from Transifex ([3dc2827](https://github.com/nextcloud/mail/commit/3dc28277a1c39cb3cff74d42742030ab371e4cf5))
+* **l10n:** Update translations from Transifex ([67d1d2a](https://github.com/nextcloud/mail/commit/67d1d2a2441f761d5076ec3c6b6cd199ed466a5b))
+* **l10n:** Update translations from Transifex ([65b822d](https://github.com/nextcloud/mail/commit/65b822db0b11b54c64a809eb612a0e0f5e6f1b4a))
+* **l10n:** Update translations from Transifex ([adf81ed](https://github.com/nextcloud/mail/commit/adf81edff2bc005bf943b7311c62aefa9d8fd00f))
+* **l10n:** Update translations from Transifex ([dd0b743](https://github.com/nextcloud/mail/commit/dd0b743a10b3ea749fad2037333daf4d40d5760d))
+* **l10n:** Update translations from Transifex ([2c49124](https://github.com/nextcloud/mail/commit/2c49124257d9b641e6fc021fbca09e949a6c4b3d))
+* **l10n:** Update translations from Transifex ([b46373a](https://github.com/nextcloud/mail/commit/b46373a80c695b83249e9b3931f2ed661d924994))
+* **l10n:** Update translations from Transifex ([2306934](https://github.com/nextcloud/mail/commit/2306934b4546131d02f4bee6d0660d20d9516d23))
+* **l10n:** Update translations from Transifex ([e40e483](https://github.com/nextcloud/mail/commit/e40e483b9d2aa17d46a5be084b284df3abc22f2f))
+* **l10n:** Update translations from Transifex ([684e75a](https://github.com/nextcloud/mail/commit/684e75a46d208bc6365b328e8c85df84e638354b))
+* **l10n:** Update translations from Transifex ([0e361f0](https://github.com/nextcloud/mail/commit/0e361f06b008d6738db6bbbad70e49312533a932))
+* **l10n:** Update translations from Transifex ([67b25e3](https://github.com/nextcloud/mail/commit/67b25e34a0dc9c8bce176817bc228e12e1f53821))
+* **l10n:** Update translations from Transifex ([0fab187](https://github.com/nextcloud/mail/commit/0fab187e0a70b82c5230e36cdea5291b1b247d1f))
+* **l10n:** Update translations from Transifex ([bff919e](https://github.com/nextcloud/mail/commit/bff919ee61c8b7e5905b285b25b60649242e7161))
+* **l10n:** Update translations from Transifex ([6ddcf65](https://github.com/nextcloud/mail/commit/6ddcf65c22b81621dc0546eb9beaa2331fce44eb))
+* **l10n:** Update translations from Transifex ([2ea9bf1](https://github.com/nextcloud/mail/commit/2ea9bf13cfd824930dde40847c538c2778bf759b))
+* **l10n:** Update translations from Transifex ([3cd6222](https://github.com/nextcloud/mail/commit/3cd62224a25cb01bd16fabf6e3b1ccbf93153df6))
+* **l10n:** Update translations from Transifex ([d972d43](https://github.com/nextcloud/mail/commit/d972d439a0eb2146e0104b065ea7d272f258f9a6))
+* **l10n:** Update translations from Transifex ([be650ef](https://github.com/nextcloud/mail/commit/be650ef147914afc875123146a9f308f1a10df2d))
+* **l10n:** Update translations from Transifex ([a3d8185](https://github.com/nextcloud/mail/commit/a3d81853bc79060c6c6364195053de8d775b53a0))
+* **l10n:** Update translations from Transifex ([a87aa56](https://github.com/nextcloud/mail/commit/a87aa56436750fd601f7609ed74eb582ccec5011))
+* **l10n:** Update translations from Transifex ([01f9f99](https://github.com/nextcloud/mail/commit/01f9f998114fade296d4fb8812d8c3aab1967719))
+* **l10n:** Update translations from Transifex ([f1368ab](https://github.com/nextcloud/mail/commit/f1368ab5642d49db7db972bfcba74eb1a3529e6e))
+* **l10n:** Update translations from Transifex ([d3ee1d5](https://github.com/nextcloud/mail/commit/d3ee1d5a2502ee7c406f0347271c8c9113825eb4))
+* **l10n:** Update translations from Transifex ([f201a19](https://github.com/nextcloud/mail/commit/f201a197242e6208ede2c6461370ebe0dc9ff2bd))
+* **l10n:** Update translations from Transifex ([2320679](https://github.com/nextcloud/mail/commit/2320679f03db9869f3cd01b7f6cdb9d29254dd1b))
+* **l10n:** Update translations from Transifex ([d164bcb](https://github.com/nextcloud/mail/commit/d164bcbef87f0a224b34cce675c0d83996323b89))
+* **l10n:** Update translations from Transifex ([b4a6221](https://github.com/nextcloud/mail/commit/b4a62211a44588abc9c8b623d268eacdfcd11a2c))
+* **l10n:** Update translations from Transifex ([46c94b3](https://github.com/nextcloud/mail/commit/46c94b3d469dfd86b2274b8f6b82ce6afeb66b33))
+* **l10n:** Update translations from Transifex ([428c205](https://github.com/nextcloud/mail/commit/428c2051be596be6a9f4c1964d55350163309d0e))
+* **l10n:** Update translations from Transifex ([6016da4](https://github.com/nextcloud/mail/commit/6016da44d22cf8769fa03a02f5cb4a8811c810fb))
+* **l10n:** Update translations from Transifex ([307a257](https://github.com/nextcloud/mail/commit/307a257a4d2fdb63c738458b2453b959af574467))
+* **l10n:** Update translations from Transifex ([c6e018b](https://github.com/nextcloud/mail/commit/c6e018bfe874bc9197f4f9ca4aeac49fa1cfd1ab))
+* **l10n:** Update translations from Transifex ([78ae7f4](https://github.com/nextcloud/mail/commit/78ae7f43a3588c9534e2cb3c60e470cbfbee86e7))
+* **l10n:** Update translations from Transifex ([b8124ae](https://github.com/nextcloud/mail/commit/b8124ae1a006ab52aa9af1e007cbe643f28f9783))
+* leftover design changes ([da0a40d](https://github.com/nextcloud/mail/commit/da0a40d67fc3ec32713254e44885249be5bf877c))
+* list separators depending on sort by date ([1af3195](https://github.com/nextcloud/mail/commit/1af3195ae5a730baef2c4bcf4d1e048fa1b9bc25))
+* mail pane resetting between layout changes ([73c34ff](https://github.com/nextcloud/mail/commit/73c34ff21d8e5fbdf51af6ddc1ef7ff63de7e153))
+* migrate mail_accounts.oauth_refresh_token to Types::TEXT ([0341d64](https://github.com/nextcloud/mail/commit/0341d64fad418803831cad77f237e00a4f180843))
+* **migration:** check if account service method exists ([4133178](https://github.com/nextcloud/mail/commit/41331785b627692f814c15fbfe43fe500f8f8516))
+* **migration:** guard repair stop for possibly missing method ([edd7634](https://github.com/nextcloud/mail/commit/edd76340c32e0a0a349b9f6b512efb78e7a46839))
+* **NewMessageModal:** keep formatting after minimizing ([63354f2](https://github.com/nextcloud/mail/commit/63354f29349cdeceb93ca239b157cfb2fe045329))
+* **psalm:** remove unnecessary var declarations ([af228f6](https://github.com/nextcloud/mail/commit/af228f6abb86878f4378cc86e3caa09fbb6c64b1))
+* **quick-actions:** adjust backend check for pinned actions order ([4251ca2](https://github.com/nextcloud/mail/commit/4251ca2dc6a0a09f23521ea72fb80380f9d7d9a3))
+* **quick-actions:** apply action to all messages in a thread ([5ccc6a6](https://github.com/nextcloud/mail/commit/5ccc6a6c9162c188587df5d42ee06bf965229ad6))
+* **quick-actions:** delete local steps ([08e379c](https://github.com/nextcloud/mail/commit/08e379c2dd0f44321726150609452ad20bfded3e))
+* **quick-actions:** pin mark as spam as a last actions step ([a28adde](https://github.com/nextcloud/mail/commit/a28adde92e50c3758c28b22088feddf3d3deb848))
+* **quickaction:** fix deleting quick action steps ([f8b67cf](https://github.com/nextcloud/mail/commit/f8b67cfb848d5f4420fafc795792796189f789ee))
+* **quickaction:** log js error to console ([da5eae9](https://github.com/nextcloud/mail/commit/da5eae94614816bb75c6fd31a95ac92b6b47a8d5))
+* render recipient info later ([03bee06](https://github.com/nextcloud/mail/commit/03bee066c6c168911151e0be71c16eb2dc2bbc4d))
+* restore color menu in text/background selector ([6de3bb1](https://github.com/nextcloud/mail/commit/6de3bb1ab9e21f28703648926f451c6f46b5dcc3))
+* schedule jobs on account provisioning ([5f9a313](https://github.com/nextcloud/mail/commit/5f9a3131ac6f31680255c616bc26e7938d1752a5))
+* schedule repair sync job when adding an account ([eb41283](https://github.com/nextcloud/mail/commit/eb41283573f85cbef11bcfe40059b7930bea9802))
+* **Settings:** redesign ([5448209](https://github.com/nextcloud/mail/commit/5448209267415ad71f877b104e420aaf0bd20ab9))
+* **setup:** log when invalid hosts are used ([b415ab6](https://github.com/nextcloud/mail/commit/b415ab6672c5d90138d8834763d9a3683b0c4331))
+* show user avatar in recipient info ([f67fd6b](https://github.com/nextcloud/mail/commit/f67fd6be188873e1a397829da7a1e82aa6cc42fe))
+* **sieve:** improve filter ui ([29c3d5e](https://github.com/nextcloud/mail/commit/29c3d5ed87547835886e9a0f47d75d206008bd98))
+* thread error message handling ([7593d60](https://github.com/nextcloud/mail/commit/7593d6099f254930fdbb63bc08398bcaa85c5e3d))
+* toolbar dropdown and height bug ([90e78c1](https://github.com/nextcloud/mail/commit/90e78c16ad80edec5209d527cebd9cd6968de016))
+* **ui:** Don't outline checkmark icons ([46e0a10](https://github.com/nextcloud/mail/commit/46e0a108843b3a3661d3da6eb4a793148b9c5a95)), closes [#11322](https://github.com/nextcloud/mail/issues/11322)
+* **ui:** escape envelope subject line ([36b5d21](https://github.com/nextcloud/mail/commit/36b5d211eedbaeb3e4b41aaa2b0fea59bd52e285))
+* **ui:** handle mailbox sorting of 'all' and unknown special use ([913342b](https://github.com/nextcloud/mail/commit/913342b0d2fd0be25186cb39b31916b72a188ced))
+* **ui:** migrate to the new radio groups for app settings ([cef6238](https://github.com/nextcloud/mail/commit/cef62387b304a927b3ffb5f8a4cfe124452e88c2))
+* **ui:** use filled icons for active navigation mailboxes ([2b78ce1](https://github.com/nextcloud/mail/commit/2b78ce1961414d2242dcc7f71b035e91d42c176a))
+* **ui:** use new NcKbd component ([65f6c61](https://github.com/nextcloud/mail/commit/65f6c61c686f0b89f25a5be16965abe29e4aeff2))
+* validate email address in recipient picker ([0d7ceb1](https://github.com/nextcloud/mail/commit/0d7ceb1fb77820595b799540e25d29649a3e7988))
+* warning for accounts that can't connect ([1ee0d5d](https://github.com/nextcloud/mail/commit/1ee0d5d76912fbe30e205f5a4c0768ef6960c5da))
+
+
+### Features
+
+* **composer:** send message on Ctrl+Enter ([0e848de](https://github.com/nextcloud/mail/commit/0e848deae3c4fadf7f70aebda3db001d554a420a))
+* **settings:** add bordered wrapper to signature editor for clearer boundary ([0675a17](https://github.com/nextcloud/mail/commit/0675a1756303159fa8b84f35eff52ee52c81c6ab))
+* show mail version in settings ([d206d4d](https://github.com/nextcloud/mail/commit/d206d4dfc68e589284418fbcfb82ea54e2000148))
+
+
+### Performance Improvements
+
+* switch webpack mode to lazy ([9d8f1f3](https://github.com/nextcloud/mail/commit/9d8f1f32219fbd21e61c66794b0ff64e2bf830f9))
 
 
 
