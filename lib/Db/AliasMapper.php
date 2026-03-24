@@ -106,12 +106,7 @@ class AliasMapper extends QBMapper {
 	/**
 	 * Delete all provisioned aliases for the given uid
 	 *
-	 * Exception for Nextcloud 20: \Doctrine\DBAL\DBALException
-	 * Exception for Nextcloud 21 and newer: \OCP\DB\Exception
-	 *
-	 * @TODO: Change throws to \OCP\DB\Exception once Mail does not support Nextcloud 20.
-	 *
-	 * @throws \Exception
+	 * @throws \OCP\DB\Exception
 	 */
 	public function deleteProvisionedAliasesByUid(string $uid): void {
 		$qb = $this->db->getQueryBuilder();
@@ -133,9 +128,7 @@ class AliasMapper extends QBMapper {
 			->leftJoin('a', 'mail_accounts', 'ac', $qb1->expr()->eq('a.account_id', 'ac.id'))
 			->where($qb1->expr()->isNull('ac.id'));
 		$result = $idsQuery->executeQuery();
-		$ids = array_map(static function (array $row) {
-			return (int)$row['id'];
-		}, $result->fetchAll());
+		$ids = array_map(static fn (array $row) => (int)$row['id'], $result->fetchAll());
 		$result->closeCursor();
 
 		$qb2 = $this->db->getQueryBuilder();

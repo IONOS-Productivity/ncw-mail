@@ -13,6 +13,7 @@ namespace OCA\Mail\Tests\Unit\Controller;
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use Horde_Imap_Client_Socket;
 use OC\AppFramework\Http\Request;
+use OC\Memcache\NullCache;
 use OC\Security\CSP\ContentSecurityPolicyNonceManager;
 use OCA\Mail\Account;
 use OCA\Mail\Attachment;
@@ -48,6 +49,7 @@ use OCP\AppFramework\Http\ZipResponse;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Files\Folder;
 use OCP\Files\IMimeTypeDetector;
+use OCP\ICacheFactory;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
@@ -130,6 +132,8 @@ class MessagesControllerTest extends TestCase {
 	/** @var MockObject|AiIntegrationsService */
 	private $aiIntegrationsService;
 
+	private ICacheFactory&MockObject $cacheFactory;
+
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -155,15 +159,17 @@ class MessagesControllerTest extends TestCase {
 		$this->userPreferences = $this->createMock(IUserPreferences::class);
 		$this->snoozeService = $this->createMock(SnoozeService::class);
 		$this->aiIntegrationsService = $this->createMock(AiIntegrationsService::class);
+		$this->cacheFactory = $this->createMock(ICacheFactory::class);
+
+		$this->cacheFactory->method('createDistributed')
+			->willReturn(new NullCache());
 
 		$timeFactory = $this->createMocK(ITimeFactory::class);
 		$timeFactory->expects($this->any())
 			->method('getTime')
 			->willReturn(10000);
 		$this->oldFactory = \OC::$server->offsetGet(ITimeFactory::class);
-		\OC::$server->registerService(ITimeFactory::class, function () use ($timeFactory) {
-			return $timeFactory;
-		});
+		\OC::$server->registerService(ITimeFactory::class, fn () => $timeFactory);
 
 		$this->controller = new MessagesController(
 			$this->appName,
@@ -187,6 +193,7 @@ class MessagesControllerTest extends TestCase {
 			$this->userPreferences,
 			$this->snoozeService,
 			$this->aiIntegrationsService,
+			$this->cacheFactory,
 		);
 
 		$this->account = $this->createMock(Account::class);
@@ -1204,12 +1211,12 @@ class MessagesControllerTest extends TestCase {
 				'DESC',
 				null,
 				null,
-				null,
+				20,
 				$this->userId,
 				'threaded',
 			)->willReturn($messages);
 
-		$actualResponse = $this->controller->index(100, null, null, null, null, $cacheBuster);
+		$actualResponse = $this->controller->index(100, null, null, 20, null, $cacheBuster);
 
 		$cacheForHeader = $actualResponse->getHeaders()['Cache-Control'] ?? null;
 		$this->assertNotNull($cacheForHeader);
@@ -1243,6 +1250,7 @@ class MessagesControllerTest extends TestCase {
 			$this->userPreferences,
 			$this->snoozeService,
 			$this->aiIntegrationsService,
+			$this->cacheFactory,
 		);
 
 		$actualResponse = $controller->needsTranslation(100);
@@ -1347,5 +1355,47 @@ class MessagesControllerTest extends TestCase {
 		$expectedResponse = new JSONResponse(['requiresTranslation' => true]);
 		$expectedResponse->cacheFor(60 * 60 * 24, false, true);
 		$this->assertEquals($expectedResponse, $actualResponse);
+	}
+
+	public static function provideLimitData(): array {
+		return [
+			'20' => [20, 20],
+			'500' => [500, 100],
+			'null' => [null, 1],
+		];
+	}
+
+	/** @dataProvider provideLimitData */
+	public function testRestrictLimit(?int $limit, int $expectedLimit): void {
+		$mailbox = new Mailbox();
+		$mailbox->setAccountId(100);
+		$this->mailManager->expects(self::once())
+			->method('getMailbox')
+			->with($this->userId, 100)
+			->willReturn($mailbox);
+		$mailAccount = new MailAccount();
+		$account = new Account($mailAccount);
+		$this->accountService->expects(self::once())
+			->method('find')
+			->with($this->userId, 100)
+			->willReturn($account);
+		$this->userPreferences->expects(self::once())
+			->method('getPreference')
+			->with($this->userId, 'sort-order', 'newest')
+			->willReturnArgument(2);
+		$this->mailSearch->expects(self::once())
+			->method('findMessages')
+			->with(
+				$account,
+				$mailbox,
+				'DESC',
+				null,
+				null,
+				$expectedLimit,
+				$this->userId,
+				'threaded',
+			)->willReturn([]);
+
+		$this->controller->index(100, null, null, $limit);
 	}
 }

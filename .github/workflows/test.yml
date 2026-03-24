@@ -15,29 +15,30 @@ jobs:
     strategy:
       matrix:
         php-versions: ['8.2', '8.3']
-        nextcloud-versions: ['master', 'stable30']
+        nextcloud-versions: ['stable33', 'stable31']
         include:
-          - php-versions: '8.1'
-            nextcloud-versions: 'stable30'
           - php-versions: '8.4'
-            nextcloud-versions: 'stable31'
+            nextcloud-versions: 'stable33'
+            coverage: true
+          - php-versions: '8.1'
+            nextcloud-versions: 'stable32'
           - php-versions: '8.4'
             nextcloud-versions: 'stable32'
           - php-versions: '8.5'
-            nextcloud-versions: 'master'
-    name: Nextcloud ${{ matrix.nextcloud-versions }} php${{ matrix.php-versions }} unit tests
+            nextcloud-versions: 'stable33'
+    name: Nextcloud ${{ matrix.nextcloud-versions }} php${{ matrix.php-versions }} unit tests ${{ matrix.coverage && '(coverage)' || ''}}
     steps:
     - name: Set up Nextcloud env
-      uses: ChristophWurst/setup-nextcloud@fc0790385c175d97e88a7cb0933490de6e990374 # v0.3.2
+      uses: ChristophWurst/setup-nextcloud@6e38a6146b15a4c4c932ce72ed8daf75eb903d18 # v0.4.1
       with:
         nextcloud-version: ${{ matrix.nextcloud-versions }}
         php-version: ${{ matrix.php-versions }}
-        php-coverage: 'xdebug'
+        php-coverage: ${{ matrix.coverage && 'xdebug' || 'none' }}
         patch-php-version-check: ${{ matrix.php-versions == '8.5' }}
         node-version: 'false'
         install: true
     - name: Checkout Mail
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
       with:
         path: nextcloud/apps/mail
         fetch-depth: 2
@@ -47,18 +48,11 @@ jobs:
     - name: Run tests
       working-directory: nextcloud/apps/mail
       run: composer run test:unit
-      if: ${{ matrix.php-versions == '8.3' }}
       env:
-        XDEBUG_MODE: coverage
-    - name: Run tests
-      working-directory: nextcloud/apps/mail
-      run: composer run test:unit
-      if: ${{ matrix.php-versions != '8.3' }}
-      env:
-        XDEBUG_MODE: off
+        XDEBUG_MODE: ${{ matrix.coverage && 'coverage' || 'off' }}
     - name: Report coverage
-      uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
-      if: ${{ always() && matrix.php-versions == '8.3' }}
+      uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+      if: ${{ !cancelled() && matrix.coverage }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         working-directory: nextcloud/apps/mail
@@ -72,31 +66,37 @@ jobs:
       strategy:
           matrix:
               php-versions: ['8.4']
-              nextcloud-versions: ['master']
+              nextcloud-versions: ['stable33']
               db: ['sqlite', 'mysql', 'pgsql']
               cache: ['nocache']
               include:
+                - php-versions: 8.4
+                  nextcloud-versions: 'stable33'
+                  db: 'mysql'
+                  cache: 'nocache'
+                  coverage: true
                 - php-versions: 8.1
-                  nextcloud-versions: 'stable30'
+                  nextcloud-versions: 'stable31'
                   db: 'sqlite'
                   cache: 'redis'
                 - php-versions: 8.2
-                  nextcloud-versions: 'stable30'
+                  nextcloud-versions: 'stable31'
                   db: 'pgsql'
                   cache: 'redis'
                 - php-versions: 8.3
-                  nextcloud-versions: 'stable31'
+                  nextcloud-versions: 'stable32'
                   db: 'mysql'
                   cache: 'redis'
                 - php-versions: 8.4
                   nextcloud-versions: 'stable32'
                   db: 'mysql'
                   cache: 'redis'
+                  coverage: true
                 - php-versions: 8.5
-                  nextcloud-versions: 'master'
+                  nextcloud-versions: 'stable33'
                   db: 'mysql'
                   cache: 'redis'
-      name: ${{ matrix.nextcloud-versions }} w/ php${{ matrix.php-versions }}-${{ matrix.db }}-${{ matrix.cache }} integration tests
+      name: ${{ matrix.nextcloud-versions }} w/ php${{ matrix.php-versions }}-${{ matrix.db }}-${{ matrix.cache }} integration tests ${{ matrix.coverage && '(coverage)' || ''}}
       services:
           mail-service:
               image: ghcr.io/christophwurst/docker-imap-devel:latest
@@ -147,11 +147,11 @@ jobs:
                 - 6379:6379
       steps:
           - name: Set up Nextcloud env
-            uses: ChristophWurst/setup-nextcloud@fc0790385c175d97e88a7cb0933490de6e990374 # v0.3.2
+            uses: ChristophWurst/setup-nextcloud@6e38a6146b15a4c4c932ce72ed8daf75eb903d18 # v0.4.1
             with:
               nextcloud-version: ${{ matrix.nextcloud-versions }}
               php-version: ${{ matrix.php-versions }}
-              php-coverage: 'xdebug'
+              php-coverage: ${{ matrix.coverage && 'xdebug' || 'none' }}
               patch-php-version-check: ${{ matrix.php-versions == '8.5' }}
               install: true
               database: ${{ matrix.db }}
@@ -162,7 +162,7 @@ jobs:
               php -f nextcloud/occ config:system:set memcache.local --value='\OC\Memcache\Redis'
               php -f nextcloud/occ config:system:set memcache.distributed --value='\OC\Memcache\Redis'
           - name: Checkout Mail
-            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+            uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
             with:
                 path: nextcloud/apps/mail
                 fetch-depth: 2
@@ -186,16 +186,9 @@ jobs:
               echo "SET GLOBAL log_output = 'table';" | mysql -h 127.0.0.1 -u root -pmy-secret-pw
           - name: Run tests
             working-directory: nextcloud/apps/mail
-            if: ${{ matrix.db == 'mysql' }}
             run: composer run test:integration
             env:
-                XDEBUG_MODE: coverage
-          - name: Run tests
-            working-directory: nextcloud/apps/mail
-            if: ${{ matrix.db != 'mysql' }}
-            run: composer run test:integration
-            env:
-                XDEBUG_MODE: off
+                XDEBUG_MODE: ${{ matrix.coverage && 'coverage' || 'off' }}
           - name: Read slow queries
             if: ${{ always() }}
             run: echo "SELECT * FROM mysql.slow_log WHERE sql_text LIKE '%oc_mail%' AND sql_text NOT LIKE '%information_schema%'" | mysql -h 127.0.0.1 -u root -pmy-secret-pw
@@ -203,8 +196,8 @@ jobs:
             if: ${{ always() }}
             run: cat nextcloud/data/mail-*-*-imap.log
           - name: Report coverage
-            uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
-            if: ${{ always() && matrix.db == 'mysql' }}
+            uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+            if: ${{ !cancelled() && matrix.coverage }}
             with:
               token: ${{ secrets.CODECOV_TOKEN }}
               working-directory: nextcloud/apps/mail
@@ -216,7 +209,7 @@ jobs:
       runs-on: ubuntu-latest
       name: Front-end unit tests
       steps:
-          - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+          - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
           - name: Read package.json node and npm engines version
             uses: skjnldsv/read-package-engines-version-actions@8205673bab74a63eb9b8093402fd9e0e018663a1 # v2.2
             id: versions
@@ -243,7 +236,7 @@ jobs:
       branches-min: ${{ steps.versions.outputs.branches-min }}
     steps:
       - name: Checkout app
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
       - name: Get version matrix
         id: versions
         uses: icewind1991/nextcloud-version-matrix@58becf3b4bb6dc6cef677b15e2fd8e7d48c0908f # v1.3.1
@@ -254,7 +247,7 @@ jobs:
     needs: matrix
     steps:
       - name: Set up Nextcloud env
-        uses: ChristophWurst/setup-nextcloud@fc0790385c175d97e88a7cb0933490de6e990374 # v0.3.2
+        uses: ChristophWurst/setup-nextcloud@6e38a6146b15a4c4c932ce72ed8daf75eb903d18 # v0.4.1
         with:
           nextcloud-version: ${{ needs.matrix.outputs.branches-min }}
           php-version: ${{ needs.matrix.outputs.php-min }}
@@ -269,7 +262,7 @@ jobs:
           php -f nextcloud/occ config:system:set app.mail.debug --type=bool --value=true
           php -f nextcloud/occ config:system:set app.mail.verify-tls-peer --type=bool --value=false
       - name: Check out the app
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
         with:
           path: nextcloud/apps/mail
       - name: Install php dependencies

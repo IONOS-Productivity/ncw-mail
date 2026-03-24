@@ -71,9 +71,7 @@ class AccountService {
 	 */
 	public function findByUserId(string $currentUserId): array {
 		if (!isset($this->accounts[$currentUserId])) {
-			$this->accounts[$currentUserId] = array_map(static function ($a) {
-				return new Account($a);
-			}, $this->mapper->findByUserId($currentUserId));
+			$this->accounts[$currentUserId] = array_map(static fn ($a) => new Account($a), $this->mapper->findByUserId($currentUserId));
 		}
 
 		return $this->accounts[$currentUserId];
@@ -113,9 +111,7 @@ class AccountService {
 			return $list;
 		}
 		// if cached accounts collection did not exist retrieve account details directly from the data store
-		return array_map(static function ($a) {
-			return new Account($a);
-		}, $this->mapper->findByUserIdAndAddress($userId, $address));
+		return array_map(static fn ($a) => new Account($a), $this->mapper->findByUserIdAndAddress($userId, $address));
 	}
 
 	/**
