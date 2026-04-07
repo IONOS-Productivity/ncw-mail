@@ -134,6 +134,10 @@
 			<h3>{{ t('mail', 'Allow aliases') }}</h3>
 			<article>
 				<p>
+					{{ t('mail', 'The Mail app does not verify aliases. If this is enabled without existing server-side support, your mail server will likely reject outgoing messages, causing emails to fail.') }}
+				</p>
+
+				<p>
 					<NcCheckboxRadioSwitch :checked.sync="allowNewMailAliases"
 						type="switch"
 						@update:checked="updateAllowNewMailAliases">
