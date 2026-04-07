@@ -308,14 +308,16 @@ class PageControllerTest extends TestCase {
 				['version', '0.0.0', '26.0.0'],
 				['app.mail.attachment-size-limit', 0, 123],
 			]);
-		$this->config->expects($this->exactly(2))
+		$this->config->expects($this->exactly(3))
 			->method('getAppValue')
 			->withConsecutive(
 				['mail', 'installed_version'],
 				['core', 'backgroundjobs_mode', 'ajax'],
+				['mail', 'allow_new_mail_aliases', 'yes'],
 			)->willReturnOnConsecutiveCalls(
 				'1.2.3',
 				'cron',
+				'yes',
 			);
 		$this->appConfig->expects($this->exactly(4))
 			->method('getValueString')
@@ -375,7 +377,7 @@ class PageControllerTest extends TestCase {
 		$this->classificationSettingsService->expects(($this->once()))
 			->method(('isClassificationEnabledByDefault'))
 			->willReturn(true);
-		$this->initialState->expects($this->exactly(27))
+		$this->initialState->expects($this->exactly(28))
 			->method('provideInitialState')
 			->withConsecutive(
 				['debug', true],
@@ -414,6 +416,7 @@ class PageControllerTest extends TestCase {
 				['disable-scheduled-send', false],
 				['disable-snooze', false],
 				['allow-new-accounts', true],
+				['allow-new-aliases', true],
 				['llm_summaries_available', false],
 				['llm_translation_enabled', false],
 				['llm_freeprompt_available', false],

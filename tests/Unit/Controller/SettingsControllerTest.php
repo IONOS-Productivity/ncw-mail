@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\Mail\Tests\Unit\Controller;
 
 use ChristophWurst\Nextcloud\Testing\ServiceMockObject;
+use OCA\Mail\AppInfo\Application;
 use OCA\Mail\Controller\SettingsController;
 use OCA\Mail\Db\Provisioning;
 use OCA\Mail\Tests\Integration\TestCase;
@@ -65,5 +66,26 @@ class SettingsControllerTest extends TestCase {
 		$response = $this->controller->deprovision(1);
 
 		$this->assertInstanceOf(JSONResponse::class, $response);
+	}
+
+	public function allowNewMailAliasesProvider(): array {
+		return [
+			'allowed' => [true, 'yes'],
+			'disallowed' => [false, 'no'],
+		];
+	}
+
+	/**
+	 * @dataProvider allowNewMailAliasesProvider
+	 */
+	public function testSetAllowNewMailAliases(bool $allowed, string $stored): void {
+		$this->mock->getParameter('appConfig')
+			->expects(self::once())
+			->method('setValueString')
+			->with(Application::APP_ID, 'allow_new_mail_aliases', $stored);
+
+		$response = $this->controller->setAllowNewMailAliases($allowed);
+
+		self::assertEquals(new JSONResponse([]), $response);
 	}
 }

@@ -105,6 +105,11 @@ class SettingsController extends Controller {
 		$this->appConfig->setValueBool(Application::APP_ID, ConfigLexicon::ALLOW_NEW_MAIL_ACCOUNTS, $allowed);
 	}
 
+	public function setAllowNewMailAliases(bool $allowed): JSONResponse {
+		$this->appConfig->setValueString(Application::APP_ID, 'allow_new_mail_aliases', $allowed ? 'yes' : 'no');
+		return new JSONResponse([]);
+	}
+
 	public function setEnabledLlmProcessing(bool $enabled): JSONResponse {
 		$this->appConfig->setValueBool(Application::APP_ID, ConfigLexicon::LLM_PROCESSING, $enabled);
 		return new JSONResponse([]);

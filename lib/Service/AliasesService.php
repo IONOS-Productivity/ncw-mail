@@ -15,11 +15,13 @@ use OCA\Mail\Db\AliasMapper;
 use OCA\Mail\Db\MailAccountMapper;
 use OCA\Mail\Exception\ClientException;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\IConfig;
 
 class AliasesService {
 	public function __construct(
-		private readonly AliasMapper $aliasMapper,
-		private readonly MailAccountMapper $mailAccountMapper,
+		private AliasMapper $aliasMapper,
+		private MailAccountMapper $mailAccountMapper,
+		private IConfig $config,
 	) {
 	}
 
@@ -62,6 +64,10 @@ class AliasesService {
 	 * @throws DoesNotExistException
 	 */
 	public function create(string $userId, int $accountId, string $alias, string $aliasName): Alias {
+		if ($this->config->getAppValue('mail', 'allow_new_mail_aliases', 'yes') === 'no') {
+			throw new ClientException('Creating aliases has been disabled by the administrator.');
+		}
+
 		$this->mailAccountMapper->find($userId, $accountId);
 
 		$aliasEntity = new Alias();
