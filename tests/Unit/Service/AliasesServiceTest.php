@@ -16,6 +16,7 @@ use OCA\Mail\Db\MailAccountMapper;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Service\AliasesService;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\IConfig;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class AliasesServiceTest extends TestCase {
@@ -23,16 +24,19 @@ class AliasesServiceTest extends TestCase {
 	private string $user = 'herbert';
 	private AliasMapper&MockObject $aliasMapper;
 	private MailAccountMapper&MockObject $mailAccountMapper;
+	private IConfig&MockObject $config;
 
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->aliasMapper = $this->createMock(AliasMapper::class);
 		$this->mailAccountMapper = $this->createMock(MailAccountMapper::class);
+		$this->config = $this->createMock(IConfig::class);
 
 		$this->service = new AliasesService(
 			$this->aliasMapper,
-			$this->mailAccountMapper
+			$this->mailAccountMapper,
+			$this->config,
 		);
 	}
 
@@ -117,6 +121,23 @@ class AliasesServiceTest extends TestCase {
 			$entity->getAlias(),
 			$entity->getName()
 		);
+	}
+
+	public function testCreateDisabledByAdmin(): void {
+		$this->expectException(ClientException::class);
+		$this->expectExceptionMessage('Creating aliases has been disabled by the administrator.');
+
+		$this->config->expects(self::once())
+			->method('getAppValue')
+			->with('mail', 'allow_new_mail_aliases', 'yes')
+			->willReturn('no');
+
+		$this->mailAccountMapper->expects(self::never())
+			->method('find');
+		$this->aliasMapper->expects(self::never())
+			->method('insert');
+
+		$this->service->create('300', 200, 'jane@doe.com', 'Jane Doe');
 	}
 
 	public function testDelete(): void {

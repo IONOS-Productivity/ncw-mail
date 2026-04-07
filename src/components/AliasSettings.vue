@@ -28,6 +28,7 @@
 			<li v-for="alias in aliases" :key="alias.id">
 				<AliasForm :account="account"
 					:alias="alias"
+					:enable-update="allowNewAliases"
 					:on-update-alias="updateAlias"
 					:on-delete="deleteAlias" />
 			</li>
@@ -47,7 +48,7 @@
 		</ul>
 
 		<div v-if="!account.provisioningId" class="aliases-controls">
-			<ButtonVue v-if="!showForm"
+			<ButtonVue v-if="!showForm && allowNewAliases"
 				type="primary"
 				:aria-label="t('mail', 'Add alias')"
 				@click="showForm = true">
@@ -113,6 +114,9 @@ export default {
 		...mapStores(useMainStore),
 		aliases() {
 			return this.account.aliases
+		},
+		allowNewAliases() {
+			return this.mainStore.getPreference('allow-new-aliases', true)
 		},
 		accountAlias() {
 			return {

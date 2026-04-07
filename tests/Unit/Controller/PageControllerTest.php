@@ -285,7 +285,7 @@ class PageControllerTest extends TestCase {
 				['version', '0.0.0', '26.0.0'],
 				['app.mail.attachment-size-limit', 0, 123],
 			]);
-		$this->config->expects($this->exactly(7))
+		$this->config->expects($this->exactly(8))
 			->method('getAppValue')
 			->withConsecutive(
 				[ 'mail', 'installed_version' ],
@@ -295,6 +295,7 @@ class PageControllerTest extends TestCase {
 				['mail', 'microsoft_oauth_tenant_id' ],
 				['core', 'backgroundjobs_mode', 'ajax' ],
 				['mail', 'allow_new_mail_accounts', 'yes'],
+				['mail', 'allow_new_mail_aliases', 'yes'],
 			)->willReturnOnConsecutiveCalls(
 				$this->returnValue('1.2.3'),
 				$this->returnValue('threaded'),
@@ -302,6 +303,7 @@ class PageControllerTest extends TestCase {
 				$this->returnValue(''),
 				$this->returnValue(''),
 				$this->returnValue('cron'),
+				$this->returnValue('yes'),
 				$this->returnValue('yes'),
 			);
 		$this->accountProviderService->expects($this->once())
@@ -340,7 +342,7 @@ class PageControllerTest extends TestCase {
 			->method('findAll')
 			->with($this->userId)
 			->willReturn([]);
-		$this->initialState->expects($this->exactly(24))
+		$this->initialState->expects($this->exactly(25))
 			->method('provideInitialState')
 			->withConsecutive(
 				['debug', true],
@@ -374,6 +376,7 @@ class PageControllerTest extends TestCase {
 				['disable-scheduled-send', false],
 				['disable-snooze', false],
 				['allow-new-accounts', true],
+				['allow-new-aliases', true],
 				['llm_summaries_available', false],
 				['llm_translation_enabled', false],
 				['llm_freeprompt_available', false],
