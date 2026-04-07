@@ -18,6 +18,7 @@
 			<ProviderAppPassword :account="account" :provider-id="account.managedByProvider" />
 		</NcAppSettingsSection>
 		<NcAppSettingsSection
+			v-if="allowNewAliases"
 			id="alias-settings"
 			:name="t('mail', 'Aliases')">
 			<AliasSettings :account="account" @rename-primary-alias="scrollToAccountSettings" />
@@ -227,6 +228,12 @@ export default {
 
 		email() {
 			return this.account.emailAddress
+		},
+
+		allowNewAliases() {
+			const hasAliases = this.account?.aliases?.length > 0
+			const allowNewAliases = this.mainStore.getPreference('allow-new-aliases', true)
+			return allowNewAliases || hasAliases
 		},
 
 		showProviderAppPassword() {

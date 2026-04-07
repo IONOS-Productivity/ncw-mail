@@ -19,6 +19,8 @@ use OCA\Mail\Service\DelegationService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\IConfig;
+use OCP\IL10N;
 use OCP\IRequest;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -42,8 +44,13 @@ class AliasesControllerTest extends TestCase {
 
 		$this->aliasMapper = $this->createMock(AliasMapper::class);
 		$this->mailAccountMapper = $this->createMock(MailAccountMapper::class);
+		$config = $this->createMock(IConfig::class);
+		$config->method('getAppValue')
+			->with('mail', 'allow_new_mail_aliases', 'yes')
+			->willReturn('yes');
+		$l10n = $this->createMock(IL10N::class);
 
-		$this->aliasService = new AliasesService($this->aliasMapper, $this->mailAccountMapper);
+		$this->aliasService = new AliasesService($this->aliasMapper, $this->mailAccountMapper, $config, $l10n);
 		$this->delegationService = $this->createMock(DelegationService::class);
 		$this->delegationService->method('resolveAccountUserId')
 			->willReturn($this->userId);
