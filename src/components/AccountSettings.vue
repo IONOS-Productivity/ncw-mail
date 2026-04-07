@@ -15,7 +15,8 @@
 			:name="t('mail', 'IMAP access / password')">
 			<ProviderAppPassword :account="account" :provider-id="account.managedByProvider" />
 		</AppSettingsSection>
-		<AppSettingsSection id="alias-settings"
+		<AppSettingsSection v-if="allowNewAliases"
+			id="alias-settings"
 			:name="t('mail', 'Aliases')">
 			<AliasSettings :account="account" @rename-primary-alias="scrollToAccountSettings" />
 		</AppSettingsSection>
@@ -175,6 +176,9 @@ export default {
 		},
 		email() {
 			return this.account.emailAddress
+		},
+		allowNewAliases() {
+			return this.mainStore.getPreference('allow-new-aliases', true)
 		},
 		showProviderAppPassword() {
 			// Show the password reset section if:

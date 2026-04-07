@@ -61,6 +61,14 @@ export const updateAllowNewMailAccounts = (allowed) => {
 	return axios.post(url, data).then((resp) => resp.data)
 }
 
+export const updateAllowNewMailAliases = (allowed) => {
+	const url = generateUrl('/apps/mail/api/settings/allownewaliases')
+	const data = {
+		allowed,
+	}
+	return axios.post(url, data).then((resp) => resp.data)
+}
+
 export const updateLlmEnabled = async (enabled) => {
 	const url = generateUrl('/apps/mail/api/settings/llm')
 	const data = {
