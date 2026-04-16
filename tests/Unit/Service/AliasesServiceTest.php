@@ -17,6 +17,7 @@ use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Service\AliasesService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\IConfig;
+use OCP\IL10N;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class AliasesServiceTest extends TestCase {
@@ -26,17 +27,26 @@ class AliasesServiceTest extends TestCase {
 	private MailAccountMapper&MockObject $mailAccountMapper;
 	private IConfig&MockObject $config;
 
+	private IL10N&MockObject $l10n;
+
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->aliasMapper = $this->createMock(AliasMapper::class);
 		$this->mailAccountMapper = $this->createMock(MailAccountMapper::class);
 		$this->config = $this->createMock(IConfig::class);
+		$this->l10n = $this->createMock(IL10N::class);
+
+		$this->l10n->method('t')
+			->willReturnCallback(function (string $text) {
+				return $text;
+			});
 
 		$this->service = new AliasesService(
 			$this->aliasMapper,
 			$this->mailAccountMapper,
 			$this->config,
+			$this->l10n,
 		);
 	}
 
