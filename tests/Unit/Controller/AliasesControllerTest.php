@@ -18,31 +18,23 @@ use OCA\Mail\Service\AliasesService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\IRequest;
+use PHPUnit\Framework\MockObject\MockObject;
 
 class AliasesControllerTest extends TestCase {
-	private $controller;
-	private $appName = 'mail';
-	private $request;
-	private $userId = 'user12345';
-	private $alias;
-
-	/** @var AliasMapper */
-	private $aliasMapper;
-
-	/** @var MailAccountMapper */
-	private $mailAccountMapper;
-
-	/** @var AliasesService */
-	private $aliasService;
+	private AliasesController $controller;
+	private string $appName = 'mail';
+	private IRequest&MockObject $request;
+	private string $userId = 'user12345';
+	private Alias&MockObject $alias;
+	private AliasMapper&MockObject $aliasMapper;
+	private MailAccountMapper&MockObject $mailAccountMapper;
+	private AliasesService $aliasService;
 
 	public function setUp(): void {
 		parent::setUp();
-		$this->request = $this->getMockBuilder('OCP\IRequest')
-			->getMock();
-
-		$this->alias = $this->getMockBuilder(\OCA\Mail\Db\Alias::class)
-			->disableOriginalConstructor()
-			->getMock();
+		$this->request = $this->createMock(IRequest::class);
+		$this->alias = $this->createMock(Alias::class);
 
 		$this->aliasMapper = $this->createMock(AliasMapper::class);
 		$this->mailAccountMapper = $this->createMock(MailAccountMapper::class);
