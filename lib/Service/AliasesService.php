@@ -18,8 +18,8 @@ use OCP\AppFramework\Db\DoesNotExistException;
 
 class AliasesService {
 	public function __construct(
-		private AliasMapper $aliasMapper,
-		private MailAccountMapper $mailAccountMapper,
+		private readonly AliasMapper $aliasMapper,
+		private readonly MailAccountMapper $mailAccountMapper,
 	) {
 	}
 
