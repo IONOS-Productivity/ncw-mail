@@ -16,19 +16,13 @@ use OCA\Mail\Db\MailAccountMapper;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Service\AliasesService;
 use OCP\AppFramework\Db\DoesNotExistException;
+use PHPUnit\Framework\MockObject\MockObject;
 
 class AliasesServiceTest extends TestCase {
-	/** @var AliasesService */
-	private $service;
-
-	/** @var string */
-	private $user = 'herbert';
-
-	/** @var AliasMapper */
-	private $aliasMapper;
-
-	/** @var MailAccountMapper */
-	private $mailAccountMapper;
+	private AliasesService $service;
+	private string $user = 'herbert';
+	private AliasMapper&MockObject $aliasMapper;
+	private MailAccountMapper&MockObject $mailAccountMapper;
 
 	protected function setUp(): void {
 		parent::setUp();
