@@ -95,6 +95,22 @@ occ config:app:set mail abuse_number_of_messages_per_1h --value=30
 occ config:app:set mail abuse_number_of_messages_per_1d --value=100
 ```
 
+### Disable alias creation
+
+By default, users can create new mail aliases. Administrators can prevent this globally while still allowing users to view and delete their existing aliases.
+
+```bash
+# Disable alias creation for all users
+occ config:app:set mail allow_new_mail_aliases --value=no
+
+# Re-enable alias creation (default)
+occ config:app:set mail allow_new_mail_aliases --value=yes
+```
+
+When disabled, the "Add alias" button is hidden in the user interface and API requests to create new aliases are rejected. Existing aliases remain visible and can be deleted.
+
+The setting can also be toggled from the Mail section of the Nextcloud admin settings page.
+
 ## Google OAuth
 
 This app can allow users to connect their Google accounts with OAuth. This makes it possible to use accounts without 2FA or app password.
