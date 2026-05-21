@@ -164,6 +164,19 @@ class IonosConfigService {
 	}
 
 	/**
+	 * Check if mailbox creation is possible for this instance.
+	 *
+	 * This flag is provided by the operator via the IONOS_MAILBOX_POSSIBLE environment
+	 * variable (set by PSS through the helm chart). It is only true when a customer
+	 * domain is connected to the instance.
+	 *
+	 * @return bool True if mailbox creation is possible, false otherwise
+	 */
+	public function isMailboxPossible(): bool {
+		return $this->config->getSystemValue('ncw.mailboxPossible', '') === 'true';
+	}
+
+	/**
 	 * Check if IONOS integration is fully enabled and configured
 	 *
 	 * Returns true only if:
