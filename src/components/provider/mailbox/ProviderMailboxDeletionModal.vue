@@ -86,7 +86,7 @@ export default {
 	.warning-text {
 		margin-top: 12px;
 		font-weight: 500;
-		color: var(--color-error);
+		color: var(--color-warning-text);
 	}
 
 	.mailbox-details {
