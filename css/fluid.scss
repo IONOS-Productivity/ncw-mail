@@ -10,5 +10,5 @@
 }
 
 @mixin gradient-background {
-	background: radial-gradient(100% 100% at 100% 100%, var(--color-primary-element) 0%, rgba(var(--color-main-background-rgb), 0) 100%), var(--color-main-background);
+	background-color: var(--color-main-background);
 }
