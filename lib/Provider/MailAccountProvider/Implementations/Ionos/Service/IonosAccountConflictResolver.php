@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2025 STRATO GmbH
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\Mail\Provider\MailAccountProvider\Implementations\Ionos\Service;
 
 use OCA\Mail\Exception\ServiceException;
@@ -15,7 +16,6 @@ use Psr\Log\LoggerInterface;
  * Handles conflict resolution when IONOS account creation fails
  */
 class IonosAccountConflictResolver {
-
 
 	public function __construct(
 		private IonosMailService $ionosMailService,

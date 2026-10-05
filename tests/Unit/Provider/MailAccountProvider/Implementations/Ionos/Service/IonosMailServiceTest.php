@@ -545,7 +545,6 @@ class IonosMailServiceTest extends TestCase {
 		$this->assertFalse($result);
 	}
 
-
 	public function testDeleteEmailAccountSuccess(): void {
 		$this->setupConfigMocks();
 		$apiInstance = $this->setupApiClient();

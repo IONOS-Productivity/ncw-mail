@@ -9,13 +9,15 @@
 			<span class="hidden-visually">{{ t('mail', 'Total rows summary') }}</span>
 		</th>
 		<td class="footer__cell footer__cell--loading">
-			<NcLoadingIcon v-if="loading"
-				:title="t('mail', 'Loading mailboxes …')"
+			<NcLoadingIcon
+				v-if="loading"
+				:title="t('mail', 'Loading mailboxes …')"
 				:size="32" />
 		</td>
 		<td class="footer__cell footer__cell--count">
 			<span :aria-describedby="countDescId">{{ mailboxCount }}</span>
-			<span :id="countDescId"
+			<span
+				:id="countDescId"
 				class="hidden-visually">
 				{{ t('mail', 'Scroll to load more rows') }}
 			</span>
@@ -24,8 +26,8 @@
 </template>
 
 <script>
-import { NcLoadingIcon } from '@nextcloud/vue'
 import { n } from '@nextcloud/l10n'
+import { NcLoadingIcon } from '@nextcloud/vue'
 
 export default {
 	name: 'MailboxListFooter',
@@ -39,6 +41,7 @@ export default {
 			type: Boolean,
 			required: true,
 		},
+
 		mailboxes: {
 			type: Array,
 			required: true,
@@ -56,8 +59,8 @@ export default {
 			if (this.loading) {
 				return n(
 					'mail',
-					'{count} mailbox …',
-					'{count} mailboxes …',
+					'{count} mailbox …',
+					'{count} mailboxes …',
 					this.mailboxes.length,
 					{
 						count: this.mailboxes.length,
@@ -81,7 +84,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-@use './styles';
+@use './styles.scss';
 
 .footer {
 	border-top: 1px solid var(--color-border);

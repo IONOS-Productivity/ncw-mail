@@ -5,23 +5,27 @@
 
 <template>
 	<tr class="header">
-		<th class="header__cell header__cell--email"
+		<th
+			class="header__cell header__cell--email"
 			data-cy-mailbox-list-header-email
 			scope="col">
 			<strong>{{ t('mail', 'Email Address') }}</strong>
 		</th>
-		<th class="header__cell header__cell--displayname"
+		<th
+			class="header__cell header__cell--displayname"
 			data-cy-mailbox-list-header-displayname
 			scope="col">
 			<span>{{ t('mail', 'Display Name') }}</span>
 		</th>
-		<th class="header__cell header__cell--linked-user"
+		<th
+			class="header__cell header__cell--linked-user"
 			data-cy-mailbox-list-header-linked-user
 			scope="col">
 			<span>{{ t('mail', 'Linked User') }}</span>
 		</th>
 		<!-- DEV ONLY: this column is for debugging purposes and will not be visible in production -->
-		<th v-if="debug"
+		<th
+			v-if="debug"
 			class="header__cell header__cell--status header__cell--dev"
 			data-cy-mailbox-list-header-status
 			scope="col"
@@ -29,7 +33,8 @@
 			<span>{{ t('mail', 'Status') }}</span>
 			<span class="dev-badge">DEV</span>
 		</th>
-		<th class="header__cell header__cell--actions"
+		<th
+			class="header__cell header__cell--actions"
 			data-cy-mailbox-list-header-actions
 			scope="col">
 			<span class="hidden-visually">{{ t('mail', 'Actions') }}</span>
@@ -51,7 +56,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-@use './styles';
+@use './styles.scss';
 
 .header {
 	border-bottom: 1px solid var(--color-border);

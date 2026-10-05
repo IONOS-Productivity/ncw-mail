@@ -653,7 +653,6 @@ class ExternalAccountsControllerTest extends TestCase {
 		$this->assertEquals('error', $data['status']);
 	}
 
-
 	public function testGeneratePasswordWithNoAccountId(): void {
 		$user = $this->createMock(IUser::class);
 		$user->method('getUID')->willReturn('testuser');
@@ -686,7 +685,6 @@ class ExternalAccountsControllerTest extends TestCase {
 		$data = $response->getData();
 		$this->assertEquals('fail', $data['status']);
 	}
-
 
 	public function testGeneratePasswordWithProviderNotFound(): void {
 		$user = $this->createMock(IUser::class);

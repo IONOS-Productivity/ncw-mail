@@ -12,7 +12,7 @@ import { generateUrl } from '@nextcloud/router'
  * @param {string} providerId The provider ID
  * @return {Promise}
  */
-export const getMailboxes = (providerId) => {
+export function getMailboxes(providerId) {
 	const url = generateUrl('/apps/mail/api/admin/providers/{providerId}/mailboxes', {
 		providerId,
 	})
@@ -27,7 +27,7 @@ export const getMailboxes = (providerId) => {
  * @param {string} email The email address
  * @return {Promise}
  */
-export const deleteMailbox = (providerId, userId, email) => {
+export function deleteMailbox(providerId, userId, email) {
 	const url = generateUrl('/apps/mail/api/admin/providers/{providerId}/mailboxes/{userId}?email={email}', {
 		providerId,
 		userId,
@@ -44,7 +44,7 @@ export const deleteMailbox = (providerId, userId, email) => {
  * @param {object} data Update data (e.g., { localpart: 'newuser', name: 'New Name' })
  * @return {Promise}
  */
-export const updateMailbox = (providerId, userId, data) => {
+export function updateMailbox(providerId, userId, data) {
 	const url = generateUrl('/apps/mail/api/admin/providers/{providerId}/mailboxes/{userId}', {
 		providerId,
 		userId,
@@ -60,7 +60,7 @@ export const updateMailbox = (providerId, userId, data) => {
  *
  * @return {Promise}
  */
-export const getEnabledProviders = () => {
+export function getEnabledProviders() {
 	const url = generateUrl('/apps/mail/api/admin/providers')
 	return axios.get(url).then((resp) => resp.data)
 }

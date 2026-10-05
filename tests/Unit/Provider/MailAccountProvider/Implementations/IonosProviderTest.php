@@ -340,7 +340,6 @@ class IonosProviderTest extends TestCase {
 			->with($userId)
 			->willThrowException($exception);
 
-
 		$this->expectException(\OCA\Mail\Exception\ProviderServiceException::class);
 		$this->expectExceptionMessage('Failed to generate app password: API error');
 

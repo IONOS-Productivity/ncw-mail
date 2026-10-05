@@ -5,7 +5,8 @@
 <template>
 	<div>
 		<!-- Provider Selection (if multiple providers available) -->
-		<NcSelect v-if="providers.length > 1"
+		<NcSelect
+			v-if="providers.length > 1"
 			v-model="selectedProvider"
 			:options="providers"
 			label="name"
@@ -20,10 +21,12 @@
 
 		<!-- Dynamic Form Fields based on Provider Schema -->
 		<div v-if="selectedProvider">
-			<div v-for="(schema, paramName) in selectedProvider.parameterSchema"
+			<div
+				v-for="(schema, paramName) in selectedProvider.parameterSchema"
 				:key="paramName"
 				class="field-wrapper">
-				<NcInputField :id="`provider-${selectedProvider.id}-${paramName}`"
+				<NcInputField
+					:id="`provider-${selectedProvider.id}-${paramName}`"
 					v-model="formData[paramName]"
 					:label="t('mail', schema.description)"
 					:type="schema.type === 'password' ? 'password' : 'text'"
@@ -34,7 +37,8 @@
 					@update:value="onFieldUpdate(paramName, $event)"
 					@change="clearAllFeedback" />
 				<!-- Email domain preview (shown next to emailUser field) -->
-				<div v-if="paramName === 'emailUser' && emailPreview"
+				<div
+					v-if="paramName === 'emailUser' && emailPreview"
 					class="email-domain-hint"
 					:class="{ 'email-domain-hint--error': isEmailValid === false }">
 					{{ emailPreview }}
@@ -46,8 +50,9 @@
 
 			<!-- Submit Button -->
 			<div class="account-form__submit-buttons">
-				<NcButton class="account-form__submit-button"
-					type="primary"
+				<NcButton
+					class="account-form__submit-button"
+					variant="primary"
 					:disabled="!isFormValid || localLoading"
 					@click="submitForm">
 					<template #icon>
@@ -72,20 +77,20 @@
 		<!-- Loading State -->
 		<div v-else-if="providersLoading" class="providers-loading">
 			<IconLoading :size="32" />
-			<p>{{ t('mail', 'Loading providers...') }}</p>
+			<p>{{ t('mail', 'Loading providers…') }}</p>
 		</div>
 	</div>
 </template>
 
 <script>
-import { NcInputField, NcButton, NcSelect, NcLoadingIcon as IconLoading } from '@nextcloud/vue'
-import IconCheck from 'vue-material-design-icons/Check.vue'
-import { generateUrl } from '@nextcloud/router'
 import axios from '@nextcloud/axios'
 import { translate as t } from '@nextcloud/l10n'
+import { generateUrl } from '@nextcloud/router'
+import { NcLoadingIcon as IconLoading, NcButton, NcInputField, NcSelect } from '@nextcloud/vue'
+import { mapStores } from 'pinia'
+import IconCheck from 'vue-material-design-icons/Check.vue'
 import logger from '../logger.js'
 import { fixAccountId } from '../service/AccountService.js'
-import { mapStores } from 'pinia'
 import useMainStore from '../store/mainStore.js'
 
 export default {
@@ -97,22 +102,26 @@ export default {
 		IconLoading,
 		IconCheck,
 	},
+
 	props: {
 		loading: {
 			type: Boolean,
 			default: false,
 		},
+
 		clearFeedback: {
 			type: Function,
 			default: () => {
 			},
 		},
+
 		isValidEmail: {
 			type: Function,
 			default: () => {
 			},
 		},
 	},
+
 	data() {
 		return {
 			providers: [],
@@ -123,6 +132,7 @@ export default {
 			feedback: null,
 		}
 	},
+
 	computed: {
 		...mapStores(useMainStore),
 
@@ -188,13 +198,15 @@ export default {
 
 		buttonText() {
 			return this.localLoading
-				? t('mail', 'Creating account...')
+				? t('mail', 'Creating account…')
 				: t('mail', 'Create & Connect')
 		},
 	},
+
 	async mounted() {
 		await this.loadProviders()
 	},
+
 	methods: {
 		async loadProviders() {
 			this.providersLoading = true
@@ -205,7 +217,7 @@ export default {
 
 				logger.debug('Loaded mail account providers', {
 					count: this.providers.length,
-					providers: this.providers.map(p => p.id),
+					providers: this.providers.map((p) => p.id),
 				})
 
 				// Auto-select if only one provider
@@ -267,7 +279,7 @@ export default {
 
 			try {
 				// Step 1: Create account via provider API
-				this.feedback = t('mail', 'Creating account...')
+				this.feedback = t('mail', 'Creating account…')
 				const account = await this.callProviderAPI(this.selectedProvider.id, this.formData)
 
 				logger.debug(`Account ${account.id} created via provider ${this.selectedProvider.id}`, { account })
@@ -275,7 +287,7 @@ export default {
 				this.feedback = t('mail', 'Account created successfully')
 
 				// Step 2: Try to fetch mailboxes with retries
-				this.feedback = t('mail', 'Connecting to mail server...')
+				this.feedback = t('mail', 'Connecting to mail server…')
 				const mailboxesFetched = await this.tryFetchMailboxesWithRetry(account)
 
 				if (mailboxesFetched) {
@@ -305,15 +317,16 @@ export default {
 		/**
 		 * Try to fetch mailboxes with exponential backoff retry logic
 		 * Returns true if successful, false if all retries failed
-		 * @param account
-		 * @param maxAttempts
+		 *
+		 * @param {object} account the created account
+		 * @param {number} maxAttempts maximum number of attempts
 		 */
 		async tryFetchMailboxesWithRetry(account, maxAttempts = 3) {
 			for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 				try {
 					// Show attempt number for clarity
 					if (attempt > 1) {
-						this.feedback = t('mail', 'Connecting to mail server (attempt {attempt}/{max})...', {
+						this.feedback = t('mail', 'Connecting to mail server (attempt {attempt}/{max})…', {
 							attempt,
 							max: maxAttempts,
 						})
@@ -344,7 +357,7 @@ export default {
 						const delaySeconds = Math.round(baseDelay * (1 + jitter))
 						const delayMs = delaySeconds * 1000
 
-						this.feedback = t('mail', 'Mail server not ready. Waiting {seconds} seconds before retry...', {
+						this.feedback = t('mail', 'Mail server not ready. Waiting {seconds} seconds before retry…', {
 							seconds: delaySeconds,
 						})
 
@@ -361,10 +374,11 @@ export default {
 
 		/**
 		 * Helper to delay execution
-		 * @param ms
+		 *
+		 * @param {number} ms milliseconds to wait
 		 */
 		delay(ms) {
-			return new Promise(resolve => setTimeout(resolve, ms))
+			return new Promise((resolve) => setTimeout(resolve, ms))
 		},
 
 		async callProviderAPI(providerId, parameters) {
@@ -390,27 +404,27 @@ export default {
 			// Provider-specific error handling
 			if (errorData.error === 'SERVICE_ERROR') {
 				switch (statusCode) {
-				case 400:
-					this.feedback = t('mail', 'Invalid email address or account data provided')
-					break
-				case 404:
-					this.feedback = t('mail', 'Email service not found. Please contact support')
-					break
-				case 409:
-					if (existingEmail) {
-						this.feedback = t('mail', 'You already have an email address with this provider: {email}', { email: existingEmail })
-					} else {
-						this.feedback = t('mail', 'An account with this email already exists')
-					}
-					break
-				case 412:
-					this.feedback = t('mail', 'Account state conflict. Please try again later')
-					break
-				case 500:
-					this.feedback = t('mail', 'Server error. Please try again later')
-					break
-				default:
-					this.feedback = t('mail', 'There was an error while setting up your account')
+					case 400:
+						this.feedback = t('mail', 'Invalid email address or account data provided')
+						break
+					case 404:
+						this.feedback = t('mail', 'Email service not found. Please contact support')
+						break
+					case 409:
+						if (existingEmail) {
+							this.feedback = t('mail', 'You already have an email address with this provider: {email}', { email: existingEmail })
+						} else {
+							this.feedback = t('mail', 'An account with this email already exists')
+						}
+						break
+					case 412:
+						this.feedback = t('mail', 'Account state conflict. Please try again later')
+						break
+					case 500:
+						this.feedback = t('mail', 'Server error. Please try again later')
+						break
+					default:
+						this.feedback = t('mail', 'There was an error while setting up your account')
 				}
 			} else if (errorData.error === 'PROVIDER_NOT_FOUND') {
 				this.feedback = t('mail', 'Email provider not found')

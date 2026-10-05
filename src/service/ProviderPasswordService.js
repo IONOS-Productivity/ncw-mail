@@ -1,9 +1,9 @@
+import axios from '@nextcloud/axios'
 /**
  * SPDX-FileCopyrightText: 2025 STRATO GmbH
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 import { generateUrl } from '@nextcloud/router'
-import axios from '@nextcloud/axios'
 
 /**
  * @typedef AppPasswordResponse
@@ -17,8 +17,8 @@ import axios from '@nextcloud/axios'
  * @param {number} accountId id of account
  * @return {Promise<AppPasswordResponse>}
  */
-export const generateAppPassword = async (providerId, accountId) => {
+export async function generateAppPassword(providerId, accountId) {
 	const url = generateUrl('/apps/mail/api/providers/{providerId}/password', { providerId })
 
-	return axios.post(url, { accountId }).then(resp => resp.data)
+	return axios.post(url, { accountId }).then((resp) => resp.data)
 }
