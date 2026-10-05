@@ -4,11 +4,13 @@
 -->
 
 <template>
-	<SettingsSection :name="t('mail', 'Email Administration')"
+	<SettingsSection
+		:name="t('mail', 'Email Administration')"
 		:description="t('mail', 'Manage email accounts for your users')">
 		<div class="mailbox-administration">
 			<!-- Provider Selection (if multiple providers available) -->
-			<NcSelect v-if="providers.length > 1"
+			<NcSelect
+				v-if="providers.length > 1"
 				v-model="selectedProvider"
 				:options="providers"
 				label="name"
@@ -24,7 +26,7 @@
 			<!-- Loading state -->
 			<div v-if="loading" class="loading-container">
 				<NcLoadingIcon :size="32" />
-				<p>{{ t('mail', 'Loading mailboxes...') }}</p>
+				<p>{{ t('mail', 'Loading mailboxes…') }}</p>
 			</div>
 
 			<!-- Error state -->
@@ -33,7 +35,8 @@
 			</NcNoteCard>
 
 			<!-- Empty state -->
-			<NcEmptyContent v-else-if="mailboxes.length === 0"
+			<NcEmptyContent
+				v-else-if="mailboxes.length === 0"
 				:name="t('mail', 'No mailboxes found')"
 				:description="t('mail', 'There are no mailboxes to display.')">
 				<template #icon>
@@ -42,7 +45,8 @@
 			</NcEmptyContent>
 
 			<!-- Mailbox list table -->
-			<VirtualList v-else
+			<VirtualList
+				v-else
 				:data-component="MailboxListItem"
 				:data-sources="mailboxes"
 				data-key="userId"
@@ -66,13 +70,15 @@
 				</template>
 
 				<template #footer>
-					<MailboxListFooter :loading="loading"
+					<MailboxListFooter
+						:loading="loading"
 						:mailboxes="mailboxes" />
 				</template>
 			</VirtualList>
 
 			<!-- Deletion modal -->
-			<ProviderMailboxDeletionModal v-if="showDeleteModal"
+			<ProviderMailboxDeletionModal
+				v-if="showDeleteModal"
 				:mailbox="selectedMailbox"
 				@confirm="confirmDelete"
 				@cancel="cancelDelete" />
@@ -81,16 +87,16 @@
 </template>
 
 <script>
+import { showError, showSuccess } from '@nextcloud/dialogs'
 import { NcEmptyContent, NcLoadingIcon, NcNoteCard, NcSelect, NcSettingsSection as SettingsSection } from '@nextcloud/vue'
 import IconMail from 'vue-material-design-icons/Email.vue'
-
-import VirtualList from './shared/VirtualList.vue'
-import MailboxListHeader from './shared/MailboxListHeader.vue'
-import MailboxListFooter from './shared/MailboxListFooter.vue'
-import ProviderMailboxListItem from './ProviderMailboxListItem.vue'
 import ProviderMailboxDeletionModal from './ProviderMailboxDeletionModal.vue'
-import { getMailboxes, getEnabledProviders, deleteMailbox } from '../../../service/ProviderMailboxService.js'
-import { showError, showSuccess } from '@nextcloud/dialogs'
+import ProviderMailboxListItem from './ProviderMailboxListItem.vue'
+import MailboxListFooter from './shared/MailboxListFooter.vue'
+import MailboxListHeader from './shared/MailboxListHeader.vue'
+import VirtualList from './shared/VirtualList.vue'
+import logger from '../../../logger.js'
+import { deleteMailbox, getEnabledProviders, getMailboxes } from '../../../service/ProviderMailboxService.js'
 
 export default {
 	name: 'ProviderMailboxAdmin',
@@ -104,7 +110,6 @@ export default {
 		VirtualList,
 		MailboxListHeader,
 		MailboxListFooter,
-		ProviderMailboxListItem,
 		ProviderMailboxDeletionModal,
 	},
 
@@ -141,6 +146,7 @@ export default {
 		await this.loadProviders()
 		await this.loadMailboxes()
 	},
+
 	methods: {
 		async loadProviders() {
 			try {
@@ -152,10 +158,11 @@ export default {
 					this.selectedProvider = this.providers[0]
 				}
 			} catch (error) {
-				console.error('Failed to load providers', error)
+				logger.error('Failed to load providers', { error })
 				this.error = this.t('mail', 'Failed to load providers')
 			}
 		},
+
 		async loadMailboxes() {
 			this.loading = true
 			this.error = null
@@ -172,27 +179,31 @@ export default {
 				this.mailboxes = response.data?.mailboxes || []
 				this.debug = response.data?.debug || false
 			} catch (error) {
-				console.error('Failed to load mailboxes', error)
+				logger.error('Failed to load mailboxes', { error })
 				this.error = this.t('mail', 'Failed to load mailboxes')
 			} finally {
 				this.loading = false
 			}
 		},
+
 		onProviderChange() {
 			// Reload mailboxes when provider changes
 			this.loadMailboxes()
 		},
+
 		handleDelete(mailbox) {
 			this.selectedMailbox = mailbox
 			this.showDeleteModal = true
 		},
+
 		handleUpdate(updatedMailbox) {
 			// Find and update mailbox in list
-			const index = this.mailboxes.findIndex(m => m.userId === updatedMailbox.userId)
+			const index = this.mailboxes.findIndex((m) => m.userId === updatedMailbox.userId)
 			if (index !== -1) {
 				this.$set(this.mailboxes, index, updatedMailbox)
 			}
 		},
+
 		async confirmDelete() {
 			if (!this.selectedMailbox || !this.selectedProvider) {
 				return
@@ -205,17 +216,16 @@ export default {
 				showSuccess(this.t('mail', 'Mailbox deleted successfully'))
 
 				// Remove from list
-				this.mailboxes = this.mailboxes.filter(
-					m => m.userId !== this.selectedMailbox.userId,
-				)
+				this.mailboxes = this.mailboxes.filter((m) => m.userId !== this.selectedMailbox.userId)
 			} catch (error) {
-				console.error('Failed to delete mailbox', error)
+				logger.error('Failed to delete mailbox', { error })
 				const errorMsg = error.response?.data?.data?.message || this.t('mail', 'Failed to delete mailbox')
 				showError(errorMsg)
 			} finally {
 				this.cancelDelete()
 			}
 		},
+
 		cancelDelete() {
 			this.showDeleteModal = false
 			this.selectedMailbox = null

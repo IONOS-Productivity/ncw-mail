@@ -1,3 +1,7 @@
+<!--
+  - SPDX-FileCopyrightText: 2025 STRATO GmbH
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 # Provider OCC Commands
 
 This document describes the new OCC commands for managing external mail account providers (e.g., IONOS Mail).

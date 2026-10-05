@@ -7,15 +7,18 @@
 	<table class="mailbox-list">
 		<slot name="before" />
 
-		<thead ref="thead"
+		<thead
+			ref="thead"
 			role="rowgroup"
 			class="mailbox-list__header">
 			<slot name="header" />
 		</thead>
 
-		<tbody :style="tbodyStyle"
+		<tbody
+			:style="tbodyStyle"
 			class="mailbox-list__body">
-			<component :is="dataComponent"
+			<component
+				:is="dataComponent"
 				v-for="item in renderedItems"
 				:key="item[dataKey]"
 				:mailbox="item"
@@ -24,7 +27,8 @@
 				@update="$emit('update', $event)" />
 		</tbody>
 
-		<tfoot ref="tfoot"
+		<tfoot
+			ref="tfoot"
 			role="rowgroup"
 			class="mailbox-list__footer">
 			<slot name="footer" />
@@ -46,18 +50,22 @@ export default {
 			type: [Object, Function],
 			required: true,
 		},
+
 		dataKey: {
 			type: String,
 			required: true,
 		},
+
 		dataSources: {
 			type: Array,
 			required: true,
 		},
+
 		itemHeight: {
 			type: Number,
 			required: true,
 		},
+
 		extraProps: {
 			type: Object,
 			default: () => ({}),

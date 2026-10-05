@@ -1,3 +1,7 @@
+<!--
+  - SPDX-FileCopyrightText: 2025 STRATO GmbH
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 # Mail Account Provider System
 
 This directory contains the pluggable mail account provider system for Nextcloud Mail.

@@ -4,24 +4,28 @@
 -->
 
 <template>
-	<tr class="mailbox-list__row"
+	<tr
+		class="mailbox-list__row"
 		:class="{ 'row--editing': editing }"
 		:data-cy-mailbox-row="mailbox.userId">
 		<!-- Email Address -->
-		<td class="row__cell row__cell--email"
+		<td
+			class="row__cell row__cell--email"
 			data-cy-mailbox-list-cell-email>
 			<!-- View Mode: Show full email -->
-			<strong v-if="!editing"
+			<strong
+				v-if="!editing"
 				:title="mailbox.email.length > 30 ? mailbox.email : null"
 				class="email-address">
 				{{ mailbox.email }}
 			</strong>
 
 			<!-- Edit Mode: Show localpart input with domain suffix -->
-			<NcTextField v-else
+			<NcTextField
+				v-else
 				ref="localpartField"
+				v-model="editedLocalpart"
 				class="cell-field"
-				:value.sync="editedLocalpart"
 				:label="t('mail', 'Email username')"
 				:disabled="loading"
 				autocomplete="off"
@@ -34,20 +38,23 @@
 		</td>
 
 		<!-- Display Name -->
-		<td class="row__cell row__cell--displayname"
+		<td
+			class="row__cell row__cell--displayname"
 			data-cy-mailbox-list-cell-displayname>
 			<template v-if="mailbox.mailAppAccountExists">
 				<!-- View Mode -->
-				<span v-if="!editing"
+				<span
+					v-if="!editing"
 					:title="(mailbox.mailAppAccountName || '').length > 25 ? mailbox.mailAppAccountName : null">
 					{{ mailbox.mailAppAccountName || t('mail', 'No name') }}
 				</span>
 
 				<!-- Edit Mode -->
-				<NcTextField v-else
+				<NcTextField
+					v-else
 					ref="displayNameField"
+					v-model="editedDisplayName"
 					class="cell-field"
-					:value.sync="editedDisplayName"
 					:label="t('mail', 'Display name')"
 					:disabled="loading"
 					autocomplete="off"
@@ -57,11 +64,13 @@
 		</td>
 
 		<!-- Linked User -->
-		<td class="row__cell row__cell--linked-user"
+		<td
+			class="row__cell row__cell--linked-user"
 			data-cy-mailbox-list-cell-linked-user>
 			<div class="user-info">
 				<!-- Avatar if user exists, placeholder icon if deleted -->
-				<NcAvatar v-if="mailbox.userExists"
+				<NcAvatar
+					v-if="mailbox.userExists"
 					class="user-icon"
 					:user="mailbox.userId"
 					:size="32"
@@ -78,7 +87,8 @@
 		</td>
 
 		<!-- Status — DEV ONLY -->
-		<td v-if="debug"
+		<td
+			v-if="debug"
 			class="row__cell row__cell--status"
 			data-cy-mailbox-list-cell-status>
 			<div class="status-indicators">
@@ -97,12 +107,14 @@
 		</td>
 
 		<!-- Actions -->
-		<td class="row__cell row__cell--actions"
+		<td
+			class="row__cell row__cell--actions"
 			:class="{ 'row__cell--actions-end': !mailbox.userExists }"
 			data-cy-mailbox-list-cell-actions>
 			<NcActions :inline="1">
 				<!-- Edit/Save Button (only if user exists) -->
-				<NcActionButton v-if="mailbox.userExists"
+				<NcActionButton
+					v-if="mailbox.userExists"
 					:disabled="loading"
 					@click="toggleEdit">
 					<template #icon>
@@ -126,15 +138,16 @@
 </template>
 
 <script>
-import { NcAvatar, NcActions, NcActionButton, NcTextField, NcLoadingIcon } from '@nextcloud/vue'
 import { showError, showSuccess } from '@nextcloud/dialogs'
-import IconPencil from 'vue-material-design-icons/Pencil.vue'
-import IconDelete from 'vue-material-design-icons/Delete.vue'
+import { NcActionButton, NcActions, NcAvatar, NcLoadingIcon, NcTextField } from '@nextcloud/vue'
+import IconAccountOff from 'vue-material-design-icons/AccountOff.vue'
+import IconAlertCircle from 'vue-material-design-icons/AlertCircle.vue'
 import IconCheck from 'vue-material-design-icons/Check.vue'
 import IconCheckCircle from 'vue-material-design-icons/CheckCircle.vue'
-import IconAlertCircle from 'vue-material-design-icons/AlertCircle.vue'
-import IconAccountOff from 'vue-material-design-icons/AccountOff.vue'
+import IconDelete from 'vue-material-design-icons/Delete.vue'
 import IconEmailOff from 'vue-material-design-icons/EmailOff.vue'
+import IconPencil from 'vue-material-design-icons/Pencil.vue'
+import logger from '../../../logger.js'
 import { updateMailbox } from '../../../service/ProviderMailboxService.js'
 
 export default {
@@ -153,20 +166,24 @@ export default {
 		IconAccountOff,
 		IconEmailOff,
 	},
+
 	props: {
 		mailbox: {
 			type: Object,
 			required: true,
 		},
+
 		providerId: {
 			type: String,
 			required: true,
 		},
+
 		debug: {
 			type: Boolean,
 			default: false,
 		},
 	},
+
 	emits: ['delete', 'update'],
 	data() {
 		return {
@@ -176,45 +193,55 @@ export default {
 			loading: false,
 		}
 	},
+
 	computed: {
 		emailDomain() {
 			const atIndex = this.mailbox.email.indexOf('@')
 			return atIndex >= 0 ? this.mailbox.email.substring(atIndex) : ''
 		},
+
 		localpartFromEmail() {
 			const atIndex = this.mailbox.email.indexOf('@')
 			return atIndex >= 0 ? this.mailbox.email.substring(0, atIndex) : this.mailbox.email
 		},
+
 		// User status
 		userStatusIcon() {
 			return this.mailbox.userExists ? IconCheckCircle : IconAccountOff
 		},
+
 		userStatusClass() {
 			return this.mailbox.userExists ? 'status-ok' : 'status-error'
 		},
+
 		userStatusLabel() {
 			return this.mailbox.userExists
 				? this.t('mail', 'User exists')
 				: this.t('mail', 'User deleted')
 		},
+
 		// Mail app account status
 		accountStatusIcon() {
 			return this.mailbox.mailAppAccountExists ? IconCheckCircle : IconEmailOff
 		},
+
 		accountStatusClass() {
 			return this.mailbox.mailAppAccountExists ? 'status-ok' : 'status-warning'
 		},
+
 		accountStatusLabel() {
 			return this.mailbox.mailAppAccountExists
 				? this.t('mail', 'Mail configured')
 				: this.t('mail', 'Not configured')
 		},
 	},
+
 	methods: {
 		extractLocalpart(email) {
 			const atIndex = email.indexOf('@')
 			return atIndex >= 0 ? email.substring(0, atIndex) : email
 		},
+
 		toggleEdit() {
 			if (this.editing) {
 				// Save changes
@@ -231,6 +258,7 @@ export default {
 				})
 			}
 		},
+
 		async saveChanges() {
 			if (this.loading) {
 				return
@@ -293,7 +321,7 @@ export default {
 				// Exit edit mode on success
 				this.editing = false
 			} catch (error) {
-				console.error('Failed to update mailbox', error)
+				logger.error('Failed to update mailbox', { error })
 
 				// Extract error message from response
 				let errorMsg = this.t('mail', 'Failed to update mailbox')
@@ -316,7 +344,7 @@ export default {
 </script>
 
 <style scoped lang="scss">
-@use './shared/styles' as styles;
+@use './shared/styles.scss' as styles;
 
 // Apply row layout to the <tr> element (same pattern as UserRow.vue)
 .mailbox-list__row {

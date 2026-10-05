@@ -4,7 +4,8 @@
 -->
 
 <template>
-	<NcDialog :name="t('mail', 'Mailbox deletion')"
+	<NcDialog
+		:name="t('mail', 'Mailbox deletion')"
 		:open="true"
 		@update:open="handleClose">
 		<div class="deletion-modal-content">
@@ -14,7 +15,7 @@
 						t(
 							'mail',
 							'Are you sure you want to delete the mailbox for {email}?',
-							{ email: mailbox?.email || '' }
+							{ email: mailbox?.email || '' },
 						)
 					}}
 				</p>
@@ -36,10 +37,10 @@
 		</div>
 
 		<template #actions>
-			<NcButton type="secondary" @click="handleClose">
+			<NcButton variant="secondary" @click="handleClose">
 				{{ t('mail', 'Cancel') }}
 			</NcButton>
-			<NcButton type="error" @click="handleConfirm">
+			<NcButton variant="error" @click="handleConfirm">
 				<template #icon>
 					<IconDelete :size="20" />
 				</template>
@@ -50,7 +51,7 @@
 </template>
 
 <script>
-import { NcDialog, NcButton, NcNoteCard } from '@nextcloud/vue'
+import { NcButton, NcDialog, NcNoteCard } from '@nextcloud/vue'
 import IconDelete from 'vue-material-design-icons/Delete.vue'
 
 export default {
@@ -61,17 +62,20 @@ export default {
 		NcNoteCard,
 		IconDelete,
 	},
+
 	props: {
 		mailbox: {
 			type: Object,
 			default: null,
 		},
 	},
+
 	emits: ['confirm', 'cancel'],
 	methods: {
 		handleConfirm() {
 			this.$emit('confirm')
 		},
+
 		handleClose() {
 			this.$emit('cancel')
 		},

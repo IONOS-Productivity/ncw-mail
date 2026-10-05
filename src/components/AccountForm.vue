@@ -231,11 +231,13 @@
 					{{ t('mail', 'Enable mark as important classification') }}
 				</NcCheckboxRadioSwitch>
 			</Tab>
-			<Tab v-if="useProviderMailconfig"
+			<Tab
+				v-if="useProviderMailconfig"
 				id="create"
 				key="create"
 				:name="t('mail', 'New Email Address')">
-				<ExternalProviderTab :loading="loading"
+				<ExternalProviderTab
+					:loading="loading"
 					:clear-feedback="clearFeedback"
 					:is-valid-email="isValidEmail"
 					@account-created="(account) => $emit('account-created', account)" />
@@ -290,6 +292,7 @@ import { NcButton, NcCheckboxRadioSwitch, NcInputField, NcLoadingIcon, NcPasswor
 import { mapState, mapStores } from 'pinia'
 import { Tab, Tabs } from 'vue-tabs-component'
 import IconCheck from 'vue-material-design-icons/Check.vue'
+import ExternalProviderTab from './ExternalProviderTab.vue'
 import { CONSENT_ABORTED, getUserConsent } from '../integration/oauth.js'
 import logger from '../logger.js'
 import {
@@ -299,7 +302,6 @@ import {
 } from '../service/AutoConfigService.js'
 import { generateOauthState } from '../service/OauthStateService.js'
 import useMainStore from '../store/mainStore.js'
-import ExternalProviderTab from './ExternalProviderTab.vue'
 
 export default {
 	name: 'AccountForm',

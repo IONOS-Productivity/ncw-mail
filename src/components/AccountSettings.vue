@@ -228,6 +228,7 @@ export default {
 		email() {
 			return this.account.emailAddress
 		},
+
 		showProviderAppPassword() {
 			// Show the password reset section if:
 			// 1. Account is managed by a provider (managedByProvider is set)

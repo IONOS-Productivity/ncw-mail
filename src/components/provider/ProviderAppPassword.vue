@@ -15,7 +15,8 @@
 		</div>
 
 		<div class="provider-password-controls">
-			<ButtonVue v-if="!generatedPassword"
+			<ButtonVue
+				v-if="!generatedPassword"
 				type="primary"
 				:aria-label="t('mail', 'Generate password')"
 				:disabled="loading"
@@ -32,7 +33,8 @@
 			<div class="provider-password-field">
 				<strong>{{ t('mail', 'Password:') }}</strong>
 				<code class="provider-password-value">{{ generatedPassword }}</code>
-				<ButtonVue type="tertiary"
+				<ButtonVue
+					type="tertiary"
 					:aria-label="t('mail', 'Copy password')"
 					@click="copyPassword">
 					<template #icon>
@@ -52,10 +54,10 @@
 </template>
 
 <script>
+import { showError, showSuccess } from '@nextcloud/dialogs'
 import { NcButton as ButtonVue, NcLoadingIcon as IconLoading } from '@nextcloud/vue'
-import IconKey from 'vue-material-design-icons/Key.vue'
 import IconContentCopy from 'vue-material-design-icons/ContentCopy.vue'
-import { showSuccess, showError } from '@nextcloud/dialogs'
+import IconKey from 'vue-material-design-icons/Key.vue'
 import logger from '../../logger.js'
 import { generateAppPassword } from '../../service/ProviderPasswordService.js'
 
@@ -87,16 +89,19 @@ export default {
 		IconKey,
 		IconContentCopy,
 	},
+
 	props: {
 		account: {
 			type: Object,
 			required: true,
 		},
+
 		providerId: {
 			type: String,
 			required: true,
 		},
 	},
+
 	data() {
 		return {
 			loading: false,
@@ -104,11 +109,13 @@ export default {
 			error: '',
 		}
 	},
+
 	computed: {
 		email() {
 			return this.account.emailAddress || ''
 		},
 	},
+
 	methods: {
 		async generatePassword() {
 			this.loading = true
