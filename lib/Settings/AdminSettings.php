@@ -60,6 +60,11 @@ class AdminSettings implements IDelegatedSettings {
 		);
 
 		$this->initialStateService->provideInitialState(
+			'allow_new_mail_aliases',
+			$this->appConfig->getValueString(Application::APP_ID, 'allow_new_mail_aliases', 'yes') === 'yes'
+		);
+
+		$this->initialStateService->provideInitialState(
 			'layout_message_view',
 			$this->appConfig->getValueString(Application::APP_ID, ConfigLexicon::LAYOUT_MESSAGE_VIEW, 'threaded')
 		);
