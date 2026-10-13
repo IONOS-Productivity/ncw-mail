@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\Mail\Listener;
 
 use OCA\Mail\Exception\ClientException;
+use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\DelegationService;
 use OCA\Mail\Service\TextBlockService;
@@ -27,6 +28,7 @@ class UserDeletedListener implements IEventListener {
 		private TextBlockService $textBlockService,
 		private DelegationService $delegationService,
 		private LoggerInterface $logger,
+		private readonly ProviderRegistryService $providerRegistry,
 	) {
 	}
 
@@ -38,10 +40,19 @@ class UserDeletedListener implements IEventListener {
 		}
 
 		$user = $event->getUser();
-		foreach ($this->accountService->findByUserId($user->getUID()) as $account) {
+		$userId = $user->getUID();
+
+		$accounts = $this->accountService->findByUserId($userId);
+
+		// Delete provider-managed accounts (generic system)
+		// This works with any registered provider (IONOS, Office365, etc.)
+		$this->providerRegistry->deleteProviderManagedAccounts($userId, $accounts);
+
+		// Delete all mail accounts in Nextcloud
+		foreach ($accounts as $account) {
 			try {
 				$this->accountService->delete(
-					$user->getUID(),
+					$userId,
 					$account->getId()
 				);
 			} catch (ClientException $e) {

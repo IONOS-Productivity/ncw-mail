@@ -42,6 +42,10 @@ export default function initAfterAppCreation() {
 		value: preferences['config-installed-version'],
 	})
 	mainStore.savePreferenceMutation({
+		key: 'mail-providers-available',
+		value: preferences['mail-providers-available'],
+	})
+	mainStore.savePreferenceMutation({
 		key: 'external-avatars',
 		value: preferences['external-avatars'],
 	})

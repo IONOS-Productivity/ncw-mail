@@ -231,6 +231,17 @@
 					{{ t('mail', 'Enable mark as important classification') }}
 				</NcCheckboxRadioSwitch>
 			</Tab>
+			<Tab
+				v-if="useProviderMailconfig"
+				id="create"
+				key="create"
+				:name="t('mail', 'New Email Address')">
+				<ExternalProviderTab
+					:loading="loading"
+					:clear-feedback="clearFeedback"
+					:is-valid-email="isValidEmail"
+					@account-created="(account) => $emit('account-created', account)" />
+			</Tab>
 		</Tabs>
 		<div v-if="isGoogleAccount && !googleOauthUrl" class="account-form__google-sso">
 			{{ t('mail', 'Google requires OAuth authentication. If your Nextcloud admin has not configured Google OAuth, you can use a Google App Password instead.') }}
@@ -281,6 +292,7 @@ import { NcButton, NcCheckboxRadioSwitch, NcInputField, NcLoadingIcon, NcPasswor
 import { mapState, mapStores } from 'pinia'
 import { Tab, Tabs } from 'vue-tabs-component'
 import IconCheck from 'vue-material-design-icons/Check.vue'
+import ExternalProviderTab from './ExternalProviderTab.vue'
 import { CONSENT_ABORTED, getUserConsent } from '../integration/oauth.js'
 import logger from '../logger.js'
 import {
@@ -302,6 +314,7 @@ export default {
 		NcButton,
 		NcLoadingIcon,
 		IconCheck,
+		ExternalProviderTab,
 	},
 
 	props: {
@@ -367,6 +380,10 @@ export default {
 			'googleOauthUrl',
 			'microsoftOauthUrl',
 		]),
+
+		useProviderMailconfig() {
+			return this.mainStore.getPreference('mail-providers-available', false)
+		},
 
 		settingsPage() {
 			return this.account !== undefined
@@ -461,6 +478,12 @@ export default {
 				if (this.manualConfig.smtpPassword === '') {
 					this.manualConfig.smtpPassword = this.autoConfig.password
 				}
+			}
+			if (this.mode === 'create') {
+				// cleanup host info in order to remove isGoogleAccount message from interface
+				this.manualConfig.imapHost = undefined
+				this.manualConfig.smtpHost = undefined
+				this.clearFeedback()
 			}
 		},
 

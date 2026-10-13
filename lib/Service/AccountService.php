@@ -23,6 +23,7 @@ use OCA\Mail\Db\MailAccountMapper;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Exception\ServiceException;
 use OCA\Mail\IMAP\IMAPClientFactory;
+use OCA\Mail\Provider\MailAccountProvider\ProviderRegistryService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJob;
@@ -49,6 +50,7 @@ class AccountService {
 		private readonly IConfig $config,
 		private readonly ITimeFactory $timeFactory,
 		private DelegationMapper $delegationMapper,
+		private readonly ProviderRegistryService $providerRegistry,
 	) {
 		$this->jobList = $jobList;
 	}
@@ -145,6 +147,11 @@ class AccountService {
 		} catch (DoesNotExistException $e) {
 			throw new ClientException("Account $accountId does not exist", 0, $e);
 		}
+
+		// Delete provider-managed accounts
+		// This works with any registered provider (IONOS, Office365, etc.)
+		$this->providerRegistry->deleteProviderManagedAccounts($currentUserId, [ $mailAccount ]);
+
 		$this->aliasesService->deleteAll($accountId);
 		$this->mapper->delete($mailAccount);
 
@@ -164,6 +171,11 @@ class AccountService {
 		} catch (DoesNotExistException $e) {
 			throw new ClientException("Account $accountId does not exist", 0, $e);
 		}
+
+		// Delete provider-managed accounts
+		// This works with any registered provider (IONOS, Office365, etc.)
+		$this->providerRegistry->deleteProviderManagedAccounts($mailAccount->getUserId(), [ $mailAccount ]);
+
 		$this->aliasesService->deleteAll($accountId);
 		$this->mapper->delete($mailAccount);
 

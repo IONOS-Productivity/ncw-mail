@@ -126,6 +126,41 @@ return [
 			'verb' => 'POST'
 		],
 		[
+			'name' => 'externalAccounts#getProviders',
+			'url' => '/api/providers',
+			'verb' => 'GET'
+		],
+		[
+			'name' => 'externalAccounts#getEnabledProviders',
+			'url' => '/api/admin/providers',
+			'verb' => 'GET'
+		],
+		[
+			'name' => 'externalAccounts#indexMailboxes',
+			'url' => '/api/admin/providers/{providerId}/mailboxes',
+			'verb' => 'GET'
+		],
+		[
+			'name' => 'externalAccounts#destroyMailbox',
+			'url' => '/api/admin/providers/{providerId}/mailboxes/{userId}',
+			'verb' => 'DELETE'
+		],
+		[
+			'name' => 'externalAccounts#updateMailbox',
+			'url' => '/api/admin/providers/{providerId}/mailboxes/{userId}',
+			'verb' => 'PUT'
+		],
+		[
+			'name' => 'externalAccounts#create',
+			'url' => '/api/providers/{providerId}/accounts',
+			'verb' => 'POST'
+		],
+		[
+			'name' => 'externalAccounts#generatePassword',
+			'url' => '/api/providers/{providerId}/password',
+			'verb' => 'POST'
+		],
+		[
 			'name' => 'tags#update',
 			'url' => '/api/tags/{id}',
 			'verb' => 'PUT'

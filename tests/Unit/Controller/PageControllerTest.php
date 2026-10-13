@@ -18,6 +18,7 @@ use OCA\Mail\Contracts\IUserPreferences;
 use OCA\Mail\Controller\PageController;
 use OCA\Mail\Db\Mailbox;
 use OCA\Mail\Db\TagMapper;
+use OCA\Mail\Service\AccountProviderService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\AiIntegrations\AiIntegrationsService;
 use OCA\Mail\Service\AliasesService;
@@ -122,6 +123,9 @@ class PageControllerTest extends TestCase {
 	private ContextChatSettingsService $contextChatSettingsService;
 
 	private ClassificationSettingsService|MockObject $classificationSettingsService;
+
+	private AccountProviderService&MockObject $accountProviderService;
+
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -152,6 +156,7 @@ class PageControllerTest extends TestCase {
 		$this->appManager->method('getAppVersion')->willReturn('0.0.1-dev.0');
 		$this->contextChatSettingsService = $this->createMock(ContextChatSettingsService::class);
 		$this->contextChatSettingsService->method('isIndexingEnabled')->willReturn(true);
+		$this->accountProviderService = $this->createMock(AccountProviderService::class);
 
 		$this->classificationSettingsService = $this->createMock(ClassificationSettingsService::class);
 		$this->controller = new PageController(
@@ -180,7 +185,8 @@ class PageControllerTest extends TestCase {
 			$this->appManager,
 			$this->contextChatSettingsService,
 			$this->classificationSettingsService,
-			$this->appConfig
+			$this->appConfig,
+			$this->accountProviderService,
 		);
 	}
 
@@ -236,6 +242,9 @@ class PageControllerTest extends TestCase {
 		$account1->expects($this->once())
 			->method('getId')
 			->will($this->returnValue(1));
+		$account1->expects($this->once())
+			->method('getEmail')
+			->will($this->returnValue('user1@example.com'));
 		$account2->expects($this->once())
 			->method('jsonSerialize')
 			->will($this->returnValue([
@@ -244,6 +253,17 @@ class PageControllerTest extends TestCase {
 		$account2->expects($this->once())
 			->method('getId')
 			->will($this->returnValue(2));
+		$account2->expects($this->once())
+			->method('getEmail')
+			->will($this->returnValue('user2@example.com'));
+		$this->accountProviderService->expects($this->exactly(2))
+			->method('addProviderMetadata')
+			->willReturnCallback(function ($json, $userId, $email) {
+				// Add provider metadata to the account JSON
+				$json['managedByProvider'] = null;
+				$json['providerCapabilities'] = null;
+				return $json;
+			});
 		$this->aliasesService->expects($this->exactly(2))
 			->method('findAll')
 			->will($this->returnValueMap([
@@ -253,6 +273,8 @@ class PageControllerTest extends TestCase {
 		$accountsJson = [
 			[
 				'accountId' => 1,
+				'managedByProvider' => null,
+				'providerCapabilities' => null,
 				'aliases' => [
 					'a11',
 					'a12',
@@ -264,6 +286,8 @@ class PageControllerTest extends TestCase {
 			],
 			[
 				'accountId' => 2,
+				'managedByProvider' => null,
+				'providerCapabilities' => null,
 				'aliases' => [
 					'a21',
 					'a22',
@@ -310,6 +334,10 @@ class PageControllerTest extends TestCase {
 			->method('getValueBool')
 			->with(Application::APP_ID, ConfigLexicon::ALLOW_NEW_MAIL_ACCOUNTS, true)
 			->willReturn(true);
+		$this->accountProviderService->expects($this->once())
+			->method('getAvailableProvidersForUser')
+			->with($this->userId)
+			->willReturn([]);
 		$this->aiIntegrationsService->expects(self::exactly(4))
 			->method('isLlmProcessingEnabled')
 			->willReturn(false);
@@ -376,6 +404,7 @@ class PageControllerTest extends TestCase {
 					'index-context-chat' => 'true',
 					'compact-mode' => 'false',
 					'auto-mark-as-read' => '3000',
+					'mail-providers-available' => false,
 				]],
 				['prefill_displayName', 'Jane Doe'],
 				['importance_classification_default', true],
