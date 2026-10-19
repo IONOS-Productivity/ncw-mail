@@ -90,6 +90,10 @@ Learn more about the Nextcloud Ethical AI Rating [in our blog](https://nextcloud
 		<command>OCA\Mail\Command\InspectMailbox</command>
 		<command>OCA\Mail\Command\ListMailboxes</command>
 		<command>OCA\Mail\Command\PredictImportance</command>
+		<command>OCA\Mail\Command\ProviderCreateAccount</command>
+		<command>OCA\Mail\Command\ProviderGenerateAppPassword</command>
+		<command>OCA\Mail\Command\ProviderList</command>
+		<command>OCA\Mail\Command\ProviderStatus</command>
 		<command>OCA\Mail\Command\TestAccount</command>
 		<command>OCA\Mail\Command\SyncAccount</command>
 		<command>OCA\Mail\Command\Thread</command>
@@ -102,6 +106,8 @@ Learn more about the Nextcloud Ethical AI Rating [in our blog](https://nextcloud
 	</commands>
 	<settings>
 		<admin>OCA\Mail\Settings\AdminSettings</admin>
+		<admin>OCA\Mail\Settings\ProviderAccountOverviewSettings</admin>
+		<admin-section>OCA\Mail\Settings\Section\MailProviderAccountsSection</admin-section>
 	</settings>
 	<navigations>
 		<navigation>

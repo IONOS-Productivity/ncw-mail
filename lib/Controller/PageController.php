@@ -17,6 +17,7 @@ use OCA\Mail\Contracts\IMailManager;
 use OCA\Mail\Contracts\IUserPreferences;
 use OCA\Mail\Db\SmimeCertificate;
 use OCA\Mail\Db\TagMapper;
+use OCA\Mail\Service\AccountProviderService;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\AiIntegrations\AiIntegrationsService;
 use OCA\Mail\Service\AliasesService;
@@ -92,6 +93,7 @@ class PageController extends Controller {
 		private ContextChatSettingsService $contextChatSettingsService,
 		private ClassificationSettingsService $classificationSettingsService,
 		private IAppConfig $appConfig,
+		private AccountProviderService $accountProviderService,
 	) {
 		parent::__construct($appName, $request);
 
@@ -147,6 +149,7 @@ class PageController extends Controller {
 		foreach ($mailAccounts as $mailAccount) {
 			$json = $mailAccount->jsonSerialize();
 			$json['isDelegated'] = false;
+			$json = $this->accountProviderService->addProviderMetadata($json, $this->userId, $mailAccount->getEmail());
 			$json['aliases'] = $this->aliasesService->findAll($mailAccount->getId(),
 				$this->userId);
 			try {
@@ -226,8 +229,10 @@ class PageController extends Controller {
 		);
 
 		$response = new TemplateResponse($this->appName, 'index');
+
 		$this->initialStateService->provideInitialState('preferences', [
 			'attachment-size-limit' => $this->config->getSystemValue('app.mail.attachment-size-limit', 0),
+			'mail-providers-available' => !empty($this->accountProviderService->getAvailableProvidersForUser($this->userId)),
 			'app-version' => $this->config->getAppValue('mail', 'installed_version'),
 			'external-avatars' => $this->preferences->getPreference($this->userId, 'external-avatars', 'true'),
 			'layout-mode' => $this->preferences->getPreference($this->userId, 'layout-mode', 'vertical-split'),
