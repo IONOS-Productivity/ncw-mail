@@ -965,6 +965,19 @@ OC.L10N.register(
     "Show less" : "Weniger anzeigen",
     "Show more" : "Mehr anzeigen",
     "Take control of your email chaos. Filters help you to prioritize what matters and eliminate clutter." : "Behalte die Kontrolle über dein E-Mail-Chaos. Filter helfen dir, Prioritäten zu setzen und Unordnung zu vermeiden.",
-    "* %USERID% and %EMAIL% will be replaced with the user's UID and email" : "* %USERID% und %EMAIL% werden durch die UID und E-Mail-Adresse ersetzt"
+    "* %USERID% and %EMAIL% will be replaced with the user's UID and email" : "* %USERID% und %EMAIL% werden durch die UID und E-Mail-Adresse ersetzt",
+    "Account created successfully" : "Konto erfolgreich erstellt",
+    "Account state conflict. Please try again later" : "Kontostatuskonflikt. Bitte versuche es später erneut",
+    "Create & Connect" : "Erstellen & Verbinden",
+    "Creating account…" : "Konto wird erstellt…",
+    "Email service not found. Please contact support" : "E-Mail-Dienst nicht gefunden. Bitte kontaktiere den Support",
+    "Invalid email address or account data provided" : "Ungültige E-Mail-Adresse oder Kontodaten angegeben",
+    "New Email Address" : "Neue E-Mail-Adresse",
+    "Server error. Please try again later" : "Serverfehler. Bitte versuche es später erneut",
+    "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account." : "Um über IMAP auf dein Postfach zuzugreifen, kannst du ein app-spezifisches Passwort generieren. Mit diesem Passwort können sich IMAP-Clients mit deinem Konto verbinden.",
+    "IMAP access / password" : "IMAP-Zugang/Passwort",
+    "Generate password" : "Passwort generieren",
+    "Copy password" : "Passwort kopieren",
+    "Please save this password now. For security reasons, it will not be shown again." : "Bitte speichere dieses Passwort jetzt. Aus Sicherheitsgründen wird es nicht erneut angezeigt."
 },
 "nplurals=2; plural=(n != 1);");

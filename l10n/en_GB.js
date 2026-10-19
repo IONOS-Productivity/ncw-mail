@@ -965,6 +965,13 @@ OC.L10N.register(
     "Show less" : "Show less",
     "Show more" : "Show more",
     "Take control of your email chaos. Filters help you to prioritize what matters and eliminate clutter." : "Take control of your email chaos. Filters help you to prioritize what matters and eliminate clutter.",
-    "* %USERID% and %EMAIL% will be replaced with the user's UID and email" : "* %USERID% and %EMAIL% will be replaced with the user's UID and email"
+    "* %USERID% and %EMAIL% will be replaced with the user's UID and email" : "* %USERID% and %EMAIL% will be replaced with the user's UID and email",
+    "Copy password" : "Copy password",
+    "Email Administration" : "Manage email",
+    "Email Provider Accounts" : "Email management",
+    "Generate password" : "Generate password",
+    "IMAP access / password" : "IMAP access / password",
+    "Please save this password now. For security reasons, it will not be shown again." : "Please save this password now. For security reasons, it will not be shown again.",
+    "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account." : "To access your mailbox via IMAP, you can generate an app-specific password. This password allows IMAP clients to connect to your account."
 },
 "nplurals=2; plural=(n != 1);");

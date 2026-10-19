@@ -31,6 +31,7 @@
 				<AliasForm
 					:account="account"
 					:alias="alias"
+					:enable-update="allowNewAliases"
 					:on-update-alias="updateAlias"
 					:on-delete="deleteAlias" />
 			</li>
@@ -53,7 +54,7 @@
 
 		<div v-if="!account.provisioningId" class="mail-button-row">
 			<NcButton
-				v-if="!showForm"
+				v-if="!showForm && allowNewAliases"
 				variant="primary"
 				:aria-label="t('mail', 'Add alias')"
 				@click="showForm = true">
@@ -123,6 +124,10 @@ export default {
 		...mapStores(useMainStore),
 		aliases() {
 			return this.account.aliases
+		},
+
+		allowNewAliases() {
+			return this.mainStore.getPreference('allow-new-aliases', true)
 		},
 
 		accountAlias() {

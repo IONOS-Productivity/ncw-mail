@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -14,29 +16,37 @@ use OCA\Mail\Db\MailAccountMapper;
 use OCA\Mail\Exception\ClientException;
 use OCA\Mail\Service\AliasesService;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\IConfig;
+use OCP\IL10N;
+use PHPUnit\Framework\MockObject\MockObject;
 
 class AliasesServiceTest extends TestCase {
-	/** @var AliasesService */
-	private $service;
+	private AliasesService $service;
+	private string $user = 'herbert';
+	private AliasMapper&MockObject $aliasMapper;
+	private MailAccountMapper&MockObject $mailAccountMapper;
+	private IConfig&MockObject $config;
 
-	/** @var string */
-	private $user = 'herbert';
-
-	/** @var AliasMapper */
-	private $aliasMapper;
-
-	/** @var MailAccountMapper */
-	private $mailAccountMapper;
+	private IL10N&MockObject $l10n;
 
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->aliasMapper = $this->createMock(AliasMapper::class);
 		$this->mailAccountMapper = $this->createMock(MailAccountMapper::class);
+		$this->config = $this->createMock(IConfig::class);
+		$this->l10n = $this->createMock(IL10N::class);
+
+		$this->l10n->method('t')
+			->willReturnCallback(function (string $text) {
+				return $text;
+			});
 
 		$this->service = new AliasesService(
 			$this->aliasMapper,
-			$this->mailAccountMapper
+			$this->mailAccountMapper,
+			$this->config,
+			$this->l10n,
 		);
 	}
 
@@ -91,7 +101,7 @@ class AliasesServiceTest extends TestCase {
 			});
 
 		$result = $this->service->create(
-			300,
+			'300',
 			$entity->getAccountId(),
 			$entity->getAlias(),
 			$entity->getName()
@@ -116,11 +126,28 @@ class AliasesServiceTest extends TestCase {
 			->willThrowException(new DoesNotExistException('Account does not exist'));
 
 		$this->service->create(
-			300,
+			'300',
 			$entity->getAccountId(),
 			$entity->getAlias(),
 			$entity->getName()
 		);
+	}
+
+	public function testCreateDisabledByAdmin(): void {
+		$this->expectException(ClientException::class);
+		$this->expectExceptionMessage('Creating aliases has been disabled by the administrator.');
+
+		$this->config->expects(self::once())
+			->method('getAppValue')
+			->with('mail', 'allow_new_mail_aliases', 'yes')
+			->willReturn('no');
+
+		$this->mailAccountMapper->expects(self::never())
+			->method('find');
+		$this->aliasMapper->expects(self::never())
+			->method('insert');
+
+		$this->service->create('300', 200, 'jane@doe.com', 'Jane Doe');
 	}
 
 	public function testDelete(): void {
@@ -189,6 +216,6 @@ class AliasesServiceTest extends TestCase {
 		$this->aliasMapper->expects(self::never())
 			->method('update');
 
-		$this->service->updateSignature($this->user, '999999', 'Kind regards<br>Herbert');
+		$this->service->updateSignature($this->user, 999999, 'Kind regards<br>Herbert');
 	}
 }
