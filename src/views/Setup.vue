@@ -43,7 +43,7 @@ import { NcAppContent, NcContent, NcEmptyContent } from '@nextcloud/vue'
 import { mapStores } from 'pinia'
 import AccountForm from '../components/AccountForm.vue'
 import Navigation from '../components/Navigation.vue'
-import FluidMail from '../../img/mail-fluid.svg'
+import FluidMail from '../../img/mail.svg'
 import logger from '../logger.js'
 import useMainStore from '../store/mainStore.js'
 
@@ -116,10 +116,9 @@ export default {
 		/** make it as narrow as possible */
 		flex-grow: 0;
 
-		background-color: var(--color-main-background-blur);
-		padding: calc(3 * var(--default-grid-baseline));
+		background-color: var(--ion-surface-secondary);
+		padding: calc(5 * var(--default-grid-baseline));
 		border-radius: var(--border-radius-container);
-		box-shadow: 0 0 10px var(--color-box-shadow);
 
 		/* overrides for custom icon size and full opacity */
 		:deep(.empty-content__icon) {
@@ -136,6 +135,9 @@ export default {
 					height: 128px !important;
 					max-width: 128px !important;
 					max-height: 128px !important;
+					path {
+						fill: var(--ion-color-primary) !important;
+					}
 				}
 			}
 		}

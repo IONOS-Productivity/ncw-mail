@@ -21,11 +21,11 @@ use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\Defaults;
 use OCP\IAppConfig;
-use OCP\Settings\ISettings;
+use OCP\Settings\IDelegatedSettings;
 use OCP\TaskProcessing\TaskTypes\TextToText;
 use OCP\TaskProcessing\TaskTypes\TextToTextSummary;
 
-class AdminSettings implements ISettings {
+class AdminSettings implements IDelegatedSettings {
 	public function __construct(
 		private IInitialState $initialStateService,
 		private ProvisioningManager $provisioningManager,
@@ -119,5 +119,15 @@ class AdminSettings implements ISettings {
 	#[\Override]
 	public function getPriority() {
 		return 90;
+	}
+
+	#[\Override]
+	public function getName(): ?string {
+		return null;
+	}
+
+	#[\Override]
+	public function getAuthorizedAppConfig(): array {
+		return [];
 	}
 }
